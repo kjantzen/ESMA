@@ -1,0 +1,321 @@
+function study_CSD_GUI(InputStudy)
+
+%this  is to account for the fact that eeglab will change this setting
+set(0,'units', 'pixels');
+
+global EEGPath;
+EEGPath = study_GetEEGPath;
+
+global STUDYPATH;
+STUDYPATH = fullfile(EEGPath, 'STUDIES');
+
+HCND_BACKCOLOR = [193/255, 205/255, 193/255];
+HCND_INFOCOLOR = [45/255,45/255,200/255];
+
+scrsize = get(0, 'ScreenSize');
+Wdth = 550; Hght = 400;
+Bttn_HalfWidth = 20;
+Bttn_HalfHeight = 18;
+LBHeight = Hght * .95;
+
+%setup the main figure window
+handles.figure = figure;
+h = handles.figure;
+set(handles.figure,...
+    'color', HCND_BACKCOLOR, ...
+    'name', 'Independent Component Analysis',...
+    'NumberTitle', 'off',...
+    'position', [(scrsize(3)-Wdth)/2,(scrsize(4)-Hght)/2,Wdth,Hght],...
+    'Resize', 'off',...
+    'menubar', 'none');
+
+handles.uipanel1 = uipanel(...
+    'Title','Study Information',...
+    'FontSize',10,...
+    'BackgroundColor',HCND_BACKCOLOR,...
+    'Position',[.05, .5, .9, .45]);
+
+handles.uipanel2 = uipanel(...
+    'Title','Independent Component Analysis Options',...
+    'FontSize',10,...
+    'BackgroundColor',HCND_BACKCOLOR,...
+    'Position',[.05, .15, .9, .3]);
+
+%*************************************************************************
+handles.label_studyinfo = uicontrol('Parent', handles.uipanel1, ...
+    'Style', 'text', ...
+    'String', '',...
+    'FontSize', 10,...
+    'units', 'pixels',...
+    'HorizontalAlignment', 'left', ...
+    'BackGroundColor', HCND_BACKCOLOR, ...
+    'ForeGroundColor', HCND_INFOCOLOR,...
+    'Position', [10, 10, 350, 140]);
+%**************************************************************************
+handles.check_concat = uicontrol('Parent', handles.uipanel2, ...
+    'Style', 'checkbox', ...
+    'String', 'Concatinated Files',...
+    'FontSize', 10,...
+    'value', 1,...
+    'units', 'pixels',...
+    'HorizontalAlignment', 'left', ...
+    'BackGroundColor', HCND_BACKCOLOR, ...
+    'Position', [10, 70, 200, 20]);
+
+handles.check_overwrite = uicontrol('Parent', handles.uipanel2, ...
+    'Style', 'checkbox', ...
+    'String', 'Overwrite Existing Components',...
+    'FontSize', 10,...
+    'value', 1,...
+    'units', 'pixels',...
+    'HorizontalAlignment', 'left', ...
+    'BackGroundColor', HCND_BACKCOLOR, ...
+    'Position', [250, 70, 200, 20]);
+
+handles.check_verify = uicontrol('Parent', handles.uipanel2, ...
+    'Style', 'checkbox', ...
+    'String', 'Verify Component Overwrite',...
+    'FontSize', 10,...
+    'value', 1,...
+    'units', 'pixels',...
+    'HorizontalAlignment', 'left', ...
+    'BackGroundColor', HCND_BACKCOLOR, ...
+    'Position', [250, 40, 200, 20]);
+
+handles.check_filter = uicontrol('Parent', handles.uipanel2, ...
+    'Style', 'checkbox', ...
+    'String', 'Filter Data before Computing ICA',...
+    'FontSize', 10,...
+    'value', 1,...
+    'units', 'pixels',...
+    'HorizontalAlignment', 'left', ...
+    'BackGroundColor', HCND_BACKCOLOR, ...
+    'Position', [10, 40, 200, 20]);
+
+handles.edit_filtrange = uicontrol('Parent', handles.uipanel2, ...
+    'Style', 'edit', ...
+    'String', '1    50',...
+    'FontSize', 10,...
+    'units', 'pixels',...
+    'HorizontalAlignment', 'center', ...
+    'BackGroundColor', 'w', ...
+    'Position', [175, 5, 100, 20]);
+
+uicontrol('Parent', handles.uipanel2, ...
+    'Style', 'text', ...
+    'String', sprintf('Filter Range [min max]:'),...
+    'Enable', 'on', ...
+    'FontSize', 10,...
+    'HorizontalAlignment', 'left', ...
+    'BackGroundColor', HCND_BACKCOLOR, ...
+    'Position', [10, 5, 150, 20]);
+
+
+handles.button_compute = uicontrol('Style', 'pushbutton', 'String', 'Compute ICA',...
+    'Position', [30, 20, 200, Bttn_HalfHeight * 2],...
+    'Callback', {@callback_ComputeICA, handles});
+
+
+
+handles.menuh = uimenu('Label', 'File');
+uimenu(handles.menuh, 'Label', 'Load Study', 'callback', {@callback_loadstudy, handles});
+uimenu(handles.menuh, 'Label', 'Exit', 'callback', {@callback_exit, handles}, 'Separator', 'on');
+
+%if no study has been identified then prompt the user to load one
+if nargin < 1
+    callback_loadstudy(0,0,handles)
+else
+    LoadExistingStudy(handles, InputStudy);
+end
+
+
+%*************************************************************************
+function callback_loadstudy(hObject, eventdata, h)
+
+studytoload = study_SelectStudy;
+if isempty(studytoload)
+    return
+end
+LoadExistingStudy(h, studytoload);
+%**************************************************************************
+function callback_exit(hObject, eventdata, h)
+close(h.figure)
+
+%*************************************************************************
+function study = LoadExistingStudy(h, StudyName)
+
+global STUDYPATH
+sn = fullfile(STUDYPATH, StudyName);
+if isempty(dir(sn))
+    msgbox(sprintf('The specified study %s does not exist.', StudyName));
+    return
+else
+    load(sn, '-mat');
+    setstudy(study,h);
+    
+end
+
+%*************************************************************************
+function setstudy(study, h)
+set(h.figure, 'UserData', study);
+display_studyinfo(study, h)
+pause(0.1);
+%*************************************************************************
+function study = getstudy(h)
+study = get(h.figure, 'UserData');
+if isempty(study);
+    msgbox('Error.  No study information is available');
+    return
+end
+%*************************************************************************
+function display_studyinfo(study, h)
+
+mystr = sprintf('Study:\t\t%s\n', study.name);
+mystr = [mystr,sprintf('Path:\t\t%s\n', study.path)];
+mystr = [mystr,sprintf('Filename:\t\t%s\n', study.filename)];
+mystr = [mystr, sprintf('Conditions:\t\t%i\n', study.nconditions)];
+mystr = [mystr, sprintf('Participants:\t\t%i\n\n', study.nsubjects)];
+mystr = [mystr, sprintf('Description:\t\t%s\n', study.description)];
+
+set(h.label_studyinfo, 'string', mystr);
+
+%*************************************************************************
+%this is the start of the module specific functions
+%*************************************************************************
+
+
+%**********************************************
+function callback_ComputeICA  (src, eventdata, h)
+
+
+global EEGPath;
+
+%get current study information
+study = getstudy(h);
+
+%make sure the study has some subjects in it
+if study.nsubjects < 1
+    msgbox('No subjects are listed in your study','ICA Error', 'error');
+    return
+end
+
+%get the user to specify the files to process
+fnames = study_SelectDataToProcess(study, 'Filter', {'*.set'}, 'Caption', 'Select files for ICA');
+if isempty(fnames)
+    fprintf('\nNo file names selected\n');
+    return
+end
+
+ConcatICA = get(h.check_concat, 'value');
+FiltData = get(h.check_filter, 'value');
+OverWrite = get(h.check_overwrite, 'value');
+Verify = get(h.check_verify, 'value');
+
+
+if FiltData
+    frange = str2num(get(h.edit_filtrange, 'string'));
+    if length(frange)<2 || length(frange)>2
+        msgbox('Please enter a valid filter range');
+        return
+    end
+    if frange(1) >= frange(2)
+        msgbox('Filter range must be entered in the form [min freq, max freq]')
+        return
+    end
+end
+
+%set a progress bar
+waithandle = statusbar('Computing ICA...');
+max_ops = study.nsubjects;
+
+op_count = 0;
+ChanArray= [];
+
+
+%loop through each subject in the study
+for ii = 1:study.nsubjects
+    
+    op_count = op_count+1;
+    
+    
+    fpath = wwu_buildpath(EEGPath, study.path, study.subject(ii).path);
+    
+%    if isempty(statusbar(op_count/max_ops,waithandle))
+%        delete(statusbar);
+%        fprintf('\noperation terminated by user\n');
+%       return
+%   end
+    
+    %load the files for this specific participant into a single data array
+    skipsubj = 0;
+    
+    
+    %decide what to do based on whether there is already ICA components
+    hasICA = 0;
+    for jj = 1:length(fnames)
+        Header = pop_loadset('filepath', fpath, 'filename', fnames{jj}, 'loadmode', 'info');
+        if ~isempty(Header.icaweights)
+            hasICA = 1;
+            break
+        end
+    end
+    
+    %if the user does not want to overwrite the existing ICA weights then jump to the next participant
+    if hasICA && ~OverWrite; continue; end
+    if hasICA && OverWrite
+        skipsubj = false;
+        if Verify
+            fprintf('ICA weights already exist for at least one condition!\n');
+            resp = questdlg(sprintf('ICA components exist for %s.  Overwrite?', study.subject(ii).ID), 'Overwrite Confirm', 'Yes', 'No', 'No');
+            switch resp
+                case 'No'
+                    skipsubj = true;
+                otherwise
+                    skipsubj = false;
+            end
+            
+        end
+    end
+    
+    
+    if skipsubj; continue;    end
+    
+    for jj = 1:length(fnames)
+        EEGIn(jj) = pop_loadset('filepath', fpath, 'filename', fnames{jj});
+        if FiltData
+            fprintf('Pre filtering the data\n');
+            EEGIn(jj) = pop_iirfilt( EEGIn(jj), frange(1), frange(2), [], 0);
+        end
+    end
+    
+    
+    %compute the IC's on either the individual conditions or the
+    %concatinated data
+    
+    fprintf('computing Independent components');
+    
+  %compute the rank of the data and subtract 1 because we have computed the
+  %average reference.  The rank function does not seem to detect this
+  %decrease in the rank of data so we compensate manually
+    dv = size(EEGIn(1).data);
+    temp = reshape(EEGIn(1).data, [dv(1), dv(2) * dv(3)]);
+    pcacomp = rank(temp);
+    
+    clear temp;
+  
+    fprintf('HCND says teh rank of this data is %i\\nn', pcacomp);
+    
+    if ConcatICA
+        EEGOut = pop_runica(EEGIn, 'concatenate', 'on', 'extended', 1, 'pca', pcacomp);
+    else
+        EEGOut = pop_runica(EEGIn, 'concatenate', 'off', 'extended', 1, 'pca', pcacomp);
+    end
+    
+    %save the data back to the original files
+    for jj = 1:length(fnames)
+        EEGOut(jj) = pop_saveset( EEGOut(jj),  'filename',fnames{jj}, 'filepath', fpath, ');
+    end
+    clear EEGIn EEGOut
+end
+
+delete(statusbar);
