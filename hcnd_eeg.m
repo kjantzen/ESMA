@@ -462,6 +462,7 @@ handles.menu_trialplot = uimenu(handles.menu_plot, 'Label', 'Plot and Review Dat
 
 %preprocess menu
 handles.menu_preprocess = uimenu('Parent', handles.figure, 'Label', 'Preprocess');
+handles.menu_resample = uimenu('Parent', handles.menu_preprocess, 'Label', 'Resample');
 handles.menu_filter = uimenu('Parent', handles.menu_preprocess, 'Label', 'Filter');
 handles.menu_rbadchans = uimenu('Parent', handles.menu_preprocess, 'Label', 'Remove and interpolate bad channels');
 handles.menu_reref = uimenu('Parent', handles.menu_preprocess, 'Label', 'Average reference');
@@ -509,6 +510,7 @@ set(handles.menu_trialplot, 'Callback', {@callback_trialplot, handles});
 set(handles.menu_deletefiles, 'Callback', {@callback_deletefiles, handles});
 set(handles.menu_exportfiles, 'Callback', {@callback_exportfiles, handles});
 set(handles.menu_rbadchans, 'Callback', {@callback_interpchans, handles});
+set(handles.menu_resample, 'Callback', {@callback_resample, handles});
 set(handles.menu_filter, 'Callback', {@callback_filter, handles});
 set(handles.menu_reref, 'Callback', {@callback_reref, handles});
 set(handles.menu_cleanline, 'Callback', {@callback_cleanline, handles});
@@ -1756,8 +1758,20 @@ study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Conver
 study = study_SaveStudy(study);
 setstudy(study,h);
 populate_studyinfo(study, h)
-
 %**************************************************************************
+function callback_resample(hObject, eventdata, h)
+
+study = getstudy(h);
+fnames = getselectedfiles(study, h);
+
+if isempty(fnames); return; end
+
+fh = study_Resample_GUI(study, fnames);
+waitfor(fh);
+
+callback_refresh(hObject, eventdata, h)
+
+%***************************************************************************
 function callback_filter(hObject, eventdata, h)
 
 study = getstudy(h);
