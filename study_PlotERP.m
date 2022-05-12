@@ -47,7 +47,7 @@ handles.figure = uifigure(...
 
 handles.gl = uigridlayout('Parent', handles.figure,...
     'ColumnWidth',{280, '1x'},...
-    'RowHeight', {35, '1x','1x','1x', '1x'});
+    'RowHeight', {35, '1x','1x','1x', '1.5x'});
 
 %panel for holding the topo plot
 handles.panel_topo = uipanel(...
@@ -455,6 +455,7 @@ handles.menu_ANOVA = uimenu('Parent', handles.menu_file, 'Label', 'Delete select
 handles.menu_cursor = uimenu('Parent', handles.figure,'Label', 'Cursor');
 handles.menu_cursoradd = uimenu('Parent', handles.menu_cursor,'Label', 'Add Cursor', 'Tag', 'add', 'Accelerator', 'A');
 handles.menu_cursorsub = uimenu('Parent', handles.menu_cursor,'Label', 'Remove Cursor', 'Tag', 'subtract', 'Accelerator', 'X');
+handles.menu_cursormean = uimenu('Parent', handles.menu_cursor, 'Label', 'Average between cursors', 'Checked', 'off');
 
 handles.menu_map = uimenu('Parent', handles.figure, 'Label', 'Scalp maps');
 handles.menu_mapquality = uimenu('Parent', handles.menu_map, 'Label', 'Print Quality', 'Checked', 'off');
@@ -497,6 +498,7 @@ handles.menu_ANOVA.MenuSelectedFcn = {@callback_removebinsandstats, handles};
 
 handles.menu_cursoradd.MenuSelectedFcn = {@callback_managecursors, handles};
 handles.menu_cursorsub.MenuSelectedFcn = {@callback_managecursors, handles};
+handles.menu_cursormean.MenuSelectedFcn = {@callback_togglemcs, handles};
 
 handles.menu_mapquality.MenuSelectedFcn = {@callback_togglemapquality, handles};
 for ii = 1:2
@@ -523,6 +525,12 @@ handles.figure.Visible = true;
 fprintf('...done\n');
 
 %***************************************************************************
+function callback_togglemcs(hObject, event, h)
+%toggle mean cursor status
+ hObject.Checked = ~hObject.Checked;
+ plot_topos(h)
+
+%************************************************************************
 function callback_toggletopomenustate(hObject, event, h)
 
 for ii = 1:2
@@ -534,7 +542,7 @@ plot_topos(h)
 %**************************************************************
 function callback_togglemapquality(hObject, event, h)
 
-    hObject.Checked = ~hObject.Checked
+    hObject.Checked = ~hObject.Checked;
     plot_topos(h);
 
 %*************************************************************************
@@ -1250,20 +1258,21 @@ if ~isempty(new_cnum) && ~isempty(cinfo.cursor)
 end
 
 %**************************************************************************
-%function [data, channel_labels] getdatatoplot(study, GND, h, mode]
-function [d, s, labels_or_times, ch_out, cond_sel] = getdatatoplot(study, GND, h, cursors)
+function [d, s, p,labels_or_times, ch_out, cond_sel] = getdatatoplot(study, GND, h, cursors, aveBetween)
 
 d = [];
 labels_or_times = [];
 ch_out = [];
 cond_sel = [];
 s = [];
+p = [];
 
-%if cursor informaiton is passed we will send back only the information
+%if cursor information is passed we will send back only the information
 %specific to the time of each cursor, otherwise the entire time series will
 %be returned.
 if nargin < 4
     mapping_mode = false;
+    aveBetween = false;
 elseif isempty(cursors)
     return
 else
@@ -1329,9 +1338,6 @@ if mass_univ_overlay
     end
 end
 
-
-
-
 %get the channels from the selected conditions
 ch_sel = ch(find(ch(:,1)),1);
 ch_out = ch_sel;    %send this back to the calling function
@@ -1343,29 +1349,46 @@ end
 %groups can be selected
 if ~isempty(ch_sel)
     if sbj==0 %this is the grand average
-        d = GND.grands(ch_sel,pt,cond_sel);
+        if aveBetween
+            d = mean(GND.grands(ch_sel,pt(1):pt(2),cond_sel),2);
+        else
+            d = GND.grands(ch_sel,pt,cond_sel);
+        end
         %get the statistics information
         if mass_univ_overlay
             
             %initialize the array to the full size of the data
              stat = zeros(size(GND.grands,1), size(GND.grands,2));
+             pstat = stat;
              pval = adj_pval<r.desired_alphaORq;
+             fval = F_obs;
              %provde a thresholded version of the F-scores for mapping
              %in future there will be an option to turn this on and off
-            if mapping_mode 
-                pval = pval .* F_obs;
-            end
+ %           if mapping_mode 
+ %               fval = F_obs;%pval .* F_obs;
+ %           end
             if contains(r.mean_wind, 'yes')
+                fval = repmat(fval, 1, length(r.used_tpt_ids));
                 pval = repmat(pval, 1, length(r.used_tpt_ids));
             end
             
-            stat(r.used_chan_ids,r.used_tpt_ids) = pval; %fill the relevant portion of the  matrix
-           %% stat(r.used_chan_ids,r.used_tpt_ids) = sig_clust; %fill the relevant portion of the  matrix
+            stat(r.used_chan_ids,r.used_tpt_ids) = fval; %fill the relevant portion of the  matrix    
+            pstat(r.used_chan_ids, r.used_tpt_ids) = pval;
+            if aveBetween
+                s = mean(stat(ch_sel,pt(1):pt(2)),2);
+                p = mean(pstat(ch_sel,pt(1):pt(2)),2);
+            else
+                s = stat(ch_sel, pt); %select the part the user requested
+                p = pstat(ch_sel,pt);
+            end
             
-            s = stat(ch_sel, pt); %select the part the user requested
         end 
     else
-        d = GND.indiv_erps(ch_sel, pt, cond_sel, sbj);
+        if aveBetween
+            d = mean(GND.indiv_erps(ch_sel, pt(1):pt(2),cond_sel,sbj),2);
+        else
+            d = GND.indiv_erps(ch_sel, pt, cond_sel, sbj);
+        end
         %no stats information for individual subject data
     end    
     labels_or_times = {GND.chanlocs(ch_sel).labels};
@@ -1380,7 +1403,7 @@ end
 %now get the channel group information 
 ch_groups = ch(find(ch(:,2)),2);
 
-%dont do this part of either there are no channel groups selected or this
+%dont do this part if either there are no channel groups selected or this
 %function was called from the plot_topo function
 if ~isempty(ch_groups) && ~mapping_mode
     %get the means of any channel gorups
@@ -1441,9 +1464,10 @@ function plot_topos(h)
 if h.menu_mapquality.Checked
     gridscale =  300;
 else 
-    gridscale = 96;
+    gridscale = 64;
 end
 
+averageBetweenCursors = h.menu_cursormean.Checked;
 
 %get map plotting options
 for ii = 1:2
@@ -1462,7 +1486,18 @@ c = h.axis_erp.UserData;
 p = h.figure.UserData;
 my_h = h.panel_topo.UserData; %get handles to the subplots
 
-[d, s, map_time, ch_out, cond_num] = getdatatoplot(p.study, p.GND, h, c.cursor);
+
+n_maps = length(c.cursor);
+if averageBetweenCursors
+    if n_maps ~= 2
+        warning('Averaging between cursors only works when 2 cursors are available. You have %i.  Ignoring this option', n_maps)
+        averageBetweenCursors = false;
+    else
+        n_maps = 1;
+    end
+end
+
+[d, s, pv,map_time, ch_out, cond_num] = getdatatoplot(p.study, p.GND, h, c.cursor, averageBetweenCursors);
 if scale_option ==1; map_scale = max(max(max(abs(d)))); end
 
 
@@ -1470,7 +1505,9 @@ if ~isempty(s)
     d(:,:,end+1) = s;
     has_stat = true;
 end
-n_maps = length(c.cursor);
+
+
+%n_maps = 1; %temporary while i work out averaging between cursors
 if n_maps < 1
     ch = h.panel_topo.Children;
     delete(ch);
@@ -1479,9 +1516,9 @@ end
 
 %there are three possible states here
 %the first is when there is only one condition being display
-comp_conds = true;
-n_conds = size(d,3);
-total_maps = n_conds * n_maps;
+comp_conds = true; %flag indicating a comparison of conditions
+n_conds = size(d,3); %the number of conditions
+total_maps = n_conds * n_maps;  %total maps to display
 
 if n_conds==1 || (n_conds>1 && n_maps==1)
     
@@ -1536,57 +1573,70 @@ for ii = 1:n_maps
         
         eval_string = [];
         if jj==n_conds && has_stat %this is the statistical map
-            ms = [0,max(abs(v))];
+            ms = [0,max(max(d(:,:,n_conds))) * .8];
+            %ms = [0,max(abs(v))];
             if ms(2)==0; ms(2) = 1; end %just in case there are no stat sig results
             title_string = 'F-score';
-            pmask = v>0;
-            cmap = hot;
-            cmap(1,:) = p.backcolor;            
-            eval_string = '''pmask'', pmask, ''conv'', ''off''';
-
+            cmap = autumn;
+            eval_string = '''conv'', ''off''';
+            extraChans = find(pv(:,ii));
         else
             ms = [-map_scale; map_scale];
             title_string =  h.list_condition.Items{cond_num(jj)};
             cmap = jet;
+            extraChans = ch_out;
         end
         
         %build the command string for the topoplot'
         mapstring = 'wwu_topoplot(v, p.GND.chanlocs, ''axishandle'', my_h(pcount),''colormap'', cmap, ''maplimits'', ms,  ''style'', ''map'', ''numcontour'', 0, ''gridscale'', gridscale'; 
         
         %change it based on the different options
-        if length(ch_out) < length(p.GND.chanlocs)
-            mapstring = [mapstring, ',  ''emarker2'', {ch_out, ''o'', ''k'', msize, 1}'];
+        if length(extraChans) < length(p.GND.chanlocs)
+            mapstring = [mapstring, ',  ''emarker2'', {extraChans, ''o'', ''k'', msize, 1}'];
         end
         if ~isempty(eval_string)
             mapstring = [mapstring, ', ', eval_string, ');'];
         else
             mapstring = [mapstring, ');'];
         end
-        
+       
         %evaluate the command string
         eval(mapstring)
-        if scale_option == 2
+        if scale_option == 2 
             colorbar(my_h(pcount));
+        elseif jj==n_conds && has_stat 
+            cb = colorbar(my_h(pcount));
+            cb.Units = 'normalized';       
+            cb.Position(1) = my_h(pcount).Position(1) + my_h(pcount).Position(3);
+            cb.Label.String = 'F-score';
         end
         
         if ii==1  && comp_conds
             my_h(pcount).Title.String = title_string;
             my_h(pcount).Title.Interpreter = 'none';
         end
-        my_h(pcount).XLabel.String = sprintf('%5.2f ms', map_time(ii) );
+        if averageBetweenCursors
+            my_h(pcount).XLabel.String = sprintf('%5.1f-%5.1f ms', map_time(1),map_time(2));
+        else
+            my_h(pcount).XLabel.String = sprintf('%5.1f ms', map_time(ii) );
+        end
         my_h(pcount).XLabel.Visible = true;
-        my_h(pcount).OuterPosition(2) = 0;
-        my_h(pcount).OuterPosition(4) = 1;
+
        
     end
 end
 
 if scale_option ==1
-    cb = colorbar(my_h(end));
+    ht = h.panel_topo.Position(4);
+   
+    cb = colorbar(my_h(1));
     cb.Units = 'pixels';
-    cb.Position = [40, 10, 16, h.panel_topo.Position(4)-20];
+    cb.Position = [40, 20, 16, ht-40];
     cb.Label.String = '\muV';
+  
 end
+
+
 h.panel_topo.UserData = my_h;
 drawnow nocallbacks
 %***************************************************************************
@@ -1600,7 +1650,7 @@ separation = h.spinner_distance.Value/100;
 clust_colors = lines;
 
 p = h.figure.UserData;
-[d, s, labels,~,cond_sel] = getdatatoplot(p.study, p.GND, h);
+[d, ~, s,labels,~,cond_sel] = getdatatoplot(p.study, p.GND, h);
 
 %account for the fact that plotting will be upside down in order to get
 %the channel data in order from top to bottom
@@ -1640,16 +1690,6 @@ for ii = 1:size(d,3)
         dd = squeeze(d(:,:,ii));
         tt = repmat(p.GND.time_pts, size(s,1),1);
         
-        %get different colors for different clusters
-%       'MarkerFaceColor',p.ts_colors(ii, :), 'Marker', 'o',...
-%      
-%         scatter(h.axis_erp, tt(s>0)', dd(s>0)',60, clust_colors(s(s>0),:),...
-%             'Marker', 'o',...
-%             'SizeData', 60,...
-%             'MarkerEdgeColor', p.ts_colors(ii, :),'MarkerFaceAlpha', .75,...
-%             'MarkerEdgeAlpha', .75);
-%     end
-  
         splot = scatter(h.axis_erp, tt(s>0)', dd(s>0)',60,'filled');
         splot.CData = clust_colors(s(s>0),:);
         splot.ColorVariable
