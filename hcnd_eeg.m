@@ -469,6 +469,7 @@ handles.menu_reref = uimenu('Parent', handles.menu_preprocess, 'Label', 'Average
 handles.menu_cleanline = uimenu('Parent', handles.menu_preprocess, 'Label', 'Reduce line noise');
 handles.menu_extractepochs = uimenu('Parent', handles.menu_preprocess, 'Label', 'Create epoched files', 'Separator', 'on');
 handles.menu_markbadtrials = uimenu('Parent', handles.menu_preprocess, 'Label', 'Automatic trial rejection');
+handles.menu_computetf = uimenu('Parent', handles.menu_preprocess, 'Label', 'Compute time frequency', 'Separator', 'on');
 
 
 handles.menu_icamain = uimenu('Parent', handles.figure, 'Label', 'ICA', 'Separator', 'on');
@@ -516,6 +517,8 @@ set(handles.menu_reref, 'Callback', {@callback_reref, handles});
 set(handles.menu_cleanline, 'Callback', {@callback_cleanline, handles});
 set(handles.menu_extractepochs , 'Callback', {@callback_extract, handles});
 set(handles.menu_markbadtrials, 'Callback', {@callback_reject, handles});
+set(handles.menu_computetf, 'Callback', {@callback_computetf, handles});
+
 set(handles.menu_ica, 'Callback', {@callback_ICA, handles});
 set(handles.menu_classify, 'Callback', {@callback_classifyICA, handles});
 set(handles.menu_icainspect, 'Callback', {@callback_inspectICA, handles});
@@ -2052,6 +2055,16 @@ study_AddHistory(study, 'start', stime, 'finish', clock, 'event', 'Removed bad c
 populate_filelist(study, h);
  
 %*************************************************************************
+function callback_computetf(hObject, event, h)
+    study = getstudy(h);
+    filelist = getselectedfiles(study, h);
+    if isempty(filelist); return; end
+    
+    fh = study_TF_GUI(study, fnames);
+    waitfor(fh);
+ 
+end
+
 % classifies ICA components for use in noice reduction
 function callback_classifyICA(hObject, event, h)
     

@@ -24,7 +24,7 @@ set(handles.figure,...
 %*************************************************************************
 %start at the bottom with the buttons
 
-handles.button_filter = uibutton(...
+handles.button_dotf = uibutton(...
     'Parent', handles.figure,...
     'Text', 'Compute',...
     'Position', [Wdth-p.buttonwidth-10, 5, p.buttonwidth, p.buttonheight],...
@@ -48,7 +48,7 @@ handles.button_cancel = uibutton(...
 
 handles.check_removemean = uicheckbox(handles.figure, ...
     'Text', 'Remove mean from single trials.',...
-    'Value', 1,...
+    'Value', false,...
     'Position', [200, 50, 200, 20]);
 
 handles.edit_baselinelow = uieditfield(handles.figure, ...
@@ -90,7 +90,7 @@ handles.edit_freqshigh = uieditfield(handles.figure, ...
     'BackgroundColor', p.textfieldbackcolor, ...
     'Position', [260, 130, 50, 25]);
 
-handles.check_prestim = uicheckbox(handles.figure, ...
+handles.check_deffreq = uicheckbox(handles.figure, ...
     'Value', true, ...,...
     'Text', 'Use defaults',...
     'Position', [320, 130, 100, 25]);
@@ -138,7 +138,7 @@ handles.edit_cycleschange = uieditfield(handles.figure, ...
     'Position', [260, 200, 50, 25]);
 
 handles.check_usefft = uicheckbox(handles.figure, ...
-    'Value', true, ...,...
+    'Value', false, ...,...
     'Text', 'Use FFT',...
     'Position', [320, 200, 100, 25]);
 
@@ -149,109 +149,152 @@ uilabel('Parent', handles.figure, ...
     'Position', [20, 200, 180, 20]);
 
 
-handles.edit_cycleschange = uieditfield(handles.figure, ...
+handles.edit_testchannel = uieditfield(handles.figure, ...
     'numeric',...
     'Value', 32,...
     'FontColor', p.textfieldfontcolor,...
     'BackgroundColor', p.textfieldbackcolor, ...
-    'Position', [200, 235, 110, 25]);
+    'Position', [200, 235, 110, 25],...
+    'HorizontalAlignment','center');
 
 
 uilabel('Parent', handles.figure, ...
-    'Text', sprintf('Channel for testing'),...
+    'Text', sprintf('Channel number for testing'),...
     'HorizontalAlignment', 'left', ...
     'BackGroundColor', p.backcolor, ...
     'Position', [20, 235, 180, 20]);
 
 
 
-handles.button_filter.ButtonPushedFcn = {@callback_filter, handles, filenames, study};
+handles.button_dotf.ButtonPushedFcn = {@callback_calculateTF, handles, filenames, study, false};
+handles.button_test.ButtonPushedFcn = {@callback_calculateTF, handles, filenames, study, true};
+%**************************************************************************
+function p = getParameters(h)
+%retrieve the user parameters
+
+    p.testChan = h.edit_testchannel.Value;
+    p.useFFT = h.check_usefft.Value;
+    if p.useFFT
+        p.cycles = 0;
+    else
+        p.cycles = [h.edit_cycles.Value, h.edit_cycleschange.Value];
+    end
+
+   p.defWinsize = h.check_winsize.Value;
+   p.winsize = h.edit_winsize.Value;
+  
+    
+    p.defFreq = h.check_deffreq.Value;
+    p.freqs      = [h.edit_freqslow.Value, h.edit_freqshigh.Value];  
+
+    p.preStim = h.check_prestim.Value;
+    p.baseline = [h.edit_baselinelow.Value, h.edit_baselinehigh.Value];
+   
+    p.remMean = h.check_removemean.Value;
+    
 
 
 %**************************************************************************
 function callback_close(hObject, eventdata)
 closereq();
 
-
+function callback_calculateTF(hO)
 %**********************************************
-function callback_filter(hObject, eventdata, h, filenames, study)
+function callback_calculateTF(hObject, eventdata, h, filenames, study, runTest)
 
 
-    file_id = '_filt';
-    start = clock;
 
-    if  h.radio_lowpass.Value == 1
-        ledge = 0;
-    else
-        ledge = h.edit_lowfilt.Value;
+    file_id = '';
+    owrite = false;
+    
+    p = getParameters(h);
+    cmd = '[ersp, itc, powbase, times, freqs, erspboot, itcboot, tfdata] = newtimef(';
+    cmd = [cmd, 'data, size(data,2), [EEG.xmin * 1000, EEG.xmax * 1000], EEG.srate, p.cycles'];
+
+    if p.remMean
+        cmd = [cmd, ', ''rmerp'', ''on'''];
     end
-    
-    if h.radio_highpass.Value == 1
-        hedge = 0;
-    else
-        hedge = h.edit_highfilt.Value;
-    end
-    
-    
-    if (ledge > 0) && (hedge > 0) 
-        if ledge >= hedge
-        msgbox('Low edge cannot exceed high edge range')
-        return
-        end
+    if ~p.defWinsize
+        cmd = [cmd, ', ''winsize'', p.winsize'];
     end
 
+    if ~p.defFreq
+        cmd = [cmd, '''freqs'', p.freqs'];
+    end
 
-    revfilt = h.radio_notch.Value;
-    owrite = h.check_overwrite.Value;
+    if ~p.preStim
+        cmd = [cmd, '''baseline'', p.baseline'];
+    end
+
+    cmd = [cmd, ');'];
+
     
-    try    
-    %set a progress bar
-    pbar = uiprogressdlg(h.figure,...
-        'Title', 'filtering in progress',...
-        'ShowPercentage', 'on');
-   
-    option = 0;
-    nfile = length(filenames);
+
+    try 
+        if runTest
+            EEGIn = wwu_LoadEEGFile(filenames{jj});
+            fprintf('converting data to time frequencie\n');
+            data = squeeze(EEGIn.data(p.testChannel, :,:));
+            feval(cmd);
+            figure("ERSP test");
+            scale = [min(min(ersp)), max(max(ersp))];
+            imagesc(ersp, scale);
+        else
+        %set a progress bar
+        pbar = uiprogressdlg(h.figure,...
+            'Title', 'computing time to time frequency',...
+            'ShowPercentage', 'on');
        
-        for jj = 1:nfile
-            [path, file, ext] = fileparts(filenames{jj});
-            if owrite
-                outfilename = file;
-            else
-                [file_id, option,writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
-                if option == 3 && ~writeflag
-                    fprintf('skipping existing file...\n')
-                    continue;
+        option = 0;
+        nfile = length(filenames);
+           
+            for jj = 1:nfile
+                [path, file, ext] = fileparts(filenames{jj});
+                if owrite
+                    outfilename = file;
+                    ext = '.tfq';
+    
                 else
-                    outfilename = [file, file_id];
+                    [file_id, option,writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
+                    if option == 3 && ~writeflag
+                        fprintf('skipping existing file...\n')
+                        continue;
+                    else
+                        outfilename = [file, file_id];
+                    end
                 end
+                
+                TFData = [];
+                EEGIn = wwu_LoadEEGFile(filenames{jj});
+                fprintf('converting data to time frequencie\n');
+       
+                for ch = 1:EEGIn.nbchan
+                    data = squeeze(EEGIn.data(ch,:,:));
+                    eval(cmd);
+                    if ch == 1
+                        TFData.times = times;
+                        TFData.freqs = freqs;
+                        TFData.chanlocs = EEGIn.chanlocs;
+                        TFData.ntrials = size(EEGIn.data, 3);
+                        TFData.ersp = zeros(EEGIn.nbchan, times, freqs);
+    
+                    end
+                    TFData.ersp(ch, :, :) = ersp;
+                end
+    
+                newfile = fullfile(path, [outfilename, ext]);
+                save(newfile, TFData);
+            
+                pbar.Value  = jj/nfile;
+        
             end
             
-            EEGIn = wwu_LoadEEGFile(filenames{jj});
-            fprintf('Filtering the data\n');
-            
-            fprintf('lowcutoff %f, highcutoff %f, revfilt %f\n', ledge, hedge, revfilt)
-            EEGIn = pop_eegfiltnew( EEGIn, 'locutoff', ledge, 'hicutoff', hedge, 'revfilt', revfilt);
-            newfile = fullfile(path, [outfilename, ext]);
-            wwu_SaveEEGFile(EEGIn, newfile);
+            clear EEGIn
+            close(pbar)
         
-            pbar.Value  = jj/nfile;
-    
+       
+            closereq();
         end
-        
-        clear EEGIn
-        close(pbar)
-    
-        params = filenames;
-        params(end+1) = {'locutoff'};
-        params(end+1) = {ledge};
-        params(end+1) = {'highcutoff'};
-        params(end+1) = {hedge};
-        study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Filter', 'function', 'study_Filter_GUI', 'paramstring', params, 'fileID', file_id);
-        study = study_SaveStudy(study);
-    
-    
-        closereq();
     catch ME
         close(pbar);
         closereq();

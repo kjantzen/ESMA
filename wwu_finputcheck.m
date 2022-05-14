@@ -174,7 +174,7 @@ function [g, varargnew] = finputcheck( vararg, fieldlist, callfunc, mode, verbos
 	end
 
 
-function g = fieldtest( fieldname, fieldtype, fieldval, tmpval, callfunc );
+function g = fieldtest( fieldname, fieldtype, fieldval, tmpval, callfunc )
 	NAME = 1;
 	TYPE = 2;
 	VALS = 3;
@@ -206,7 +206,7 @@ function g = fieldtest( fieldname, fieldtype, fieldval, tmpval, callfunc );
                   end
               end
           end
-      end;  
+      end  
       
       
      case 'string'
