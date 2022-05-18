@@ -12,6 +12,21 @@ LBHeight = Hght * .95;
 handles.figure = uifigure;
 h = handles.figure;
 
+EEG = wwu_LoadEEGFile(filenames{1});
+EEG.data = [];
+handles.EEG = EEG;  %store this so we have access to sample rate etc.
+
+DEFAULT_CYCLES = [3,1];
+DEFAULT_WINSIZE = 2^nextpow2([EEG.pnts /8]);
+DEFAULT_FREQS = [EEG.srate/DEFAULT_WINSIZE * DEFAULT_CYCLES(1), 50];
+if EEG.xmin < 0
+    DEFAULT_BASELINE = [EEG.xmin, 0] * 1000;
+else
+    DEFAULT_BASELINE = [EEG.xmin, EEG.xmax] * 1000;
+end
+[~,fname,~] = fileparts(filenames{1});
+DEFAULT_OUTFILE = [fname, '_AVG_ERPS'];
+
 set(handles.figure,...
     'Color', p.backcolor, ...
     'Name', 'Time Frequency Calculation',...
@@ -53,14 +68,14 @@ handles.check_removemean = uicheckbox(handles.figure, ...
 
 handles.edit_baselinelow = uieditfield(handles.figure, ...
     'numeric',...
-    'Value', 1.0,...
+    'Value', DEFAULT_BASELINE(1),...
     'FontColor', p.textfieldfontcolor,...
     'BackgroundColor', p.textfieldbackcolor, ...
     'Position', [200, 90, 50, 25]);
 
 handles.edit_baselinehigh = uieditfield(handles.figure, ...
     'numeric',...
-    'Value', 0,...
+    'Value', DEFAULT_BASELINE(2),...
     'FontColor', p.textfieldfontcolor,...
     'BackgroundColor', p.textfieldbackcolor, ...
     'Position', [260, 90, 50, 25]);
@@ -78,20 +93,20 @@ uilabel('Parent', handles.figure, ...
 
 handles.edit_freqslow = uieditfield(handles.figure, ...
     'numeric',...
-    'Value', 1,...
+    'Value', DEFAULT_FREQS(1),...
     'FontColor', p.textfieldfontcolor,...
     'BackgroundColor', p.textfieldbackcolor, ...
     'Position', [200, 130, 50, 25]);
 
 handles.edit_freqshigh = uieditfield(handles.figure, ...
     'numeric',...
-    'Value', 50,...
+    'Value', DEFAULT_FREQS(2),...
     'FontColor', p.textfieldfontcolor,...
     'BackgroundColor', p.textfieldbackcolor, ...
     'Position', [260, 130, 50, 25]);
 
 handles.check_deffreq = uicheckbox(handles.figure, ...
-    'Value', true, ...,...
+    'Value', false, ...,...
     'Text', 'Use defaults',...
     'Position', [320, 130, 100, 25]);
 
@@ -103,14 +118,14 @@ uilabel('Parent', handles.figure, ...
 
 handles.edit_winsize = uieditfield(handles.figure, ...
     'numeric',...
-    'Value', 256,...
+    'Value', DEFAULT_WINSIZE,...
     'FontColor', p.textfieldfontcolor,...
     'BackgroundColor', p.textfieldbackcolor, ...
     'Position', [200, 165, 110, 25],...
     'HorizontalAlignment','center');
 
 handles.check_winsize = uicheckbox(handles.figure, ...
-    'Value', true, ...,...
+    'Value', false, ...,...
     'Text', 'Use defaults',...
     'Position', [320, 165, 100, 25]);
 
@@ -125,14 +140,14 @@ uilabel('Parent', handles.figure, ...
 
 handles.edit_cycles = uieditfield(handles.figure, ...
     'numeric',...
-    'Value', 3,...
+    'Value', DEFAULT_CYCLES(1),...
     'FontColor', p.textfieldfontcolor,...
     'BackgroundColor', p.textfieldbackcolor, ...
     'Position', [200, 200, 50, 25]);
 
 handles.edit_cycleschange = uieditfield(handles.figure, ...
     'numeric',...
-    'Value', 0.8,...
+    'Value', DEFAULT_CYCLES(2),...
     'FontColor', p.textfieldfontcolor,...
     'BackgroundColor', p.textfieldbackcolor, ...
     'Position', [260, 200, 50, 25]);
@@ -148,7 +163,6 @@ uilabel('Parent', handles.figure, ...
     'BackGroundColor', p.backcolor, ...
     'Position', [20, 200, 180, 20]);
 
-
 handles.edit_testchannel = uieditfield(handles.figure, ...
     'numeric',...
     'Value', 32,...
@@ -157,12 +171,25 @@ handles.edit_testchannel = uieditfield(handles.figure, ...
     'Position', [200, 235, 110, 25],...
     'HorizontalAlignment','center');
 
-
 uilabel('Parent', handles.figure, ...
     'Text', sprintf('Channel number for testing'),...
     'HorizontalAlignment', 'left', ...
     'BackGroundColor', p.backcolor, ...
     'Position', [20, 235, 180, 20]);
+
+handles.edit_outfile = uieditfield(handles.figure,...
+    'text',...
+    'Value', DEFAULT_OUTFILE,...
+    'HorizontalAlignment','Left',...
+    'BackgroundColor',p.textfieldbackcolor,...
+    'FontColor',p.textfieldfontcolor,...
+    'Position', [200, 270, 300, 25]);
+
+uilabel('Parent', handles.figure, ...
+    'Text', sprintf('Output file name'),...
+    'HorizontalAlignment', 'left', ...
+    'BackGroundColor', p.backcolor, ...
+    'Position', [20, 270, 180, 20]);
 
 
 
@@ -172,132 +199,138 @@ handles.button_test.ButtonPushedFcn = {@callback_calculateTF, handles, filenames
 function p = getParameters(h)
 %retrieve the user parameters
 
-    p.testChan = h.edit_testchannel.Value;
-    p.useFFT = h.check_usefft.Value;
-    if p.useFFT
-        p.cycles = 0;
-    else
-        p.cycles = [h.edit_cycles.Value, h.edit_cycleschange.Value];
-    end
+p.testChannel = h.edit_testchannel.Value;
+p.useFFT = h.check_usefft.Value;
+if p.useFFT
+    p.cycles = 0;
+else
+    p.cycles = [h.edit_cycles.Value, h.edit_cycleschange.Value];
+end
 
-   p.defWinsize = h.check_winsize.Value;
-   p.winsize = h.edit_winsize.Value;
-  
-    
-    p.defFreq = h.check_deffreq.Value;
-    p.freqs      = [h.edit_freqslow.Value, h.edit_freqshigh.Value];  
+p.defWinsize = h.check_winsize.Value;
+p.winsize = h.edit_winsize.Value;
 
-    p.preStim = h.check_prestim.Value;
-    p.baseline = [h.edit_baselinelow.Value, h.edit_baselinehigh.Value];
-   
-    p.remMean = h.check_removemean.Value;
-    
 
+p.defFreq = h.check_deffreq.Value;
+p.freqs      = [h.edit_freqslow.Value, h.edit_freqshigh.Value];
+
+p.preStim = h.check_prestim.Value;
+p.baseline = [h.edit_baselinelow.Value, h.edit_baselinehigh.Value];
+
+p.remMean = h.check_removemean.Value;
+
+
+%**************************************************************************
+function p = checkParams(p, filename)
 
 %**************************************************************************
 function callback_close(hObject, eventdata)
 closereq();
 
-function callback_calculateTF(hO)
 %**********************************************
 function callback_calculateTF(hObject, eventdata, h, filenames, study, runTest)
 
 
+exclude_badtrials = true;
+exclude_badcomps = true;
+exclude_badsubjs = true;
 
-    file_id = '';
-    owrite = false;
-    
-    p = getParameters(h);
-    cmd = '[ersp, itc, powbase, times, freqs, erspboot, itcboot, tfdata] = newtimef(';
-    cmd = [cmd, 'data, size(data,2), [EEG.xmin * 1000, EEG.xmax * 1000], EEG.srate, p.cycles'];
 
-    if p.remMean
-        cmd = [cmd, ', ''rmerp'', ''on'''];
-    end
-    if ~p.defWinsize
-        cmd = [cmd, ', ''winsize'', p.winsize'];
-    end
+p = getParameters(h);
+p.runtest = runTest;  %if true only a single channel will be calculated
 
-    if ~p.defFreq
-        cmd = [cmd, '''freqs'', p.freqs'];
-    end
+%TFData = struct();  %will hold the data for all subjects
 
-    if ~p.preStim
-        cmd = [cmd, '''baseline'', p.baseline'];
-    end
+%output this to the  across subject folder
+study_path = study_GetEEGPath;
+outdir = wwu_buildpath(study_path, study.path, 'across subject');
+%create the output directory
+if ~exist(outdir, 'Dir')
+    mkdir(outdir)
+end
 
-    cmd = [cmd, ');'];
+outfile = h.edit_outfile.Value;
+if isempty(outfile)
+    msgbox('Please enter an output filename.')
+    return
+end
 
-    
+try
 
-    try 
-        if runTest
-            EEGIn = wwu_LoadEEGFile(filenames{jj});
-            fprintf('converting data to time frequencie\n');
-            data = squeeze(EEGIn.data(p.testChannel, :,:));
-            feval(cmd);
-            figure("ERSP test");
-            scale = [min(min(ersp)), max(max(ersp))];
-            imagesc(ersp, scale);
-        else
+    pbar = uiprogressdlg(h.figure,...
+        'Title', 'computing ersp',...
+        'ShowPercentage', 'on');
+
+    if runTest
+        EEGIn = wwu_LoadEEGFile(filenames{1});
+        fprintf('converting data to time frequency\n');
+        ersp = wwu_tf(p, EEGIn);
+    else
         %set a progress bar
-        pbar = uiprogressdlg(h.figure,...
-            'Title', 'computing time to time frequency',...
-            'ShowPercentage', 'on');
-       
-        option = 0;
+    
         nfile = length(filenames);
-           
-            for jj = 1:nfile
-                [path, file, ext] = fileparts(filenames{jj});
-                if owrite
-                    outfilename = file;
-                    ext = '.tfq';
-    
-                else
-                    [file_id, option,writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
-                    if option == 3 && ~writeflag
-                        fprintf('skipping existing file...\n')
-                        continue;
-                    else
-                        outfilename = [file, file_id];
-                    end
-                end
-                
-                TFData = [];
-                EEGIn = wwu_LoadEEGFile(filenames{jj});
-                fprintf('converting data to time frequencie\n');
-       
-                for ch = 1:EEGIn.nbchan
-                    data = squeeze(EEGIn.data(ch,:,:));
-                    eval(cmd);
-                    if ch == 1
-                        TFData.times = times;
-                        TFData.freqs = freqs;
-                        TFData.chanlocs = EEGIn.chanlocs;
-                        TFData.ntrials = size(EEGIn.data, 3);
-                        TFData.ersp = zeros(EEGIn.nbchan, times, freqs);
-    
-                    end
-                    TFData.ersp(ch, :, :) = ersp;
-                end
-    
-                newfile = fullfile(path, [outfilename, ext]);
-                save(newfile, TFData);
-            
-                pbar.Value  = jj/nfile;
-        
+
+        for jj = 1:nfile
+            EEGIn = wwu_LoadEEGFile(filenames{jj});
+
+            if exclude_badtrials
+                pbar.Message = 'Removing bad trials';
+                btrials = study_GetBadTrials(EEGIn);
+                EEGIn = pop_rejepoch(EEGIn, btrials,0);
+                %for some reason removing hte epochs scrambles the order of the
+                %events so now I have to go in and make sure they are correct.
+                EEGIn = wwu_fix_eventmarkers(EEGIn);
             end
+            if exclude_badcomps && isfield(EEGIn, 'icasphere')
+                pbar.Message = 'Removing bad components';
+                EEGIn = pop_subcomp(EEGIn, [], 0, 0);
+            end
+
+            pbar.Message = 'Computing ERSP for all channels and conditions';
             
-            clear EEGIn
-            close(pbar)
-        
-       
-            closereq();
+            %pass the data to the lower level routine that computes ersp on
+            %the conditions and channels
+
+            subTFData = wwu_tf(p, EEGIn);
+            if jj == 1 
+                %allocate space for all the ersp data
+                TFData.indiv_ersp = zeros(nfile, subTFData.nchan, length(subTFData.freqs), length(subTFData.times), subTFData.ncond);
+                TFData.times = subTFData.times;
+                TFData.freqs = subTFData.freqs;
+                TFData.chanlocs = EEGIn.chanlocs;
+                TFData.bindesc = subTFData.bindesc;
+                TFData.ncond = subTFData.ncond;
+                TFData.nchan = subTFData.nchan;
+            end
+            TFData.indiv_ersp(jj, :,:,:,:) = subTFData.ersp;
+            TFData.erp_file{jj} = filenames{jj};
+           
+            pbar.Value  = jj/nfile;
+
+
         end
-    catch ME
-        close(pbar);
+
+        %figure out which participants are good and bad
+        sbjinave = find(contains({study.subject.status}, 'good'));
+
+        %compute the grand average
+        grand = squeeze(mean(TFData.indiv_ersp(sbjinave,:,:,:,:), 1));
+        TFData.grand_ersp  = grand;
+
+
+        newfile = fullfile(outdir, [outfile, '.ersp']);
+        save(newfile, 'TFData');
+
+        clear EEGIn
+        close(pbar)
+
+
         closereq();
-        rethrow(ME)
     end
+catch ME
+    close(pbar);
+    closereq();
+    rethrow(ME)
+end
+
 

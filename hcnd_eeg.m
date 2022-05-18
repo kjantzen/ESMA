@@ -469,7 +469,7 @@ handles.menu_reref = uimenu('Parent', handles.menu_preprocess, 'Label', 'Average
 handles.menu_cleanline = uimenu('Parent', handles.menu_preprocess, 'Label', 'Reduce line noise');
 handles.menu_extractepochs = uimenu('Parent', handles.menu_preprocess, 'Label', 'Create epoched files', 'Separator', 'on');
 handles.menu_markbadtrials = uimenu('Parent', handles.menu_preprocess, 'Label', 'Automatic trial rejection');
-handles.menu_computetf = uimenu('Parent', handles.menu_preprocess, 'Label', 'Compute time frequency', 'Separator', 'on');
+handles.menu_computetf = uimenu('Parent', handles.menu_preprocess, 'Label', 'Compute ERSP', 'Separator', 'on');
 
 
 handles.menu_icamain = uimenu('Parent', handles.figure, 'Label', 'ICA', 'Separator', 'on');
@@ -517,7 +517,7 @@ set(handles.menu_reref, 'Callback', {@callback_reref, handles});
 set(handles.menu_cleanline, 'Callback', {@callback_cleanline, handles});
 set(handles.menu_extractepochs , 'Callback', {@callback_extract, handles});
 set(handles.menu_markbadtrials, 'Callback', {@callback_reject, handles});
-set(handles.menu_computetf, 'Callback', {@callback_computetf, handles});
+set(handles.menu_computetf, 'Callback', {@callback_computeersp, handles});
 
 set(handles.menu_ica, 'Callback', {@callback_ICA, handles});
 set(handles.menu_classify, 'Callback', {@callback_classifyICA, handles});
@@ -570,7 +570,10 @@ fprintf('...loading current study and populating GUI\n');
 callback_loadstudy(0,0,handles)
 
 fprintf('...done\n');
+fprintf('...making figure visible...')
 handles.figure.Visible = 'on';
+fprintf('done\n');
+
 %%
 %Start of function definitions
 %**************************************************************************
@@ -1208,9 +1211,10 @@ for ii = 1:study.nsubjects
     end
 end
 
-FileTypes = {'Biosemi Files', 'Continuous EEG', 'Epoched Trial Data', 'Averages', 'EEGLab Files', 'Other'};
-Included_Extensions = {'.bdf', '.cnt', '.epc', '.GND', '.set'};
+FileTypes = {'Biosemi Files', 'Continuous EEG', 'Epoched Trial Data', 'ERP (Average)', 'ERSP (Average)', 'EEGLab Files', 'Other'};
+Included_Extensions = {'.bdf', '.cnt', '.epc', '.GND', '.ersp', '.set'};
 Excluded_Extensions = {'.fdt'};
+Acrosssubj_Extensions = {'.GND', '.ersp'};
 
 %clear the existing list of files
 n = h.tree_filetree.Children;
@@ -1237,24 +1241,27 @@ end
 
 %now get the average files from the across subect folder
 searchpath = wwu_buildpath(EEGPath, study.path, 'across subject');
+
 if ~exist(searchpath, 'dir')
     return
 else
-    flist = dir(fullfile(searchpath,filesep, '*.GND'));
-    for ii = 1:length(flist)
+    for ee = 1:length(Acrosssubj_Extensions)
+        flist = dir(fullfile(searchpath,filesep, ['*',Acrosssubj_Extensions{ee}]));
+        for ii = 1:length(flist)
+            
+            [~,fname,ext] = fileparts(flist(ii).name);
         
-        [~,fname,ext] = fileparts(flist(ii).name);
-    
-         category = find(strcmp(Included_Extensions,'.GND'));
-         if isempty(category); category = length(FileTypes); end
-         node_name = sprintf('(%i)\t%s', 1 ,flist(ii).name);
-         uitreenode(Nodes(category).Node,'Text', node_name, 'NodeData', flist(ii).name);
-         
+             category = find(strcmp(Included_Extensions,Acrosssubj_Extensions{ee}));
+             if isempty(category); category = length(FileTypes); end
+             node_name = sprintf('(%i)\t%s', 1 ,flist(ii).name);
+             uitreenode(Nodes(category).Node,'Text', node_name, 'NodeData', flist(ii).name);
+             
+        end
     end
 end
 
 %**************************************************************************
-%refresh all the informaiton on the channel group tab
+%refresh all the information on the channel group tab
 %**************************************************************************
 function populate_ChanGroupDisplay(study, h)
 
@@ -1656,6 +1663,8 @@ try
             study_PlotEPC(study, files);
         case '.GND' %averaged subject and grand average data
             study_PlotERP(study, files);
+        case '.ersp'
+            study_PlotERSP(study, files);
         otherwise
             uialert(h.figure, 'Other files types are not supported, but I am working on it!', 'Plot Data');
             return
@@ -1701,7 +1710,7 @@ cntr = 0;
 n_uniquefiles = 0;
 
 %this is an average file not stored in the subject folders
-if contains(fext,'.GND')
+if contains(fext,'.GND') || contains(fext, '.ersp')
     for jj = 1:length(fnames)
         temp = wwu_buildpath(eeg_path, study.path, 'across subject', fnames{jj});
         if exist(temp, 'file') > 0
@@ -1990,7 +1999,7 @@ function callback_evtsummary(hObject, event, h)
     study = getstudy(h);
     filelist = getselectedfiles(study, h);
     if isempty(filelist); return; end
-    [~,~,ext] = fileparts(filelist{1})
+    [~,~,ext] = fileparts(filelist{1});
     if ~strcmp(ext, '.cnt') && ~strcmpi(ext, '.epc');
         uialert(h.figure, 'Event summaries are available only for continuous (.cnt) and epoch (.epc) filetypes', 'Event Summary');
         return
@@ -2055,15 +2064,21 @@ study_AddHistory(study, 'start', stime, 'finish', clock, 'event', 'Removed bad c
 populate_filelist(study, h);
  
 %*************************************************************************
-function callback_computetf(hObject, event, h)
+function callback_computeersp(hObject, event, h)
     study = getstudy(h);
     filelist = getselectedfiles(study, h);
-    if isempty(filelist); return; end
+    if isempty(filelist);return;end
     
-    fh = study_TF_GUI(study, fnames);
+
+    [~,~,ext] = fileparts(filelist{1});
+    if ~strcmpi(ext, '.epc')
+        uialert(h.figure, 'ERSP is only available for epoch (.epc) filetypes', 'Compute ERSP ');
+        return
+    end
+
+    fh = study_TF_GUI(study, filelist);
     waitfor(fh);
  
-end
 
 % classifies ICA components for use in noice reduction
 function callback_classifyICA(hObject, event, h)

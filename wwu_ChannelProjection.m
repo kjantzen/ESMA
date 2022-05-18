@@ -2,15 +2,19 @@
 %
 %Usage [X,Y] = wwu_ChannelProjection(chanlocs, 'option', optionval,...)
 %Inputs -   chanlocs:  an EEGlab channel structure
-%           Normalize:  optional arguement.  A valuye of 1 indicates that 
-%           output should be normalized between -1:1.  A 0 indicates no 
+%           Normalize:  optional boolean arguement.  if true indicates that 
+%           output should be normalized between 0 and 1.  0 indicates no 
 %           normalization (default 1).
+%
+%           ScaleForTopo: Optional boolean.  if true the locations will be
+%           centered and scaled to approx [-.5, .5] which works for a topo.
+%           Normalization is always conducted when ScaleForTopo = true.
 function [X,Y] = wwu_ChannelProjection(chanlocs, varargin)
 
 
  p = finputcheck(varargin, {...
-        'Normalize', 'real', [0,1], 1;...
-        'ScaleForTopo', 'real', [0,1], 0;...
+        'Normalize', 'boolean', [0, 1], 1;...
+        'ScaleForTopo', 'boolean', [0, 1], 0;...
         });
     
 %compute some X and Y positions for plotting results
@@ -18,7 +22,7 @@ theta = [chanlocs.theta] * pi/180;
 rho = [chanlocs.radius];
 [X,Y] = pol2cart(theta,rho);
 
-if p.Normalize == 1
+if p.Normalize || p.ScaleForTopo
     X = (X-(min(X))) /(max(X)-min(X));
     Y = (Y-(min(Y))) /(max(Y)-min(Y));
 end
