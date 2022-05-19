@@ -51,10 +51,8 @@ set(handles.figure,...
     'Resize', 'off',...
     'menubar', 'none');%,...
 
-pause(1)
-drawnow
-
-msg = uiprogressdlg(handles.figure, 'Message', 'Building GUI', 'Cancelable',false);
+%handles.figure.Visible = 'off';
+msg = uiprogressdlg(handles.figure, 'Message', 'Building GUI', 'Cancelable',false)
 drawnow
 
 handles.dropdown_study = uidropdown(...
@@ -578,9 +576,10 @@ msg.Message = 'Loading current study and populating GUI';
 fprintf('...loading current study and populating GUI\n');
 callback_loadstudy(0,0,handles)
 
-msg.Message = 'OK, all done. Have fun!';
 fprintf('...done\n');
-pause(1);
+fprintf('...making figure visible...')
+handles.figure.Visible = 'on';
+fprintf('done\n');
 close(msg);
 
 %%

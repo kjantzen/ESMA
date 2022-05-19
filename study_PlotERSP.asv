@@ -1539,10 +1539,11 @@ annotation(h.panel_topo, 'textbox', [0, 0, 1, 1], 'String', str, ...
 %***************************************************************************
 %main erp drawing function
 function callback_plotersp(hObject, event, h)
-
+tic
 topostyle = h.check_topolayout.Value;
 showgrid = true;
 
+progress = uiprogressdlg(h.figure, 'Cancelable',false, 'Message', 'Plotting data...');
 
 p = h.figure.UserData;
 data = get_ersp_plot_data(p.study, p.TFData, h, topostyle);
@@ -1555,13 +1556,9 @@ end
 %cannot plot in topostyle with only 1 channel
 if data.nchan == 1
     topostyle = false;
-    progress = [];
-else
-    progress = uiprogressdlg(h.figure, 'Cancelable',false, 'Message', 'Plotting data...');
-
 end
-    
- cfg = [];
+
+cfg = [];
 if topostyle
     layout = tf_topo_layout(data.chanlocs);
     cfg.showaxistitle = false;
@@ -1636,13 +1633,10 @@ else
     cb.Position = cp;
 end
 draw_tf_cursors(h, p)
-if ~isempty(progress) close(progress); end
-drawnow
-%
-%plot_topos(h)
+plot_topos(h)
 h.figure.UserData = p;
-
-
+close(pr)
+toc
 
 %% start of tfdata specific plotting functions
 
