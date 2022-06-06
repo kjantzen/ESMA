@@ -191,8 +191,8 @@ for ii = 1:size(p.filenames,1)
       
             SDir = fpath(max(strfind(fpath, filesep))+1:end);
     %        snum = find(ismember({study.subject.path}, ['/', SDir]) | ismember({study.subject.path}, ['\', SDir]));
-            sr = strfind({study.subject.path}, SDir);
-            snum = find(cell2mat( cellfun(@(x) ~isempty(x), sr, 'UniformOutput', false)));
+            sr = endsWith({study.subject.path}, SDir);
+            snum = find(sr);
             if isempty(snum) || length(snum) > 1
                 fprintf('Could not determine subject number.  All subjects will be included!\n');
                 exclude_badsubjs = false;

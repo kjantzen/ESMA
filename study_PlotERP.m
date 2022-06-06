@@ -36,12 +36,15 @@ else
 end
 figpos = [420, p.screenheight - H, W, H];
 
+[~,fname,~] = fileparts(filename{:});
+figureTitle = sprintf('ERP Tool: %s', fname);
+
 handles.figure = uifigure(...
     'Color', p.backcolor,...
     'Position', figpos,...
     'NumberTitle', p.numbertitle,...
     'Menubar', p.menubar,...
-    'Name', 'hcnd ERP Ploting and Analysus Tool');
+    'Name', figureTitle);
 
 %handles.figure.Visible = false;
 
@@ -52,7 +55,8 @@ handles.gl = uigridlayout('Parent', handles.figure,...
 %panel for holding the topo plot
 handles.panel_topo = uipanel(...
     'Parent', handles.gl,...
-    'AutoResizeChildren', false);
+    'AutoResizeChildren', false,...
+    'BorderType', 'none');
 handles.panel_topo.Layout.Column = 2;
 handles.panel_topo.Layout.Row = 5;
 
@@ -68,63 +72,102 @@ handles.axis_erp.Toolbar.Visible = 'off';
 %**************************************************************************
 %Create a panel to hold the  line plot options
 handles.panel_plotopts = uipanel(...
-    'Parent', handles.gl);
+    'Parent', handles.gl,...
+    'BorderType', 'none',...
+    'AutoResizeChildren', 'off');
 handles.panel_plotopts.Layout.Column = 2;
 handles.panel_plotopts.Layout.Row = 1;
 
-%check box for stacking or spreading the plot
-handles.check_stacked = uicheckbox(...
-    'Parent', handles.panel_plotopts,...
-    'Position', [10, 7, 100, 20],...
-    'FontColor', p.labelfontcolor,...
-    'Text', 'Stacked', ...
-    'Value', 1);
 
 uilabel('Parent', handles.panel_plotopts,...
-    'Position', [110, 7, 100, 20],...
-    'Text', 'Channel Distance',...
-    'FontColor', p.labelfontcolor);
+    'Position', [10, 7, 60, 20],...
+    'Text', 'Time range',...
+    'FontColor', p.labelfontcolor,...
+    'HorizontalAlignment','left');
+
+handles.spinner_mintime = uispinner(...
+    'Parent', handles.panel_plotopts,...
+    'Position', [75,7,100,20],...
+    'FontColor', p.textfieldfontcolor,...
+    'BackgroundColor', p.textfieldbackcolor,...
+    'Value', p.GND.time_pts(1), ...
+    'Limits', [p.GND.time_pts(1), p.GND.time_pts(end)],...
+    'Step',diff(p.GND.time_pts(1:2)),...
+    'RoundFractionalValues', 'off',...
+    'ValueDisplayFormat', '%6.2f ms',...
+    'Tag', 'mintime');
+
+uilabel('Parent', handles.panel_plotopts,...
+    'Position', [175, 7, 20, 20],...
+    'Text', 'to',...
+    'FontColor', p.labelfontcolor,...
+    'HorizontalAlignment','center');
+
+handles.spinner_maxtime = uispinner(...
+    'Parent', handles.panel_plotopts,...
+    'Position', [200,7,100,20],...
+    'FontColor', p.textfieldfontcolor,...
+    'BackgroundColor', p.textfieldbackcolor,...
+    'Value', p.GND.time_pts(end), ...
+    'Limits', [p.GND.time_pts(1), p.GND.time_pts(end)],...
+    'Step',diff(p.GND.time_pts(1:2)),...
+    'RoundFractionalValues', 'off',...
+    'ValueDisplayFormat', '%6.2f ms',...
+    'Tag', 'maxtime');
+
+uilabel('Parent', handles.panel_plotopts,...
+    'Position', [320, 7, 60, 20],...
+    'Text', 'Amp range',...
+    'FontColor', p.labelfontcolor,...
+    'HorizontalAlignment','left');
+
+handles.spinner_minamp = uispinner(...
+    'Parent', handles.panel_plotopts,...
+    'Position', [380,7,80,20],...
+    'FontColor', p.textfieldfontcolor,...
+    'BackgroundColor', p.textfieldbackcolor,...
+    'Value', -5, ...
+    'Limits', [-inf, 0],...
+    'Step',.1,...
+    'RoundFractionalValues', 'off',...
+    'ValueDisplayFormat', '%3.1f uV',...
+    'Tag', 'mintime', ...
+    'Enable', false);
+
+uilabel('Parent', handles.panel_plotopts,...
+    'Position', [460, 7, 20, 20],...
+    'Text', 'to',...
+    'FontColor', p.labelfontcolor,...
+    'HorizontalAlignment','center');
+
+handles.spinner_maxamp = uispinner(...
+    'Parent', handles.panel_plotopts,...
+    'Position', [480,7,80,20],...
+    'FontColor', p.textfieldfontcolor,...
+    'BackgroundColor', p.textfieldbackcolor,...
+    'Value', 5, ...
+    'Limits', [0, inf],...
+    'Step',.1,...
+    'RoundFractionalValues', 'off',...
+    'ValueDisplayFormat', '%3.1f uV',...
+    'Tag', 'maxtime', ...
+    'Enable', false);
+
+uilabel('Parent', handles.panel_plotopts,...
+    'Position', [580, 7, 80, 20],...
+    'Text', 'Stack Dist.',...
+    'FontColor', p.labelfontcolor,...
+    'HorizontalAlignment','Left');
 
 handles.spinner_distance = uispinner(...
     'Parent', handles.panel_plotopts,...
-    'Position', [220,7,80,20],...
+    'Position', [660,7,80,20],...
     'FontColor', p.textfieldfontcolor,...
     'BackgroundColor', p.textfieldbackcolor,...
     'Value', 100, ...
     'Limits', [1, inf],...
     'RoundFractionalValues', 'on',...
     'ValueDisplayFormat', '%i %%');
-
-
-[fp,fn,~] = fileparts(filename{:});
-handles.label_filename = uilabel(...
-    'Parent', handles.panel_plotopts,...
-    'Position', [310,7,80,20],...
-    'Text', 'Average File:',...
-    'FontColor', p.labelfontcolor);
-
-handles.label_filename = uilabel(...
-    'Parent',handles.panel_plotopts,...
-    'Position', [400,7,200,20],...
-    'Text', fn,...
-    'BackgroundColor', [.85,.85,.85],...
-    'FontColor', p.textfieldfontcolor,...
-    'HorizontalAlignment', 'center');
-
-handles.label_filename = uilabel(...
-    'Parent', handles.panel_plotopts,...
-    'Position', [610,7,80,20],...
-    'Text', 'Folder:',...
-    'FontColor', p.labelfontcolor);
-
-handles.label_filename = uilabel(...
-    'Parent', handles.panel_plotopts,...
-    'Position', [700,7,540,20],...
-    'Text', fp,...
-    'BackgroundColor',  [.85,.85,.85],...
-    'FontColor', p.textfieldfontcolor,...
-    'HorizontalAlignment', 'center');
-
 
 %**************************************************************************
 %Create a panel to hold the  plotting options of condition, channel and
@@ -451,6 +494,14 @@ handles.menu_refresh = uimenu('Parent', handles.menu_file, 'Label', 'Refresh Stu
 handles.menu_conditions = uimenu('Parent', handles.menu_file, 'Label', '&Delete selected condition', 'Separator', 'on', 'Tag', 'bin', 'Accelerator', 'D');
 handles.menu_stats = uimenu('Parent', handles.menu_file, 'Label', 'Delete selected Mass &Univ Test', 'Tag', 'MU', 'Accelerator', 'U');
 handles.menu_ANOVA = uimenu('Parent', handles.menu_file, 'Label', 'Delete selected &GLM Test', 'Tag', 'ANOVA', 'Accelerator', 'G');
+handles.menu_editcond = uimenu('Parent', handles.menu_file, 'Label', 'Edit Conditions', 'Separator', 'on');
+
+
+handles.menu_plot = uimenu('Parent', handles.figure, 'Label', 'ERP View');
+handles.menu_autoscale = uimenu('Parent', handles.menu_plot, 'Label', 'Auto scale amplitude', 'Checked', true);
+handles.menu_stderr = uimenu('Parent', handles.menu_plot, 'Label', 'Show Std Err');
+handles.menu_stack = uimenu('Parent', handles.menu_plot, 'Label', 'Stack Channels', 'Checked', true);
+
 
 handles.menu_cursor = uimenu('Parent', handles.figure,'Label', 'Cursor');
 handles.menu_cursoradd = uimenu('Parent', handles.menu_cursor,'Label', 'Add Cursor', 'Tag', 'add', 'Accelerator', 'A');
@@ -471,8 +522,11 @@ handles.figure.WindowButtonUpFcn = {@callback_handlemouseevents, handles};
 handles.figure.WindowButtonMotionFcn = {@callback_handlemouseevents, handles};
 handles.figure.WindowKeyPressFcn = {@callback_handlekeyevents, handles};
 
-handles.check_stacked.ValueChangedFcn = {@callback_ploterp, handles};
 handles.spinner_distance.ValueChangedFcn = {@callback_ploterp, handles};
+handles.spinner_mintime.ValueChangedFcn = {@callback_changePlotRange, handles};
+handles.spinner_maxtime.ValueChangedFcn = {@callback_changePlotRange, handles};
+handles.spinner_minamp.ValueChangedFcn = {@callback_changePlotRange, handles};
+handles.spinner_maxamp.ValueChangedFcn = {@callback_changePlotRange, handles};
 
 handles.list_condition.ValueChangedFcn = {@callback_ploterp, handles};
 handles.check_allchans.ValueChangedFcn = {@callback_toggleallchannel, handles};
@@ -495,12 +549,17 @@ handles.menu_refresh.MenuSelectedFcn = {@callback_reloadfiles, handles, true};
 handles.menu_conditions.MenuSelectedFcn = {@callback_removebinsandstats,handles};
 handles.menu_stats.MenuSelectedFcn = {@callback_removebinsandstats,handles};
 handles.menu_ANOVA.MenuSelectedFcn = {@callback_removebinsandstats, handles};
+handles.menu_editcond.MenuSelectedFcn = {@callback_editconditions, handles};
+
+handles.menu_stderr.MenuSelectedFcn = {@callback_toggleplotoption, handles};
+handles.menu_stack.MenuSelectedFcn = {@callback_toggleplotoption, handles};
+handles.menu_autoscale.MenuSelectedFcn = {@callback_toggleautoscale, handles};
 
 handles.menu_cursoradd.MenuSelectedFcn = {@callback_managecursors, handles};
 handles.menu_cursorsub.MenuSelectedFcn = {@callback_managecursors, handles};
-handles.menu_cursormean.MenuSelectedFcn = {@callback_togglemcs, handles};
+handles.menu_cursormean.MenuSelectedFcn = {@callback_togglemapoption, handles};
 
-handles.menu_mapquality.MenuSelectedFcn = {@callback_togglemapquality, handles};
+handles.menu_mapquality.MenuSelectedFcn = {@callback_togglemapoption, handles};
 for ii = 1:2
     handles.menu_mapscale(ii).MenuSelectedFcn = {@callback_toggletopomenustate, handles};
 end
@@ -525,10 +584,18 @@ handles.figure.Visible = true;
 fprintf('...done\n');
 
 %***************************************************************************
-function callback_togglemcs(hObject, event, h)
+function callback_togglemapoption(hObject, event, h)
 %toggle mean cursor status
  hObject.Checked = ~hObject.Checked;
  plot_topos(h)
+
+function callback_toggleautoscale(hObject, event, h)
+
+    hObject.Checked = ~hObject.Checked;
+    h.spinner_maxamp.Enable = ~hObject.Checked;
+    h.spinner_minamp.Enable = ~hObject.Checked;
+
+    callback_ploterp(hObject, event, h)
 
 %************************************************************************
 function callback_toggletopomenustate(hObject, event, h)
@@ -540,10 +607,46 @@ hObject.Checked = true;
 plot_topos(h)
 
 %**************************************************************
-function callback_togglemapquality(hObject, event, h)
+function callback_toggleplotoption(hObject, event, h)
 
     hObject.Checked = ~hObject.Checked;
-    plot_topos(h);
+    
+    callback_ploterp(hObject, event, h);
+
+%**************************************************************
+function callback_changePlotRange(hObject, event, h)
+    
+    tag = hObject.Tag;
+
+    %check to make sure the min and max are not opposite
+    mnt = h.spinner_mintime.Value;
+    mxt = h.spinner_maxtime.Value;
+    mna = h.spinner_minamp.Value;
+    mxa = h.spinner_maxamp.Value;
+
+    if mnt >= mxt
+        p = h.figure.UserData;
+        if mxt == p.GND.time_pts(end) || strcmp(tag, 'maxtime')
+            mnt = mxt - h.spinner_mintime.Step;
+            h.spinner_mintime.Value = mnt;
+        elseif mnt == p.GND.time_pts(1) || strcmp(tag, 'mintime')
+            mxt = mnt + h.spinner_maxtime.Step;
+            h.spinner_maxtime.Value = mxt;
+        end
+    end
+
+    if mna >=mxa
+        mna = mxa - 1;
+        h.spinner_minamp.value = mna;
+    end
+
+    callback_ploterp(hObject,event,h);
+
+%*************************************************************************
+function callback_editconditions(~,~,h)
+    p = h.figure.UserData;
+    waitfor(wwu_EditERPConditions(p.GND));
+    callback_reloadfiles([],[],h, true);
 
 %*************************************************************************
 function callback_plotANOVAresult(hObject, event,h)
@@ -1258,9 +1361,9 @@ if ~isempty(new_cnum) && ~isempty(cinfo.cursor)
 end
 
 %**************************************************************************
-function [d, s, p,labels_or_times, ch_out, cond_sel] = getdatatoplot(study, GND, h, cursors, aveBetween)
+function [d,se, s, p,labels_or_times, ch_out, cond_sel] = getdatatoplot(study, GND, h, cursors, aveBetween)
 
-d = [];
+d = []; se = [];
 labels_or_times = [];
 ch_out = [];
 cond_sel = [];
@@ -1353,6 +1456,7 @@ if ~isempty(ch_sel)
             d = mean(GND.grands(ch_sel,pt(1):pt(2),cond_sel),2);
         else
             d = GND.grands(ch_sel,pt,cond_sel);
+            se = GND.grands_stder(ch_sel, pt, cond_sel);
         end
         %get the statistics information
         if mass_univ_overlay
@@ -1362,11 +1466,6 @@ if ~isempty(ch_sel)
              pstat = stat;
              pval = adj_pval<r.desired_alphaORq;
              fval = F_obs;
-             %provde a thresholded version of the F-scores for mapping
-             %in future there will be an option to turn this on and off
- %           if mapping_mode 
- %               fval = F_obs;%pval .* F_obs;
- %           end
             if contains(r.mean_wind, 'yes')
                 fval = repmat(fval, 1, length(r.used_tpt_ids));
                 pval = repmat(pval, 1, length(r.used_tpt_ids));
@@ -1497,7 +1596,7 @@ if averageBetweenCursors
     end
 end
 
-[d, s, pv,map_time, ch_out, cond_num] = getdatatoplot(p.study, p.GND, h, c.cursor, averageBetweenCursors);
+[d, ~,s, pv,map_time, ch_out, cond_num] = getdatatoplot(p.study, p.GND, h, c.cursor, averageBetweenCursors);
 if scale_option ==1; map_scale = max(max(max(abs(d)))); end
 
 
@@ -1643,18 +1742,23 @@ drawnow nocallbacks
 %main erp drawing function
 function callback_ploterp(hObject, event, h)
 
-stacked = h.check_stacked.Value;
+stacked = h.menu_stack.Checked;
+userScale = ~h.menu_autoscale.Checked;
+SEoverlay = h.menu_stderr.Checked;
 MUoverlay = h.check_MUoverlay.Value;
 separation = h.spinner_distance.Value/100;
+mnTime = h.spinner_mintime.Value;
+mxTime = h.spinner_maxtime.Value;
+mnAmp = h.spinner_minamp.Value;
+mxAmp = h.spinner_maxamp.Value;
 
-clust_colors = lines;
 
 p = h.figure.UserData;
-[d, ~, s,labels,~,cond_sel] = getdatatoplot(p.study, p.GND, h);
+[d, se,~, s,labels,~,cond_sel] = getdatatoplot(p.study, p.GND, h);
 
 %account for the fact that plotting will be upside down in order to get
 %the channel data in order from top to bottom
-d = d * -1;
+%d = d * -1;
 
 %can't plot it if it is not there!
 if isempty(d)
@@ -1669,17 +1773,43 @@ legend_handles = [];
 % if the user has selected the butter fly plot option where 
 % are stacked on the same origin.
 if ~stacked  
-    spread_amnt = max(max(max(abs(d)))) * separation;   %get the plotting scale    
-    v = 1:1:size(d,1);
+    if userScale 
+         spread_amnt = max(abs([mnAmp, mxAmp])) * separation;   %get the plotting scale    
+    else
+        spread_amnt = max(max(max(abs(d)))) * separation;   %get the plotting scale
+    end
+    %v = 1:1:size(d,1);
+    v = size(d,1):-1:1;
     spread_matrix = repmat(v' * spread_amnt, 1, size(d,2), size(d,3));
     d = d + spread_matrix;
 end
 
 %main plotting loop - plot the time series for each condition
+cla(h.axis_erp);
+
 for ii = 1:size(d,3)
+        hold(h.axis_erp, 'on');
+    dd = squeeze(d(:,:,ii));
     
-    ph = plot(h.axis_erp, p.GND.time_pts, squeeze(d(:,:,ii))', 'Color', p.ts_colors(ii, :), 'LineWidth', 1);
+    if ~isempty(se) && SEoverlay
+        for jj = 1:size(d,1)
+        e = squeeze(se(jj,:,ii));
+            xe = [p.GND.time_pts, fliplr(p.GND.time_pts)];
+            ye = [dd(jj,:) + e, fliplr(dd(jj,:)-e)];
+            er = patch(h.axis_erp,xe, ye,p.ts_colors(ii, :));
+            er.FaceColor = p.ts_colors(ii, :);
+            er.EdgeColor = 'None';
+            er.FaceAlpha = .3;
+        end
+        
+    end
+       
+    
+    ph = plot(h.axis_erp, p.GND.time_pts, dd', 'Color', p.ts_colors(ii, :), 'LineWidth', 1);
     hold(h.axis_erp, 'on');
+    for phi = 2:length(ph)
+        ph(phi).Annotation.LegendInformation.IconDisplayStyle = 'off';
+    end
     
     legend_handles(ii) = ph(1);
     legend_names(ii) = h.list_condition.Items(cond_sel(ii));
@@ -1687,39 +1817,53 @@ for ii = 1:size(d,3)
     %just storing this loop here for now
     if MUoverlay && ~isempty(s)
         hold(h.axis_erp, 'on');
-        dd = squeeze(d(:,:,ii));
+       % dd = squeeze(d(:,:,ii));
         tt = repmat(p.GND.time_pts, size(s,1),1);
         
         splot = scatter(h.axis_erp, tt(s>0)', dd(s>0)',60,'filled');
-        splot.CData = clust_colors(s(s>0),:);
-        splot.ColorVariable
+        splot.CData =  p.ts_colors(ii, :);%clust_colors(s(s>0),:);
+        %splot.ColorVariable
 
     end
 end
-colormap lines;
+h.axis_erp.Colormap = lines;
+
 hold(h.axis_erp, 'off');
     
 %handle axes and scaling differently depending on whether the plot is
 %stacked or not
 if stacked
-    h.axis_erp.YLim = [min(min(min(d))) * 1.1, max(max(max(d))) * 1.1];
-    
+    if userScale 
+        h.axis_erp.YLim = [mnAmp, mxAmp]; 
+    else
+        h.axis_erp.YLim = [min(min(min(d))) * 1.1, max(max(max(d))) * 1.1];
+    end
+
     l = line(h.axis_erp, h.axis_erp.XLim, [0,0],...
         'Color', [.5,.5,.5], 'LineWidth', 1.5);
     l.Annotation.LegendInformation.IconDisplayStyle = 'off';
     
     h.axis_erp.YTickMode = 'auto';
-    h.axis_erp.YTickLabel = -h.axis_erp.YTick;
+    %h.axis_erp.YTickLabel = -h.axis_erp.YTick;
+    h.axis_erp.YTickLabel = h.axis_erp.YTick;
     h.axis_erp.YLabel.String = 'microvolts';
     
 else    
     h.axis_erp.YLim = [min(min(min(d))) - (spread_amnt * .1), max(max(max(d))) + (spread_amnt * .1)];
-    h.axis_erp.YTick = spread_matrix(:,1);
-    h.axis_erp.YTickLabel = labels;
+    h.axis_erp.YTick = sort(spread_matrix(:,1));
+    h.axis_erp.YTickLabel = labels(v);
     
     h.axis_erp.YLabel.String = 'microvolts x channel';
     
 end
+
+
+
+h.axis_erp.XGrid = 'on'; h.axis_erp.YGrid = 'on';
+h.axis_erp.XLim = [mnTime, mxTime];
+h.axis_erp.XLabel.String = 'Time (ms)';
+h.axis_erp.YDir = 'normal';
+h.axis_erp.FontSize = 14;
 
 
 %draw a vertical line at 0 ms;
@@ -1728,10 +1872,6 @@ l = line(h.axis_erp, [time_lock_ms, time_lock_ms], h.axis_erp.YLim,...
     'Color', [.5,.5,.5], 'LineWidth', 1.5);
 l.Annotation.LegendInformation.IconDisplayStyle = 'off';
 
-h.axis_erp.XGrid = 'on'; h.axis_erp.YGrid = 'on';
-h.axis_erp.XLim = [p.GND.time_pts(1), p.GND.time_pts(end)];
-h.axis_erp.XLabel.String = 'Time (ms)';
-h.axis_erp.YDir = 'reverse';
 
 if length(legend_names) > 6
     legend_columns = 6;
@@ -1741,8 +1881,11 @@ end
 lg = legend(h.axis_erp, legend_handles, legend_names, 'box', 'off', 'Location', 'NorthOutside', 'NumColumns', legend_columns,'Interpreter', 'none');
 lg.Color = p.backcolor;
 lg.LineWidth = 2;
+lg.FontSize = 14;
 
 %rebuild and plot existing cursors to fit the currently scaled data
 rebuild_cursors(h)
 plot_topos(h)
+
+
 

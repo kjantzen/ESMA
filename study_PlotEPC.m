@@ -898,7 +898,7 @@ status_image = double(zeros(1,p.EEG.trials,3));
  btrials = study_GetBadTrials(p.EEG);
  nbad = sum(btrials);
  if nbad > 0
-    status_image(1,btrials,:) = repmat([1,0,0], sum(btrials),1);
+    status_image(1,btrials>0,:) = repmat([1,0,0], sum(btrials),1);
  end
   status_image = repmat(status_image, [10,1,1]);
 %********************************************************************   

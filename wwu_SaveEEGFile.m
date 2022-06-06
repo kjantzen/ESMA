@@ -1,6 +1,7 @@
-%HCND_EEG  function to save EEG data files 
-%acts as a wrapper for some of the eeglab functions
 function EEG = wwu_SaveEEGFile(EEG, filename)
+%EEG = wwu_SaveEEGFile(EEG, filename) - save the eeg data in EEG to the
+%file specified in filename.  If omitted, the filename stored in teh EEG
+%structure will be used.
 
 if nargin < 1
     help wwu_SaveEEGFile;

@@ -139,34 +139,41 @@ for jj = 1:length(fnames)
     %average reference.  The rank function does not seem to detect this
     %decrease in the rank of data so we compensate manually
     dv = size(EEGprocessed.data);
-    temp = reshape(EEGprocessed.data, [dv(1), dv(2) * dv(3)]);
-    pcacomp = rank(temp);
+  %  temp = reshape(EEGprocessed.data, [dv(1), dv(2) * dv(3)]);
+    pcacomp = (dv(1));
     
-    clear temp;
-    fprintf('hcnd_eeg says the rank of this data is %i\n', pcacomp);
+ %   clear temp;
     
-    if pcacomp==EEG.nbchan && strcmp(EEG.ref,'averef')
+    if pcacomp==EEG.nbchan && (strcmp(EEG.ref,'averef') || strcmp(EEG.ref, 'average'))
         pcacomp = pcacomp - 1;
         fprintf('Matlab computed full rank so reducing by 1 for the average reference\n');
     end
     
+    if  isfield(EEGprocessed, 'chaninfo') && isfield(EEGprocessed.chaninfo, 'removedchans')
+        if ~isempty(EEGprocessed.chaninfo.removedchans)
+            pcacomp = pcacomp - length(EEGprocessed.chaninfo.removedchans);
+            fprintf('Reducing rank to accouunt for remvoed channels\n')
+        end
+    end
     if Excludebad
         bad_trials = study_GetBadTrials(EEGprocessed);
         EEGprocessed = pop_rejepoch(EEGprocessed, bad_trials, 0);
     end 
-    
+  
+   fprintf('hcnd_eeg says the rank of this data is %i\n', pcacomp);
     EEGOut = pop_runica(EEGprocessed, 'concatenate', 'off', 'extended', 1, 'pca', pcacomp);
     
 %now restore the original data before filtering and epoch removal
-  [EEG.icaact, EEG.icawinv,EEG.icasphere,EEG.icaweights,EEG.icachansind] = deal(EEGOut.icaact, EEGOut.icawinv,EEGOut.icasphere,EEGOut.icaweights,EEGOut.icachansind );
+   EEG = EEGOut;
+  %[EEG.icaact, EEG.icawinv,EEG.icasphere,EEG.icaweights,EEG.icachansind] = deal(EEGOut.icaact, EEGOut.icawinv,EEGOut.icasphere,EEGOut.icaweights,EEGOut.icachansind );
    
   %I retain all trials and use bad trial markers to keep track of the bad ones so I need to 
   %recompute the ica activations since had trials were
   %removed for the purpose of ICA calculation.
-  if size(EEG.icaact, 3) < EEG.trials
-      tempact = icaact(EEG.data, EEG.icaweights * EEG.icasphere);
-      EEG.icaact = reshape(tempact, size(EEG.icaweights, 1), EEG.pnts, EEG.trials); 
-  end
+  %if size(EEG.icaact, 3) < EEG.trials
+  %    tempact = icaact(EEG.data, EEG.icaweights * EEG.icasphere);
+  %    EEG.icaact = reshape(tempact, size(EEG.icaweights, 1), EEG.pnts, EEG.trials); 
+  %end
   wwu_SaveEEGFile(EEG, fnames{jj});
   clear EEGIn EEGOut
   pb.Value = jj/length(fnames);

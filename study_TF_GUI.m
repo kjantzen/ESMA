@@ -269,10 +269,14 @@ try
         %set a progress bar
     
         nfile = length(filenames);
-
+        sCount = 0;  %count the # of participants included 
         for jj = 1:nfile
             EEGIn = wwu_LoadEEGFile(filenames{jj});
-
+            if strcmp(study.subject(jj).status, 'bad')
+                continue
+            end
+            sCount = sCount + 1;
+             
             if exclude_badtrials
                 pbar.Message = 'Removing bad trials';
                 btrials = study_GetBadTrials(EEGIn);
@@ -292,7 +296,7 @@ try
             %the conditions and channels
 
             subTFData = wwu_tf(p, EEGIn);
-            if jj == 1 
+            if sCount == 1 
                 %allocate space for all the ersp data
                 TFData.indiv_ersp = zeros(nfile, subTFData.nchan, length(subTFData.freqs), length(subTFData.times), subTFData.ncond);
                 TFData.times = subTFData.times;
@@ -302,8 +306,8 @@ try
                 TFData.ncond = subTFData.ncond;
                 TFData.nchan = subTFData.nchan;
             end
-            TFData.indiv_ersp(jj, :,:,:,:) = subTFData.ersp;
-            TFData.erp_file{jj} = filenames{jj};
+            TFData.indiv_ersp(sCount, :,:,:,:) = subTFData.ersp;
+            TFData.erp_file{sCount} = filenames{jj};
            
             pbar.Value  = jj/nfile;
 
