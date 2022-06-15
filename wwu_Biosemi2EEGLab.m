@@ -16,7 +16,9 @@
 %   AveRef          A boolean indicated whether to compute the average
 %   reference of the data [1] or to leave the data unreferenced [0:
 %   default]
-%
+
+%   ApplyFilt       A boolean indicating wether to apply a filter to the
+%                   data (default = false)
 %   LPass           The cuttoff for the low pass filter to apply
 %
 %   Hpass           The cut off for a high pass filter to apply
@@ -28,6 +30,10 @@
 %   FileExt         This strng will be added to the filename as a way of
 %   making the name distinct from other files.  The '.set' extension will
 %   still be added at the end
+%
+%   SaveAsStruct  A boolean indicating whether to save the EEG file in
+%   struct formatusing the wwu_SaveEEGFile function will be used.  This may
+%   make the file format incompatible with EEGlab. Default true
 %
 function [Trig_Events, Btn_Events] = wwu_Biosemi2EEGLab(filelist, varargin)
 
@@ -43,7 +49,8 @@ p = wwu_finputcheck(varargin, {...
     'FigHandle',    'handle', [], [];...
     'ApplyFilt',    'real', [0,1], 0;...
     'Chanlocs',     'struct', [], struct;...
-    'ChanFile',     'string', [], ''
+    'ChanFile',     'string', [], '';...
+    'SaveAsStruct', 'real', [0, 1], 1
     });
 
 %start by using the existing EEGlab routines to convert the BDF file to
@@ -178,7 +185,11 @@ for ii = 1:nfiles
     end
     waitbar(wstep/wsteps, wb, sprintf('%s\n Saving...', MText));
     EEG = eeg_checkset( EEG );
-    save(fullfile(path, outname), 'EEG', '-mat');
+    if p.SaveAsStruct
+        wwu_SaveEEGFile(EEG, fullfile(path, outname));
+    else
+        save(fullfile(path, outname), 'EEG', '-mat');
+    end
     %EEG = pop_saveset( EEG,  'filename', outname, 'filepath', path, 'savemode', 'onefile');
     
     

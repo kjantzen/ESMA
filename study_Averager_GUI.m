@@ -176,6 +176,8 @@ for ii = 1:size(p.filenames,1)
     fcount = 0;
     flist = [];
     
+ %   testfile = 'badstuff.xls'; %test writing information to an excel file
+
     for jj = 1:size(p.filenames,2)
         
         %ignore bad subject
@@ -203,19 +205,19 @@ for ii = 1:size(p.filenames,1)
             end
         
         EEG = wwu_LoadEEGFile(p.filenames{ii,jj});
-        %EEG = pop_loadset('filepath', fpath, 'filename', [fname, fext]);
         EEG.subject = study.subject(snum).ID;
         
         if exclude_badtrials
             pb.Message = 'Removing bad trials';
             btrials = study_GetBadTrials(EEG);
             EEG = pop_rejepoch(EEG, btrials,0);
-            %for some reason removing hte epochs scrambles the order of the
+            %for some reason removing the epochs scrambles the order of the
             %events so now I have to go in and make sure they are correct.
             EEG = wwu_fix_eventmarkers(EEG);
         end
         if exclude_badcomps && isfield(EEG, 'icasphere')
             pb.Message = 'Removing bad components';
+            bcomps = find(EEG.reject.gcompreject);
             EEG = pop_subcomp(EEG, [], 0, 0);
         end
         

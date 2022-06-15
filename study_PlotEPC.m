@@ -21,6 +21,7 @@ handles.figure = uifigure(...
     'Menubar', p.menubar,...
     'AutoResizeChildren', 'off');
 
+
 %toolbar items
 %************************************************************************
 handles.toolbar = uitoolbar('Parent', handles.figure);
@@ -109,7 +110,8 @@ handles.axis_main.Layout.Row = [2 3];
 
 handles.panel_summaryimage = uipanel(...
     'Parent', handles.gl,...
-    'Units', 'Pixels');
+    'Units', 'Pixels',...
+    'BorderType','none');
 handles.panel_summaryimage.Layout.Column = 2;
 handles.panel_summaryimage.Layout.Row = 2;
 
@@ -156,7 +158,9 @@ handles.axis_trialstatus.Toolbar.Visible = 'off';
 handles.panel_infobar = uipanel(...
     'Parent', handles.gl,...
     'Scrollable','on',...
-    'Title', '');
+    'Title', '',...
+    'BorderType','none',...
+    'AutoResizeChildren', false);
 handles.panel_infobar.Layout.Column = [1,2];
 handles.panel_infobar.Layout.Row = 1;
 
@@ -242,10 +246,21 @@ handles.menu_chans = uimenu(handles.figure, 'Label', 'Channels');
 handles.menu_clearchans = uimenu(handles.menu_chans, 'Label', 'Unselect channels');
 
 %assign callbacks
+
+%% code for assinging a custom lost (or gained) focus callback.
+
+% warning off MATLAB:structOnObject
+% figProps = struct(handles.figure);
+% controller = figProps.Controller;
+% controllerProps = struct(controller);
+% platformHost = controllerProps.PlatformHost;
+% platformHostProps = struct(platformHost);
+% win = platformHostProps.CEF;
+% win.FocusLost = {@losingFocus, handles};
+
+%%
+
 handles.menu_savefile.Callback = {@callback_saveCurrentData, handles};
-%handles.menu_icplot.Callback = {@callback_togglecheck, handles};
-%handles.menu_quickave.Callback = {@callback_togglecheck, handles};
-%handles.menu_overlay.Callback = {@callback_togglecheck, handles};
 handles.menu_clearchans.Callback = {@callback_deselectchans, handles, 0};
 handles.menu_clearcomps.Callback = {@callback_deselectchans, handles, 1};
 
@@ -305,6 +320,11 @@ drawnow;
 callback_loadnewfile([], [], study, handles);
 
 %*************************************************************************
+function losingFocus(hObject, hEvent, h)
+
+fprintf('losing focus');
+hObject
+
 function initialize_icmenus(h)
     
     p = h.figure.UserData;
@@ -601,7 +621,6 @@ pb.Message = 'Loading new subject file';
 %load the data
 EEG = wwu_LoadEEGFile(filename);
 
-%close(pb);
 if isempty(EEG.reject.rejmanual)
     EEG.reject.rejmanual = zeros(1, EEG.trials);
     EEG.saved = 'no';

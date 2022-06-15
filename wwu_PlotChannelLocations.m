@@ -1,4 +1,4 @@
-%hCMarker = wwu_PlotChannelLocations(chanlocs, varargin)
+%hCMarker, hCMarkerSubset = wwu_PlotChannelLocations(chanlocs, varargin)
 %
 %plots the location of the EEG channels projected onto 2 dimensions
 %chanlocs is a 1Xn eeglab channel structure where n is the nunmber of
@@ -41,9 +41,11 @@
 %   will place the label above the marker.  Default='outside'
 %
 %Returns
-%hCMarker is a 1Xn array of handles to the markers
+%hCMarker is a handle to the scatter object for the markers
+%hCMarkerSubset is a handle to the scatter object of the highlighted
+%markers
 %
-function hCMarker = wwu_PlotChannelLocations(chanlocs, varargin)
+function [hCMarker,hCMarkerSubset] = wwu_PlotChannelLocations(chanlocs, varargin)
 
  p = wwu_finputcheck(varargin, {...
         'AxisHandle', 'handle', [], [];...
@@ -56,9 +58,11 @@ function hCMarker = wwu_PlotChannelLocations(chanlocs, varargin)
         'HeadBorder', 'string', {'on', 'off'}, 'on';...
         'Subset', 'integer', [], [];...
         'Labels', 'string', {'none', 'name', 'number', 'both'}, 'both';...
-        'LabelPos', 'string', {'inside', 'outside'}, 'outside'
+        'LabelPos', 'string', {'inside', 'outside'}, 'outside';...
+        'Callback', 'string', [], ''
         });
     
+
 if isempty(p.Subset) 
     plot_subset = false;
 else
@@ -83,12 +87,22 @@ switch p.HeadBorder
         rectangle(p.AxisHandle,'position', [0, .1, 1, .9], 'Curvature', [1, 1]);
         hold(p.AxisHandle, 'on');
 end    
-hCMarker = plot(p.AxisHandle,p.X,p.Y, 'o', 'markersize', p.Elec_Size, 'markerfacecolor', p.Elec_Color, 'markeredgecolor', 'k');
+%hCMarker = plot(p.AxisHandle,p.X,p.Y, 'o', 'markersize', p.Elec_Size, 'markerfacecolor', p.Elec_Color, 'markeredgecolor', 'k');
+hCMarker = scatter('Parent',p.AxisHandle, p.X, p.Y, 'Marker', 'o', ...
+    'MarkerEdgeColor', p.Elec_Color,...
+    'MarkerFaceColor', p.Elec_Color,...
+    'SizeData', p.Elec_Size);
 
 
 if plot_subset
     hold(p.AxisHandle, 'on');
-    plot(p.AxisHandle,p.X(p.Subset),p.Y(p.Subset), 'o', 'markersize', p.Elec_SelSize, 'markerfacecolor', p.Elec_Selcolor, 'markeredgecolor', 'k');
+
+    %plot(p.AxisHandle,p.X(p.Subset),p.Y(p.Subset), 'o', 'markersize', p.Elec_SelSize, 'markerfacecolor', p.Elec_Selcolor, 'markeredgecolor', 'k');
+    hCMarkerSubset = scatter('Parent',p.AxisHandle, p.X(p.Subset), p.Y(p.Subset), 'Marker', 'o', ...
+    'MarkerEdgeColor', 'k',...
+    'MarkerFaceColor', p.Elec_Selcolor,...
+    'SizeData', p.Elec_SelSize);
+
 end
 
 switch p.Labels
@@ -100,7 +114,7 @@ switch p.Labels
                     set(p.AxisHandle, 'units', 'pixel');
                     pos = get(p.AxisHandle, 'position');
                     xl = get(p.AxisHandle, 'xlim');
-                    voffset = (xl(2)- xl(1))/pos(3) * ((p.Elec_Size/2)+2);
+                    voffset = (xl(2)- xl(1))/pos(3) * ((p.Elec_Size/10)+2);
             otherwise
                     voffset = 0;
         end

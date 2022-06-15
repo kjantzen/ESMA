@@ -1903,12 +1903,14 @@ if ~isfield(study, 'bingroup')
     return
 end
 
+%******************************
+%replace this with the selection from a bin group popup.
+%******************************
 n = h.tree_bingrouplist.SelectedNodes;
 if isempty(n)
      uialert(h.figure, 'Please select an Epoch Group first.', 'Create Epoch files');   
      return
 end
-
 gnum = n.NodeData{1};
 cnum = n.NodeData{2};
 

@@ -9,7 +9,7 @@ function [study, not_saved] = study_SaveStudy(study, varargin)
 %Optional
 %       'saveas':  a 1 indicates that the study structure will be saved
 %       with a new study name.  When a 0 is passed the existing study will 
-%       be overwritten with the new information
+%       be overwritten with the new information.  The default is 0
 %Output
 %       study:  the saved study structure
 %
@@ -26,7 +26,7 @@ STUDYPATH = fullfile(EEGPath, 'STUDIES');
 
 if isempty(study.filename) || p.saveas==1
     
-    newstudyname = inputdlg({'Enter a new name for this study'}, 'Save As', 1);
+    newstudyname = inputdlg({'Enter a name for this study'}, 'Save As', 1);
     fsname = fullfile(STUDYPATH, [newstudyname{:}, '.study']);
     if ~ isempty(dir(fsname))
         btn = questdlg(sprintf('The STUDY %s exists.\nDo you want to overwrite?', newstudyname{:}), 'Overwrite Request', 'yes', 'no', 'no');

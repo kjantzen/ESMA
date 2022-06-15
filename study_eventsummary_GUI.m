@@ -48,9 +48,7 @@ function [eventsTable, epochsTable] = load_eventdata(h, study, filenames)
         [fpath, fname, fext] = fileparts(filenames{ii});
         fname = [fname, fext];
         fprintf('Loading event data for file %s\n', fname);
-      %  EEG = pop_loadset('filepath', fpath, 'filename', fname, 'loadmode', 'info', 'verbose', 'off');
         EEG = wwu_LoadEEGFile(filenames{ii}, {'event', 'trials', 'epoch'});
-        EEG
         fprintf('getting all event types from the EEG structure...\n')
         allTypes = {EEG.event.type};
         
@@ -66,7 +64,7 @@ function [eventsTable, epochsTable] = load_eventdata(h, study, filenames)
             [all_gevents, all_count] = compareevents(cevents, all_gevents, all_count);
         end
         for jj = 1:length(all_gevents)
-            all_count(ii,jj) = sum(cell2mat(strfind(allTypes, all_gevents{jj})));
+            all_count(ii,jj) = sum(strcmp(allTypes, all_gevents{jj}));
         end
 
         if EEG.trials > 1
@@ -108,7 +106,7 @@ function [gevents, count] = compareevents(cevents, gevents, count)
 %existing list if it is not already there
 
 %nothing to do if the event structures are the same
-if isequal(cevents, gevents); 
+if isequal(cevents, gevents)
     fprintf('matching events found...\n');
     return; 
 end

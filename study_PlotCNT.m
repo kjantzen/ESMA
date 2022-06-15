@@ -153,6 +153,7 @@ else
     if contains(choice, 'OK')
         p.EEG = pop_select(p.EEG, 'point',[pstart, pend]);
         p.EEG.saved = 'no';
+        p.EEG = wwu_SaveEEGFile(p.EEG);
         h.figure.UserData = p;
         callback_loadnewfile([],[],study,h);
     end
@@ -191,7 +192,10 @@ else
         p.EEG.chaninfo.badchans = p.selchans;
     end
 end
-p.EEG.saved = 'no';
+pb = uiprogressdlg(h.figure,'Indeterminate','on', 'Message','Saving channel status');
+p.EEG = wwu_SaveEEGFile(p.EEG,[],{'chaninfo'});
+close(pb);
+
 h.figure.UserData = p;
 callback_drawdata([], [],h)
 
@@ -212,12 +216,12 @@ p = h.figure.UserData;
 pp = plot_params;
 
 if isfield(p, 'EEG')
-    if strcmp(p.EEG.saved, 'no')
-        msg = sprintf('Saving changes to %s', p.EEG.filename);
-        pb = uiprogressdlg(h.figure,'Indeterminate','on', 'Message',msg);
-        p.EEG = wwu_SaveEEGFile(p.EEG);
-        close(pb);
-    end
+     if strcmp(p.EEG.saved, 'no')
+         msg = sprintf('Saving changes to %s', p.EEG.filename);
+         pb = uiprogressdlg(h.figure,'Indeterminate','on', 'Message',msg);
+         p.EEG = wwu_SaveEEGFile(p.EEG);
+         close(pb);
+     end
 end
 pb = uiprogressdlg(h.figure, 'Indeterminate','on', 'Message', 'Loading new subject...');
 drawnow;
@@ -243,10 +247,7 @@ if exist(filename, 'file') ~= 2
     uialert(h.figure, 'The selected file does not seem to exist.  Please double check the file location.');
     return
 end
-
 EEG = wwu_LoadEEGFile(filename);
-%[path, name, ext] = fileparts(filename);
-%EEG = pop_loadset([name, ext], path);
 
 if EEG.trials > 1
     uialert(h.figure, 'The file may contain epoched data. Please use the trial viewer instead.');
@@ -301,7 +302,7 @@ endpos = startpos + p.pwidth-1;
 d = p.EEG.data(:,startpos:endpos);
 t = p.EEG.times(startpos:endpos)./1000;
 
-if isfield(p.EEG.chaninfo,'badchans');
+if isfield(p.EEG.chaninfo,'badchans')
     badchans = p.EEG.chaninfo.badchans;
 else
     badchans = zeros(1,p.EEG.nbchan);
@@ -345,7 +346,7 @@ evt_indx = find(all_latencies >= startpos & all_latencies <= endpos);
 
 if ~isempty(evt_indx)
     for ii = evt_indx
-        evt_time = p.EEG.times(p.EEG.event(ii).latency)/1000;
+        evt_time = p.EEG.times(int32(p.EEG.event(ii).latency))/1000;
         evt_label = p.EEG.event(ii).type;
         if isnumeric(evt_label)
             evt_label = num2str(evt_label);
