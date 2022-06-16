@@ -147,6 +147,9 @@ set(handles.dropdown_study, 'ValueChangedFcn', {@callback_loadstudy, handles})
 set(handles.menu_new, 'Callback', {@callback_newstudy, handles, false});
 set(handles.menu_edit, 'Callback', {@callback_newstudy, handles, true});
 set(handles.menu_refresh, 'Callback', {@callback_refresh, handles});
+set(handles.menu_deletestudy, 'Callback', {@callback_archivestudy, handles, true});
+set(handles.menu_archivestudy, 'Callback', {@callback_archivestudy, handles, false});
+
 set(handles.menu_exit, 'Callback', {@callback_exit, handles});
 set(handles.menu_script, 'Callback', {@callback_runscript, handles});
 set(handles.menu_evtsummary, 'Callback', {@callback_evtsummary, handles});
@@ -577,6 +580,52 @@ function callback_newstudy(hObject, eventdata, h, editMode)
     end
 
 %**************************************************************************
+function callback_archivestudy(hObject, event, h, deleteStudy)
+  
+    study = getstudy(h);
+    EEGPath = study_GetEEGPath();
+
+    if deleteStudy
+        msg = sprintf('This action will permanantly delete "%s"! ', study.name);
+        title = 'Delete Study';
+    else
+        msg = sprintf('This action will move "%s" to the archive folder!  ', study.name);
+        title = 'Archive Study';
+    end
+    msg = [msg, 'Are you sure you want to continue?'];
+
+    response = uiconfirm(h.figure, msg, title,'Options', {'Yes', 'No'}, 'CancelOption','No');
+
+    if contains(response, 'Yes')
+        file = fullfile(EEGPath, 'STUDIES', [study.name, '.study']);
+        f = dir(file);
+        if isempty(f)
+            uialert(h.figure, sprintf('%s was not found on the disk',file), 'Error')
+            return
+        end
+        if deleteStudy
+            delete(file);
+        else
+            archiveFolder = fullfile(EEGPath, 'STUDIES', 'ARCHIVE');
+            if ~isfolder(archiveFolder)
+                status = mkdir(archiveFolder);
+                if ~status
+                    uialert('Failed to create the ARCHIVE folder');
+                    return
+                end
+            end
+           status = movefile(file, archiveFolder);
+           if ~status
+               uialert('File failed to move.  You may want to move it manually')
+               return
+           end
+        end
+        
+        populate_studylist(h);
+       
+    end
+
+%**************************************************************************
 %plot the data from different file formats
 function callback_trialplot(hObject, eventdata, h)
 
@@ -843,17 +892,12 @@ if ~isfield(study, 'bingroup')
     return
 end
 
-%******************************
-%replace this with the selection from a bin group popup.
-%******************************
-n = h.tree_bingrouplist.SelectedNodes;
-if isempty(n)
-     uialert(h.figure, 'Please select an Epoch Group first.', 'Create Epoch files');   
-     return
+info = study_SelectBinGroup(study);
+if isempty(info.gnum) || contains(info.option, 'Cancel')
+    return
 end
-gnum = n.NodeData{1};
-cnum = n.NodeData{2};
-
+gnum = info.gnum;
+cnum = info.cnum;
 
 selfiles = getselectedfiles(study, h);
 
