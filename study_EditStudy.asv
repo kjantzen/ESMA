@@ -1,4 +1,4 @@
-function study = study_EditStudy(study)
+function fh = study_EditStudy(study)
 
 newStudy = false;
 if nargin < 1 || isempty(study)
@@ -18,6 +18,7 @@ if newStudy
 end
 setstudy(h,study);
 populate_studyinfo(study, h);
+fh = h.figure;
 
 
 %**************************************************************************
@@ -54,7 +55,10 @@ choice = uiconfirm(h.figure, msg,'New Study',...
 
 %if they choose to proceed present them with a dialog box to select the
 %path of the data
-if strcmp(choice, 'Proceed')
+if strcmp(choice, 'Cancel')
+    study = [];
+    return
+end
     h.figure.Visible = false;
     studyFolder = uigetdir(EEGPath, 'Select data folder');
     h.figure.Visible = true;
@@ -109,7 +113,11 @@ if strcmp(choice, 'Proceed')
         return
     end
 
-end
+    msg = sprintf('The new study %s has been created and saved.\n',study.name);
+    msg = sprintf('%sYou can edit the study using the Study Editing tool, or close the tool to return to the main interface.', msg);
+    uialert(h.figure,msg,'Study saved','Icon','info');
+    
+
 
 %************************************************************************
 %helper functions
@@ -238,7 +246,7 @@ function callback_channelClick(hObject, ~, h)
 function callback_handleMouseDown(hObject, hEvent, h)
     
 
-    if contains(hObject.SelectionType, 'normal')
+    if contains(hObject.SelectionType, 'extend')
         cp = hObject.CurrentPoint;
         ap = h.axis_chanpicker.Position;
         pp = h.infotabs.Position;
@@ -295,7 +303,13 @@ function callback_handleMouseMove(hObject, hEvent, h)
 
     css = h.axis_chanpicker.UserData;
     if ~isempty(css) && css.drawing == true
-        if ~isobject()
+        %the handle may get deleted
+        if ~isvalid(css.line)
+            css.drawing = false;
+            h.axis_chanpicker.UserData  = css;
+            return
+        end
+
         cp = h.axis_chanpicker.CurrentPoint;
         css.line.XData(end+1) = cp(1,1);
         css.line.YData(end+1) = cp(1,2);
@@ -563,15 +577,20 @@ else
 end
 
 %get a name for this group
-prompt = {'Enter a name for the channel group'};
-dlgtitle = 'New Channel Group';
-dims = [1 35];
-definput = {default_groupname};
-answer = inputdlg(prompt,dlgtitle,dims,definput);
+dlgparams.msg = 'Enter a name for the new channel group';
+dlgparams.title = 'New Channel Group';
+dlgparams.options = {'OK', 'Cancel'};
+dlgparams.default = default_groupname;
+info = wwu_inputdlg(dlgparams);
+%answer = inputdlg(prompt,dlgtitle,dims,definput);
 
+if isempty(info.input) || strcmp(info.input, '') || contains(info.option, 'Cancel')
+    fprintf('No valid group name or operation aborted\n');
+    return
+end
 %now make the group
 
-study.chgroups(gnum).name = answer{:};
+study.chgroups(gnum).name = info.input;
 study.chgroups(gnum).chans = h.list_chanpicker.Value;
 study.chgroups(gnum).chanlocs = study.chanlocs(study.chgroups(gnum).chans);
 

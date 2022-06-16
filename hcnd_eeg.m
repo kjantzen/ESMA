@@ -26,7 +26,7 @@ EEGPath = study_GetEEGPath;
 
 p = plot_params;
 
-W = 420; H = 768;
+W = 420; H = 500;
 FIGPOS = [0,(p.screenheight-H), W, H];
 
 %checking for eeglab installation and path
@@ -50,10 +50,6 @@ set(handles.figure,...
     'position', FIGPOS,...
     'Resize', 'off',...
     'menubar', 'none');%,...
-
-pause(1)
-drawnow
-
 msg = uiprogressdlg(handles.figure, 'Message', 'Building GUI', 'Cancelable',false);
 drawnow
 
@@ -68,377 +64,25 @@ handles.tree_filetree = uitree(...
     'Parent', handles.figure,...
     'Multiselect', 'on',...
     'Editable', 'on',...
-    'Position', [10,H-300,400,275],...
+    'Position', [10,H-250,400,225],...
     'BackgroundColor', p.textfieldbackcolor,...
     'FontColor', p.textfieldfontcolor);
 
-handles.infotabs = uitabgroup(...
-    'Parent',handles.figure,...
-    'TabLocation', 'top',...
-    'Position', [10,10,400,448]...
-    );
-
-%***********************************************************************
-%general tab
-handles.tab_general = uitab(...
-    'Parent', handles.infotabs,...
-    'Title', 'General',...
-    'BackgroundColor', p.backcolor);
-
-uilabel('Parent', handles.tab_general,...
-    'Text', 'Study name',...
-    'Position', [10, 380,100,25],...
-    'Fontcolor', p.labelfontcolor);
-
-uilabel('Parent', handles.tab_general,...
-    'Text', 'Relative location',...
-    'Position', [10, 340,100,25],...
-    'Fontcolor', p.labelfontcolor);
-
-uilabel('Parent', handles.tab_general,...
-    'Text', 'Description',...
-    'Position', [10, 300,100,25],...
-    'Fontcolor', p.labelfontcolor);
-uilabel('Parent', handles.tab_general,...
-    'Text', 'History',...
-    'Position', [10, 175,100,25],...
-    'Fontcolor', p.labelfontcolor);
-
-handles.edit_studyname = uieditfield(...
-    'Parent', handles.tab_general,...
-    'Value', 'study name',...
-    'Position', [150,380,240,25],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor,...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
-
-handles.edit_studypath = uieditfield(...
-    'Parent', handles.tab_general,...
-    'Value', 'study path',...
-    'Position', [150,340,240,25],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor,...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
-
-handles.edit_studydescr = uitextarea(...
-    'Parent', handles.tab_general,...
-    'Value', 'desription',...
-    'Position', [10,215,380,85],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor,...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
-
-
-
-%*************************************************************************
-%subject panel
-handles.tab_subjects = uitab(...
-    'Parent', handles.infotabs,...
-    'Title', 'Subjects');
-
-uilabel('Parent', handles.tab_subjects,...
-    'Text', 'Subject ID',...
-    'Position', [10, 380,100,25],...
-    'Fontcolor', p.labelfontcolor);
-uilabel('Parent', handles.tab_subjects,...
-    'Text', 'Subject Folder',...
-    'Position', [10, 340,100,25],...
-    'Fontcolor', p.labelfontcolor);
-
-uilabel('Parent', handles.tab_subjects,...
-    'Text', 'Gender',...
-    'Position', [10, 300,100,25],...
-    'Fontcolor', p.labelfontcolor);
-
-uilabel('Parent', handles.tab_subjects,...
-    'Text', 'Age',...
-    'Position', [250, 300,50,25],...
-    'Fontcolor', p.labelfontcolor);
-
-uilabel('Parent', handles.tab_subjects,...
-    'Text', 'Handedness',...
-    'Position', [10, 260,100,25],...
-    'Fontcolor', p.labelfontcolor);
-
-handles.edit_subjectid = uieditfield(...
-    'Parent', handles.tab_subjects,...
-    'Value', '',...
-    'Position', [100,380,290,25],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
-
-handles.edit_subjectpath = uieditfield(...
-    'Parent', handles.tab_subjects,...
-    'Value', '',...
-    'Position', [100,340,190,25],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
-
-handles.button_subjectpath = uibutton(...
-    'Parent', handles.tab_subjects,...
-    'Text', '...', ...
-    'Position', [300, 340, 80, 25],...
-    'Backgroundcolor', p.buttoncolor,...
-    'FontColor', p.buttonfontcolor,...
-    'Backgroundcolor', p.buttoncolor,...
-    'FontColor', p.buttonfontcolor);
-
-handles.dropdown_subjectgender = uidropdown(...
-    'Parent', handles.tab_subjects,...
-    'Items', {'female', 'male', 'other'},...
-    'Position', [100,300,100,25],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
-
-handles.spinner_subjectage = uispinner(...
-    'Parent', handles.tab_subjects,...
-    'Value', 20,...
-    'Limits', [1,100],...
-    'RoundFractionalValues', 'on',...
-    'Position', [290,300,100,25],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
-
-handles.check_subjectstatus = uicheckbox(...
-    'Parent', handles.tab_subjects,...
-    'Position', [250, 260, 150,25],...
-    'Text', 'Good Subject',...
-    'Value', true,...
-    'FontColor', p.textfieldfontcolor);
-
-handles.dropdown_subjecthand = uidropdown(...
-    'Parent', handles.tab_subjects,...
-    'Items', {'right', 'left', 'both'},...
-    'Position', [100,260,100,25],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
-
-handles.tree_subjectlist = uitree(...
-    'Parent', handles.tab_subjects,...
-    'Position', [10,10,280,240],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
-
-handles.button_subjectadd = uibutton(...
-    'Parent', handles.tab_subjects,...
-    'Position', [300, 225, 80, 25],...
-    'Text', 'Add',...
-    'Backgroundcolor', p.buttoncolor,...
-    'FontColor', p.buttonfontcolor);
-
-handles.button_subjectremove = uibutton(...
-    'Parent', handles.tab_subjects,...
-    'Position', [300, 195, 80, 25],...
-    'Text', 'Remove',...
-    'Backgroundcolor', p.buttoncolor,...
-    'FontColor', p.buttonfontcolor);
-
-handles.button_subjectedit = uibutton(...
-    'Parent', handles.tab_subjects,...
-    'Position', [300, 165, 80, 25],...
-    'Text', 'Edit',...
-    'Backgroundcolor', p.buttoncolor,...
-    'FontColor', p.buttonfontcolor);
-
-%*************************************************************************
-% Bin tab
-handles.tab_bins = uitab(...
-    'Parent', handles.infotabs,...
-    'Title', 'Bin Data',...
-    'BackgroundColor', p.backcolor);
-
-handles.panel_bingroup = uipanel(...
-    'Parent', handles.tab_bins,...
-    'Position', [10, 140, 380, 170],...
-    'Title', 'Bin Group Information',...
-    'BackgroundColor', p.backcolor);
-
-handles.button_bingroupadd = uibutton(...
-    'Parent', handles.panel_bingroup,...
-    'Position', [290, 115, 80, 25],...
-    'Text', 'New',...
-    'Backgroundcolor', p.buttoncolor,...
-    'FontColor', p.buttonfontcolor);
-
-handles.button_bingroupremove = uibutton(...
-    'Parent', handles.panel_bingroup,...
-    'Position', [290, 85, 80, 25],...
-    'Text', 'Remove',...
-    'Backgroundcolor', p.buttoncolor,...
-    'FontColor', p.buttonfontcolor);
-
-handles.button_bingroupedit = uibutton(...
-    'Parent', handles.panel_bingroup,...
-    'Position', [290, 55, 80, 25],...
-    'Text', 'Edit',...
-    'Backgroundcolor', p.buttoncolor,...
-    'FontColor', p.buttonfontcolor);
-
-
-handles.tree_bingrouplist = uitree(...
-    'Parent', handles.tab_bins,...
-    'Position', [10,320,280,100],...
-    'Multiselect', 'off',...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
-
-handles.list_binevents = uilistbox(...
-     'Parent', handles.tab_bins,...
-     'Position', [302, 320, 80, 75],...
-     'Items', {'click on the button above to import event markers from an existing file'},...
-     'MultiSelect', 'on');
- 
- handles.button_getevents = uibutton(...
-     'Parent', handles.tab_bins, ...
-     'Position', [302, 400, 80, 20],...
-     'Text', '-->', ...
-     'Backgroundcolor', p.buttoncolor,...
-     'FontColor', p.buttonfontcolor);
-
-
-uilabel('Parent', handles.panel_bingroup, ...
-    'Position', [10 115, 100, 25],...
-    'FontColor', p.labelfontcolor, ...
-    'Text', 'Bin Group Name');
-
-uilabel('Parent', handles.panel_bingroup, ...
-    'Position', [10 80, 100, 25],...
-    'FontColor', p.labelfontcolor, ...
-    'Text', 'Epoch Filename');
-
-
-uilabel('Parent', handles.panel_bingroup, ...
-    'Position', [10 45, 100, 25],...
-    'FontColor', p.labelfontcolor, ...
-    'Text', 'Epoch start');
-
-uilabel('Parent', handles.panel_bingroup, ...
-    'Position', [10 10, 100, 25],...
-    'FontColor', p.labelfontcolor, ...
-    'Text', 'Epoch end');
-
-handles.edit_bingroupname = uieditfield(...,
-    'Parent', handles.panel_bingroup,...
-    'Position', [120, 115, 157, 25],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
-
-
-handles.edit_epochfilename = uieditfield(...,
-    'Parent', handles.panel_bingroup,...
-    'Position', [120, 80, 157, 25],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
-
-handles.edit_epochstart = uieditfield(...,
-    'numeric',...
-    'Parent', handles.panel_bingroup,...
-    'Position', [120, 45, 75, 25],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor,...
-    'ValueDisplayFormat', '%0.3g sec.',...
-    'Value', -.1);
-
-handles.edit_epochend = uieditfield(...,
-    'numeric',...
-    'Parent', handles.panel_bingroup,...
-    'Position', [120, 10, 75, 25],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor,...
-    'ValueDisplayFormat', '%0.3g sec.',...
-    'Value', .5);
-
-handles.panel_bin = uipanel(...
-    'Parent', handles.tab_bins,...
-    'Position', [10, 5, 380, 130],...
-    'Title', 'Bin Information',...
-    'BackgroundColor', p.backcolor);
-
-
-uilabel('Parent', handles.panel_bin, ...
-    'Position', [10 80,100, 25],...
-    'FontColor', p.labelfontcolor, ...
-    'Text', 'Bin Name');
-
-uilabel('Parent', handles.panel_bin, ...
-    'Position', [10 50, 100, 25],...
-    'FontColor', p.labelfontcolor, ...
-    'Text', 'Bin Events');
-
-
-
-handles.edit_binname = uieditfield(...,
-    'Parent', handles.panel_bin,...
-    'Position', [120, 80, 157, 25],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
-
-handles.edit_eventlist = uitextarea(...,
-    'Parent', handles.panel_bin,...
-    'Position', [120, 10, 157, 55],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
-
-handles.button_addbin = uibutton(...
-    'Parent', handles.panel_bin, ...
-    'Position', [290, 80, 80, 25],...
-    'Text', 'Add', ...
-    'Backgroundcolor', p.buttoncolor,...
-    'FontColor', p.buttonfontcolor,...
-    'UserData', 0);
-
-%*************************************************************************
-%channel group tab
-handles.tab_changroup = uitab(...
-    'Parent', handles.infotabs,...
-    'Title', 'Channel Group',...
+handles.panel_info = uipanel(...
+    'Parent', handles.figure,...
+    'Title','Study Information', ...
     'BackgroundColor', p.backcolor,...
-    'Tag', 'changroup');
+    'Position',[10,H-490, 400,230]);
 
-handles.axis_chanpicker = uiaxes(...
-    'Parent', handles.tab_changroup,...
-    'Position', [0,0,270,270],...
-    'BackgroundColor', p.backcolor,...
-    'Color', p.backcolor,...
-    'XColor', p.backcolor,...
-    'YColor', p.backcolor,...
-    'XTick', [], 'YTick', []);
-handles.axis_chanpicker.Toolbar.Visible = 'off';
-
-handles.list_chanpicker = uilistbox(...
-    'Parent', handles.tab_changroup,...
-    'Position', [300, 5, 85, 250],...
-    'Multiselect', 'on',...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
-
-handles.tree_changroup = uitree(...
-    'Parent', handles.tab_changroup,...
-    'Position', [10,280,280,120],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
-
-uilabel('Parent', handles.tab_changroup,...
-    'Position', [5,405, 100,20],...
-    'Text', 'Channel Groups',...
-    'Fontcolor', p.labelfontcolor);
-
-handles.button_addchangroup = uibutton(...
-    'Parent', handles.tab_changroup,...
-    'Position', [300,375,90,25],...
-    'Text', 'Create',...
-    'Backgroundcolor', p.buttoncolor,...
-    'FontColor', p.buttonfontcolor);
-
-handles.button_removechangroup = uibutton(...
-    'Parent', handles.tab_changroup,...
-    'Position', [300,345,90,25],...
-    'Text', 'Remove ',...
-    'Backgroundcolor', p.buttoncolor,...
-    'FontColor', p.buttonfontcolor);
+handles.label_info = uilabel(...
+    'Parent', handles.panel_info,...
+    'Position', [20,20,360,190],...
+    'Text','test',...
+    'FontSize', 12,...
+    'FontName', p.monospaced,...
+    'WordWrap','on',...
+    'VerticalAlignment','top',...
+    'Interpreter','latex');
 
 msg.Message = 'Creating menus';
 drawnow
@@ -446,6 +90,7 @@ drawnow
 %Study menu
 handles.menu_study = uimenu('Parent', handles.figure,'Label', '&Study', 'Accelerator', 's');
 handles.menu_new = uimenu(handles.menu_study, 'Label', '&New Study', 'Accelerator', 'n');
+handles.menu_edit = uimenu(handles.menu_study, 'Label', '&Edit Study', 'Accelerator', 'e');
 handles.menu_refresh = uimenu(handles.menu_study, 'Label', '&Refresh Study List', 'Accelerator', 'r');
 handles.menu_deletestudy = uimenu(handles.menu_study, 'Label', 'Delete Study', 'Separator', 'on');
 handles.menu_archivestudy = uimenu(handles.menu_study, 'Label', 'Archive Study');
@@ -492,17 +137,12 @@ handles.menu_evtsummary = uimenu(handles.menu_utils, 'Label', 'Event Summary');
 handles.menu_trimraw = uimenu(handles.menu_utils, 'Label', 'Trim Continuous (CNT) EEG File');
 
 
-%Context menus
-handles.cm_epochlist = uicontextmenu(handles.figure);
-
-uimenu(handles.cm_epochlist, 'Text', 'Edit', 'MenuSelectedFcn', {@callback_editbingroup, handles});
-uimenu(handles.cm_epochlist, 'Text', 'Delete', 'MenuSelectedFcn', {@callback_removebingroup, handles});
-
 
 %assign all the callbacks
 set(handles.dropdown_study, 'ValueChangedFcn', {@callback_loadstudy, handles})
 
-set(handles.menu_new, 'Callback', {@callback_newstudy, handles});
+set(handles.menu_new, 'Callback', {@callback_newstudy, handles, false});
+set(handles.menu_edit, 'Callback', {@callback_newstudy, handles, true});
 set(handles.menu_refresh, 'Callback', {@callback_refresh, handles});
 set(handles.menu_exit, 'Callback', {@callback_exit, handles});
 set(handles.menu_script, 'Callback', {@callback_runscript, handles});
@@ -529,27 +169,6 @@ set(handles.menu_icacopy, 'Callback', {@callback_copypastecomponents, handles});
 set(handles.menu_icapaste, 'Callback', {@callback_copypastecomponents, handles});
 
 set(handles.menu_convert, 'Callback', {@callback_convert,handles});
-
-set(handles.infotabs, 'SelectionChangedFcn', {@callback_checkforchaninfo, handles});
-set(handles.button_subjectedit, 'ButtonPushedFcn', {@callback_editsubject,  handles});
-set(handles.button_subjectadd, 'ButtonPushedFcn', {@callback_addsubject, handles});
-set(handles.button_subjectremove, 'ButtonPushedFcn', {@callback_removesubject, handles});
-set(handles.button_subjectpath, 'ButtonPushedFcn', {@callback_getsubjectpath, handles});
-set(handles.button_addchangroup, 'ButtonPushedFcn', {@callback_createchangroup, handles});
-set(handles.button_removechangroup, 'ButtonPushedFcn', {@callback_removechangroup, handles});
-set(handles.button_getevents, 'ButtonPushedFcn', {@callback_importevents, handles});
-set(handles.button_bingroupadd, 'ButtonPushedFcn', {@callback_addbingroup, handles});
-set(handles.button_addbin, 'ButtonPushedFcn', {@callback_addbintogroup, handles});
-set(handles.button_bingroupremove, 'ButtonPushedFcn', {@callback_removebingroup, handles});
-set(handles.button_bingroupedit, 'ButtonPushedFcn', {@callback_editbingroup, handles});
-
-set(handles.tree_changroup, 'SelectionChangedFcn', {@callback_selectchangroup, handles});
-
-set(handles.list_chanpicker, 'ValueChangedFcn', {@callback_drawchannelpositions, handles});
-set(handles.list_binevents, 'ValueChangedFcn', {@callback_addtoeventlist, handles});
-
-handles.edit_studydescr.ValueChangedFcn = {@callback_editstudydescr, handles};
-
 
 msg.Message = 'Loading studies';
 fprintf('...reading STUDY information\n');
@@ -679,283 +298,6 @@ populate_studylist(h)
 callback_loadstudy(0,0,h)
 h.figure.Pointer = 'arrow';
 
-%*************************************************************************
-%edit the description of the study in real time
-function callback_editstudydescr(hObject, event, h)
-
-study = getstudy(h);
-study.description = h.edit_studydescr.Value;
-study = study_SaveStudy(study);
-setstudy(study, h);
-%*************************************************************************
-%get the events from a file and put them in a dorp down list box
-function callback_importevents(hObject, eventdata, h)
-
-study = getstudy(h);
-f = getselectedfiles(study, h);
-if isempty(f)
-    return
-end
-
-%use the file from the first participant
-%EEG = pop_loadset(f{1});
-EEG = wwu_LoadEEGFile(f{1});
-
-%collect all the events into a singlr cell vector
-evnts = {EEG.event.type};
-%make sure they are string variables
-evnts = cellfun(@num2str, evnts, 'UniformOutput', false);
-
-unique_events = unique(evnts);
-h.list_binevents.Items = unique_events;
-
-%**************************************************************************
-function callback_addtoeventlist(hObject, eventdata, h)
-
-i = hObject.Value;
-if isempty(i); return; end
-new_evnt = join(i);
-
-cur_evnt = h.edit_eventlist.Value;
-cur_evnt = join(cur_evnt');
-all_evnt = join(cat(2, cur_evnt, new_evnt));
-h.edit_eventlist.Value = all_evnt;
-
-%**************************************************************************
-function callback_addbingroup(hObject, eventdata, h)
-
-
-study = getstudy(h);
-
-epochgroup_name = h.edit_bingroupname.Value;
-epochgroup_filename  = h.edit_epochfilename.Value;
-epoch_start = h.edit_epochstart.Value;
-epoch_end = h.edit_epochend.Value;
-
-mode = hObject.UserData;
-
-if isempty(epochgroup_name)
-    uialert(h.figure, 'Please enter a valid bin group name.', 'Error');
-    return
-else
-    eg.name = epochgroup_name;
-end
-
-if isempty(epochgroup_filename)
-    uialert(h.figure, 'Please enter a valid bin group file name.', 'Error');
-    return
-else
-    eg.filename = epochgroup_filename;
-end
-
-    
-if epoch_start >= epoch_end
-    uialert(h.figure, 'the epoch start cannot be greater than the epoch end.', 'Error');
-else
-    eg.interval = [epoch_start, epoch_end];
-end
-
-
-if mode == 1 %this is an update and not a new bin group
-   n = h.tree_bingrouplist.SelectedNodes;
-   cnum = n.NodeData{1};
-   eg.bins = study.bingroup(cnum).bins; %save the bin information
-elseif ~isfield(study, 'bingroup')
-    cnum = 1;   
-    eg.bins = [];
-else
-    cnum = length(study.bingroup) + 1;
-    eg.bins = [];
-end
-
-study.bingroup(cnum)  = eg;
-
-study = study_SaveStudy(study);
-setstudy(study, h);
-populate_bintree(study, h);
-
-if mode ==1
-    callback_clearcondition(hObject, eventdata, h)
-end
-
-%*************************************************************************
-function callback_removebingroup(hObject, eventdata, h)
-
-n = h.tree_bingrouplist.SelectedNodes;
-study = getstudy(h);
-
-if hObject.UserData ==1
-    callback_clearcondition(hObject, eventdata, h)
-    return
-end
-
-
-if isempty(n)
-    uialert(h.figure, 'Try selecting something to delete first.', 'Epoch delete');
-    return
-end
-
-enum = n.NodeData{1};
-cnum = n.NodeData{2};
-
-if cnum==0 % this is an epoch group
-    response = uiconfirm(h.figure, 'Are you sure you want to delete this Bin Group and all its associated bin information?', 'Delete Bin Group');
-    if contains(response, 'OK')
-        study.bingroup(enum) = [];
-        enum = 0;
-    end
-else
-    response = uiconfirm(h.figure, 'Are you sure you want to delete this Bin?', 'Delete Bin');
-    if contains(response, 'OK')
-        study.bingroup(enum).bins(cnum) = [];
-        cnum = length(study.bingroup(enum).bins);
-    end
-end
-
-study = study_SaveStudy(study);
-setstudy(study, h);
-populate_bintree(study, h, [enum, cnum]);    
-
-%*************************************************************************
-%callback function for allowing editing of an existing condition
-function callback_editbingroup(hObject, eventdata, h)
-
-study = getstudy(h);
-n = h.tree_bingrouplist.SelectedNodes;
-if isempty(n)
-    uialert(h.figure, 'You must select a Bin Group to edit.', 'Edit Bin Group');
-    return
-end
-
-gnum = n.NodeData{1};
-cnum = n.NodeData{2};
-
-%if cnum==0 %the user is editing the epoch group name
-    h.edit_bingroupname.Value = study.bingroup(gnum).name;
-    h.edit_epochfilename.Value = study.bingroup(gnum).filename;
-    h.edit_epochstart.Value = study.bingroup(gnum).interval(1);
-    h.edit_epochend.Value = study.bingroup(gnum).interval(2);
-
-    %set things in an edit mode
-    h.button_bingroupadd.Text = 'Update';
-    h.button_bingroupadd.UserData = 1; %this puts the button in edit mode
-    h.button_bingroupremove.Text = 'Cancel';
-    h.button_bingroupremove.UserData = 1;
-    
-    h.tree_bingrouplist.Enable = 'off';
-%end
-%callback for handling the clearing of the information in the condition ui
-%boxes and for cancelling the editing mode
-function callback_clearcondition(hObject, eventdata, h)
-
-mode = hObject.UserData;
-
-if mode==1   
-    %reset things out of edit mode
-    h.button_bingroupadd.Text = 'New';
-    h.button_bingroupadd.UserData = 0; %this puts the button in edit mode
-    h.button_bingroupremove.Text = 'Remove';
-    h.button_bingroupremove.UserData = 0;
-    h.tree_bingrouplist.Enable = 'on';
-end
-
-%*************************************************************************
-%adds a new condition to an Epoch group or adds edited information to an
-%existing group.
-function callback_addbintogroup(hObject,eventdata, h)
-
-study = getstudy(h);
-
-
-n = h.tree_bingrouplist.SelectedNodes;
-if isempty(n)
-    uialert(h.figure,'Please create or select a Bin Group first.', 'Add Condition');
-    return
-end
-
-ndata = n.NodeData;
-gnum = ndata{1}; cnum = ndata{2};
-
-if ~isempty(study.bingroup(gnum).bins)
-    new_cnum = length(study.bingroup(gnum).bins) + 1;
-else
-    new_cnum = 1;
-end
-
-%get information from the input boxes
-p.name = h.edit_binname.Value;
-p.events = h.edit_eventlist.Value;
-
-
-%do some checking
-if strcmp(p.name, '')
-    uialert(h.figure,'Please enter a valid Bin Name', 'Add Bin');
-    return
-end
-
-if isempty(p.events)
-    uialert(h.figure,'Please enter some event markers', 'Add Condition');
-    return
-end
-
-if new_cnum==1
-    study.bingroup(gnum).bins = p;
-else
-    study.bingroup(gnum).bins(new_cnum) = p;
-end
-
-
-study = study_SaveStudy(study);
-setstudy(study, h);
-populate_bintree(study, h, [gnum, new_cnum]);
-
-%***************************************************************************
-%this fills the epoch tree information list with the current epoch
-%information for the loaded study
-function populate_bintree(study, h, select)
-
-if nargin < 3
-    select = [0,0];
-end
-%clear existing nodes
-n = h.tree_bingrouplist.Children;
-n.delete;
-
-if ~isfield(study, 'bingroup')
-    return
-end
-
-node_to_select = [];
-
-for ii = 1:length(study.bingroup)
-    n = uitreenode('Parent', h.tree_bingrouplist,'Text', study.bingroup(ii).name,'NodeData', {ii, 0}, 'ContextMenu',h.cm_epochlist);
-    uitreenode('Parent', n, 'Text', sprintf('start:\t%0.3g', study.bingroup(ii).interval(1)),...
-                'NodeData', {ii, 0}, 'ContextMenu',h.cm_epochlist);
-    uitreenode('Parent', n, 'Text', sprintf('end:\t\t%0.3g', study.bingroup(ii).interval(2)),...
-                'NodeData', {ii, 0}, 'ContextMenu',h.cm_epochlist);
-    n2 = uitreenode('Parent', n, 'Text', 'bins',...
-                'NodeData', {ii, 0}, 'ContextMenu',h.cm_epochlist);
-                    
-    if isfield(study.bingroup(ii), 'bins')
-        for jj = 1:length(study.bingroup(ii).bins)      
-            n3 = uitreenode('Parent', n2, 'Text', sprintf('%i:\t%s',jj, study.bingroup(ii).bins(jj).name),...
-                'NodeData', {ii, jj}, 'ContextMenu',h.cm_epochlist);
-            uitreenode('Parent', n3, 'Text', sprintf('bin events:\t%s ', study.bingroup(ii).bins(jj).events{:}),...
-                'NodeData', {ii, jj}, 'ContextMenu',h.cm_epochlist);
-            if (ii==select(1)) && (jj==select(2))
-                node_to_select = n3;
-            end
-                      
-        end
-    end
-  
-end
-if ~isempty(node_to_select)
-    expand(node_to_select.Parent);
-    h.tree_bingrouplist.SelectedNodes = node_to_select;
-end
-
-setstudy(study, h);
 %**************************************************************************
 %exports files to the eeglab set format
 function callback_exportfiles(hObject, eventdata, h, format)
@@ -1023,7 +365,11 @@ end
 %populates the study tree with all the studies found in the "STUDIES"
 %folder
 function populate_studylist(h, selected_study)
-
+%populate_study(handles, selectedStudy) populates the drop down study list
+%with the names of the studies currently in the STUDIES folder.
+%SelectedStudy is the name of the study to select and load once the list is
+%filled.  If selectedStudy is not provided, the first study is selected by
+%default.
 if nargin < 2
     selected_study = [];
 end
@@ -1081,95 +427,26 @@ end
 
 populate_studyinfo(study, h);
 populate_filelist(study, h);
-populate_bintree(study, h);
 h.figure.Pointer = 'arrow';
 %*************************************************************************
 %puts all the study information into the display and edit controls on the
 %main screen
 function populate_studyinfo(study, h)
 
-%fprintf('populating study information...\n')
-h.edit_studyname.Value = study.name;
-h.edit_studypath.Value = study.path;
 if isempty(study.description)
-    h.edit_studydescr.Value = '';
+    descr = {''};
 else
-    h.edit_studydescr.Value = study.description;
+    descr = study.description;
 end
-
-% %clear current history
-% n = h.tree_studyhistory.Children;
-% n.delete;
- n = h.tree_subjectlist.Children;
- n.delete;
-% 
-% try
-% %load the new history
-% fprintf('adding study history...\n')
-% if ~isempty(study.history)
-%     for hh = 1:length(study.history)
-%         n = uitreenode('Parent', h.tree_studyhistory,...
-%             'Text', study.history(hh).event);
-%         uitreenode('Parent', n, ...
-%             'Text', sprintf('%s:\t%s', 'Start', datetime(study.history(hh).start)));
-%         uitreenode('Parent', n, ...
-%             'Text', sprintf('%s:\t%s', 'Finish', datetime(study.history(hh).finish)));
-%         uitreenode('Parent', n, ...
-%             'Text', sprintf('Function:\t%s', study.history(hh).function));
-%         p = uitreenode('Parent', n, 'Text', 'Parameters');
-%         for pp = 1:length(study.history(hh).paramstring)
-%        
-%             if ischar(study.history(hh).paramstring)
-%                 paramStr = study.history(hh).paramstring;
-%             else
-%                 paramStr = study.history(hh).paramstring{pp};
-%             end
-%             paramStr = num2str(paramStr);
-%             uitreenode('Parent', p, ...
-%                     'Text', paramStr);
-%         end
-%         uitreenode('Parent', n, ...
-%             'Text', sprintf('ID:\t%s',study.history(hh).fileID));
-%     end
-% end
-% catch ME
-% 
-%     fprintf('Some problem with the history display\n')
-%     study.history(hh);
-%     rethrow(ME)
-% end
-
-
-%load the subjects into the subject tree
-if study.nsubjects > 0
-
-    badSubjStyle = uistyle('FontColor', 'r');
-
-    for ss = 1:length(study.subject)
-        n = uitreenode('Parent', h.tree_subjectlist,...
-            'Text', sprintf('Subject: \t%s', study.subject(ss).ID),...
-            'NodeData', ss);
-        if strcmp(study.subject(ss).status, 'bad')
-            addStyle(h.tree_subjectlist, badSubjStyle, 'node', n);
-        end
-        uitreenode('Parent', n,...
-            'Text', sprintf('Data path:\t\t%s', study.subject(ss).path),...
-            'NodeData', ss);
-        uitreenode('Parent', n,...
-            'Text', sprintf('Gender:\t\t\t%s', study.subject(ss).gender),...
-            'NodeData', ss);
-        uitreenode('Parent', n,...
-            'Text', sprintf('Handedness:\t\t%s', study.subject(ss).hand),...
-            'NodeData', ss);
-        uitreenode('Parent', n,...
-            'Text', sprintf('Age:\t\t\t\t%s', study.subject(ss).age),...
-            'NodeData', ss);
-        uitreenode('Parent', n,...
-            'Text', sprintf('Status:\t\t\t%s', study.subject(ss).status),...
-            'NodeData', ss);
-    end
+msg{1} = sprintf('STUDY:\t\t\t%s', study.name);
+msg{2} = sprintf('PATH:\t\t\t%s', study.path);
+msg{3} = sprintf('# of SUBJ:\t\t%i', study.nsubjects);
+msg{4} = 'DESCRIPTION';
+for ii = 1:length(descr)
+    msg{4+ii} = sprintf('\t%s', descr{ii});
 end
-populate_ChanGroupDisplay(study, h)
+h.label_info.Text = msg;
+
 
 %*************************************************************************
 %load all the information into the file tree
@@ -1261,383 +538,35 @@ else
     end
 end
 
-%**************************************************************************
-%refresh all the information on the channel group tab
-%**************************************************************************
-function populate_ChanGroupDisplay(study, h)
-
-n = h.tree_changroup.Children;
-n.delete;
-
-if ~isfield(study, 'chanlocs')
-    return
-end
-
-h.list_chanpicker.Items = {study.chanlocs.labels};
-h.list_chanpicker.ItemsData = 1:length(study.chanlocs);
-callback_drawchannelpositions(0,0,h)
-
-%delete existing channel groups in the display
-
-
-%add the ones from thh current study
-
-if isfield(study,'chgroups')
-    for ii = 1:length(study.chgroups)
-        n = uitreenode('Parent', h.tree_changroup,...
-            'Text', study.chgroups(ii).name, 'NodeData', ii);
-        for jj = 1:length(study.chgroups(ii).chans)
-            uitreenode('Parent', n, 'Text', study.chgroups(ii).chanlocs(jj).labels,...
-                'NodeData', ii);
-        end
-    end
-end
-
 %*************************************************************************
-%Offer the oppportunity to associate channel informaiton to this study in
-%case it is not already attached.
-%*************************************************************************
-function callback_checkforchaninfo(hObject, eventdata,h)
+function callback_newstudy(hObject, eventdata, h, editMode)
 
-if strcmp('changroup', eventdata.NewValue.Tag)
+
+    
     study = getstudy(h);
-    if ~isfield(study, 'chanlocs')
-        msg = 'There are currently no channel locations associated with this study.';
-        msg = sprintf('%s Would you like to add information from a channel file?\n\n', msg);
-        msg = sprintf('%s All files in your study must have the same channel names and order to avoid problems later', msg);
-        
-        selection = uiconfirm(h.figure, msg, 'Add channel locations',...
-            'Options', {'Add Locations', 'Cancel'});
-        
-        if strcmp(selection, 'Add Locations')
-            
-            [loc_file, loc_path] = uigetfile('*.*', 'Select channel locations file');
-            if ~isempty(loc_file)
-                chanlocs = readlocs(fullfile(loc_path,loc_file));
-                if ~isempty(chanlocs)
-                    study.chanlocs = chanlocs;
-                    setstudy(study, h);
-                    study_SaveStudy(study);
-                end
-            end
-        end
-        
-        
-    end
-end
-
-%*************************************************************************
-%draw the display that shows the channel locations on a 2-d projection
-%**************************************************************************
-function callback_drawchannelpositions(hobject, eventdata, h)
-
-
-study = getstudy(h);
-
-selchans = h.list_chanpicker.Value;
-
-wwu_PlotChannelLocations(study.chanlocs,...
-    'Elec_Color', h.p.buttoncolor,...
-    'Elec_Selcolor',[.2,.9,.2],...
-    'Elec_Size', 5,...
-    'Elec_SelSize', 10,...
-    'Labels', 'name',...
-    'Subset', selchans,...
-    'AxisHandle', h.axis_chanpicker);
-
-%*************************************************************************
-%this is the callback for the Create button on the channel group tab
-%*************************************************************************
-function callback_createchangroup(hObject, eventdata,h)
-
-study = getstudy(h);
-
-if ~isfield(study, 'chgroups')
-    default_groupname = 'Group 1';
-    gnum = 1;
-else
-    default_groupname = sprintf('Group %i', sum(contains({study.chgroups.name},'Group'))+1);
-    gnum = length(study.chgroups) + 1;
-end
-
-%get a name for this group
-prompt = {'Enter a name for the channel group'};
-dlgtitle = 'New Channel Group';
-dims = [1 35];
-definput = {default_groupname};
-answer = inputdlg(prompt,dlgtitle,dims,definput);
-
-%now make the group
-
-study.chgroups(gnum).name = answer{:};
-study.chgroups(gnum).chans = h.list_chanpicker.Value;
-study.chgroups(gnum).chanlocs = study.chanlocs(study.chgroups(gnum).chans);
-
-setstudy(study,h);
-study = study_SaveStudy(study);
-populate_ChanGroupDisplay(study, h)
-
-%*************************************************************************
-function callback_removechangroup(hObject, eventdata, h)
-
-study = getstudy(h);
-n = h.tree_changroup.SelectedNodes;
-
-if isempty(n)
-    return
-end
-
-msg = sprintf('Are you sure you want to remove channgel group %s', study.chgroups(n.NodeData).name);
-
-if strcmp(uiconfirm(h.figure, msg, 'Remove Channel Group'), 'OK')
+    currentStudy = study.name;
+    oldStudies = h.dropdown_study.Items;
     
-    study.chgroups(n.NodeData) = [];
-    
-    setstudy(study, h)
-    study_SaveStudy(study);
-    populate_ChanGroupDisplay(study, h)
-    
-end
-
-%**************************************************************************
-function callback_selectchangroup(hObject, eventdata, h)
-%draw the 2D channel locations with those channels in the selected channel 
-%highlighted
-
-study = getstudy(h);
-n = h.tree_changroup.SelectedNodes;
-
-if isempty(n)
-    return
-end
-h.list_chanpicker.Value = study.chgroups(n.NodeData).chans;
-callback_drawchannelpositions(0,0,h)
-
-
-%*********************************************************************
-function callback_editsubject(hObject, eventdata,h)
-
-study = getstudy(h);
-
-n = h.tree_subjectlist.SelectedNodes;
-if isempty(n)
-    uialert(h.figure, 'Please select a subject to edit', 'Subject Edit');
-    return
-end
-
-sn = n.NodeData;
-
-%place the values from the selected subject in teh appropriate controls
-h.edit_subjectid.Value = study.subject(sn).ID;
-h.edit_subjectpath.Value = study.subject(sn).path;
-h.dropdown_subjectgender.Value = study.subject(sn).gender;
-h.spinner_subjectage.Value = str2double(study.subject(sn).age);
-h.dropdown_subjecthand.Value = study.subject(sn).hand;
-h.check_subjectstatus.Value = strcmp(study.subject(sn).status, 'good');
-
-
-%change the status of the controls
-h.button_subjectadd.Text = 'Update';
-h.button_subjectadd.UserData = sn;
-
-h.button_subjectremove.Text = 'Cancel';
-h.button_subjectremove.UserData = sn;
-
-hObject.Enable = 'off';
-
-%**************************************************************************
-%add a subject to the current study
-function callback_addsubject(hObject, eventdata, h)
-
-sn = hObject.UserData;
-study = getstudy(h);
-
-%collect all the data into a subject structure
-subject.ID = h.edit_subjectid.Value;
-subject.path = h.edit_subjectpath.Value;
-subject.gender = h.dropdown_subjectgender.Value;
-subject.age = num2str(h.spinner_subjectage.Value);
-subject.hand = h.dropdown_subjecthand.Value;
-if h.check_subjectstatus.Value==1
-    subject.status =  'good';
-else
-    subject.status = 'bad';
-end
-
-%make sure all the necessary information is included
-if isempty(subject.ID) || isempty(subject.path)
-    uialert(h.figure, 'Please include a valid Subject ID and Folder.', 'New Subject');
-    return
-end
-
-%make sure the path actually exists.
-fullpath = fullfile(study_GetEEGPath, study.path, subject.path);
-if ~isfolder(fullpath)
-    uialert(h.figure, 'The subject folder could not be found. The subject folder must reside in the study folder.', 'New Subject');
-    return
-end
-
-if ~isempty(sn)   %this is the edit mode
-    study.subject(sn) = subject;
-    h.button_subjectadd.Text = 'Add';
-    h.button_subjectadd.UserData = [];
-    h.button_subjectremove.Text = 'Remove';
-    h.button_subjectremove.UserData = [];
-    h.button_subjectedit.Enable = 'on';
-    
-else
-    if ~isfield(study, 'subject') 
-        study.subject = subject;
+    if editMode
+        fh = study_EditStudy(study);
+        waitfor(fh);
+        populate_studylist(h, currentStudy);
     else
-        if isempty(study.subject)
-            study.subject = subject;
+        fh = study_EditStudy();
+        waitfor(fh);
+        populate_studylist(h);
+        
+        newStudies = h.dropdown_study.Items;
+    
+        c = setdiff(newStudies, oldStudies);
+    
+        if isempty(c)
+            populate_studylist(h, currentStudy)
         else
-            study.subject(end+1) = subject;
+            populate_studylist(h, c{1});
         end
     end
-    study.nsubjects = study.nsubjects + 1;
-end
 
-%reset all the values to their default state
-set_subjectdefaults(h);
-
-%save the study within the figure
-setstudy(study, h);
-
-%save the study on the disk
-study_SaveStudy(study);
-
-%refresh the node tree
-populate_studyinfo(study, h);
-populate_filelist(study, h)
-
-%*************************************************************************
-function callback_removesubject(hObject, eventdata, h)
-
-sn = hObject.UserData;
-study = getstudy(h);
-
-if ~isempty(sn)   %this is the cancel mode
-    
-    h.button_subjectadd.Text = 'Add';
-    h.button_subjectadd.UserData = [];
-    h.button_subjectremove.Text = 'Remove';
-    h.button_subjectremove.UserData = [];
-    h.button_subjectedit.Enable = 'on';
-    
-else
-    n = h.tree_subjectlist.SelectedNodes;
-    if isempty(n)
-        uialert(h.figure, 'Please select a subject to edit', 'Subject Edit');
-        return
-    end
-    
-    sn = n.NodeData;
-    msgstr = sprintf('Are you sure you want to remove subject %s from this study?',...
-        study.subject(sn).ID);
-    selection = uiconfirm(h.figure, msgstr, 'Remove Subject',...
-        'Options', {'Remove', 'Cancel'},...
-        'DefaultOption', 2,...
-        'CancelOption', 2);
-    if strcmp(selection, 'Remove')
-        study.subject(sn) = [];
-        study.nsubjects = study.nsubjects -1;
-        
-        %save the study within the figure
-        setstudy(study, h);
-        
-        %save the study on the disk
-        study_SaveStudy(study);
-        
-        %refresh the node tree
-        populate_studyinfo(study, h);
-    end
-    
-    
-end
-set_subjectdefaults(h);
-
-%*************************************************************************
-function callback_getsubjectpath(hObject, eventdata, h)
-
-eeg_path = study_GetEEGPath();
-
-
-study = getstudy(h);
-
-%build the path for this study
-fullstudypath = wwu_buildpath(eeg_path, study.path);
-
-%get the user path input
-path = uigetdir(fullstudypath);
-
-%make sure they made a choice and did not cancel
-if isempty(path); return; end
-
-%make sure the folder is in the study folder
-i = strfind(path, fullstudypath);
-if ~isempty(i)
-    %get just the relative portion
-    path = path(i+length(fullstudypath):length(path));
-else
-    uialert(h.figure, sprintf('Not a valid folder.  Subject data folder must be located within the study folder %s',...
-        fullstudypath), 'try it again...','Icon', 'info');
-    return
-end
-
-%assign it
-h.edit_subjectpath.Value = path;
-
-%automatically create a likely subject ID if the field is blank
-if isempty(h.edit_subjectid.Value)
-    [~, autoID, ~] = fileparts(path);
-    h.edit_subjectid.Value = autoID;
-end
-
-
-%*************************************************************************
-%these are the defaults for adding a new subject
-%*************************************************************************
-function set_subjectdefaults(h)
-    h.edit_subjectid.Value = '';
-    h.edit_subjectpath.Value = '';
-    h.dropdown_subjectgender.Value = 'female';
-    h.dropdown_subjecthand.Value = 'right';
-    h.spinner_subjectage.Value = 20;
-    h.check_subjectstatus.Value = 1;
-
-%*************************************************************************
-function callback_newstudy(hObject, eventdata, h)
-
-    EEGPath = study_GetEEGPath;
-
-    %initialize a new study structure
-    study.filename = [];
-    study.name = [];
-    study.description = [];
-    study.path = [];
-    study.nfactors = 0;
-    study.nsubjects = 0;
-    study.nconditions = 0;
-    study.history = [];
-    study.subject = [];
-
-    %get the path indicating the location of subject folders
-    selpath = uigetdir(EEGPath, 'Select parent folder for subject data');
-    if selpath == 0
-        return
-    end
-    i = strfind(selpath, EEGPath);
-    selpath = selpath(i+length(EEGPath):length(selpath));    
-    study.path = selpath;
-    
-    %save the new study
-    [study, saved_flag] = study_SaveStudy(study, 'saveas', 1);
-   
-    if ~saved_flag
-        populate_studylist(h, study.name)
-    end
-    
 %**************************************************************************
 %plot the data from different file formats
 function callback_trialplot(hObject, eventdata, h)
@@ -1790,7 +719,7 @@ function callback_filter(hObject, eventdata, h)
 study = getstudy(h);
 fnames = getselectedfiles(study, h);
 
-if isempty(fnames); return; end;
+if isempty(fnames); return; end
 
 fh = study_Filter_GUI(study, fnames);
 waitfor(fh);
@@ -1843,8 +772,9 @@ setstudy(study,h);
 close(pb);
 
 %update the list of files now
-populate_filelist(study, h)
-populate_studyinfo(study,h)
+callback_refresh(hObject, eventdata, h)
+%populate_filelist(study, h)
+%populate_studyinfo(study,h)
 
 %*************************************************************************
 function callback_cleanline(hObject, eventdata, h)
@@ -1888,8 +818,9 @@ setstudy(study,h);
 close(pb);
 
 %update the list of files now
-populate_filelist(study, h)
-populate_studyinfo(study, h)
+callback_refresh(hObject, eventdata, h)
+%populate_filelist(study, h)
+%populate_studyinfo(study, h)
 %**************************************************************************
 %extract epochs and save files to the disk based on the epoch group
 %information in the study
@@ -1903,12 +834,14 @@ if ~isfield(study, 'bingroup')
     return
 end
 
+%******************************
+%replace this with the selection from a bin group popup.
+%******************************
 n = h.tree_bingrouplist.SelectedNodes;
 if isempty(n)
      uialert(h.figure, 'Please select an Epoch Group first.', 'Create Epoch files');   
      return
 end
-
 gnum = n.NodeData{1};
 cnum = n.NodeData{2};
 
@@ -2153,7 +1086,7 @@ set(h.figure, 'UserData', study);
 %get the study from the UserData of the figure
 function study = getstudy(h)
 study = get(h.figure, 'UserData');
-if isempty(study);
+if isempty(study)
     msgbox('Error.  No study information is available');
     return
 end

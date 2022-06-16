@@ -1,4 +1,4 @@
-function study = study_EditStudy(study)
+function fh = study_EditStudy(study)
 
 newStudy = false;
 if nargin < 1 || isempty(study)
@@ -7,6 +7,7 @@ end
 
 h = build_GUI;
 h = assign_callbacks(h);
+fh = h.figure;
 
 if newStudy
     study = callback_newStudy([],[],h);
@@ -18,6 +19,7 @@ if newStudy
 end
 setstudy(h,study);
 populate_studyinfo(study, h);
+
 
 
 %**************************************************************************
@@ -54,62 +56,69 @@ choice = uiconfirm(h.figure, msg,'New Study',...
 
 %if they choose to proceed present them with a dialog box to select the
 %path of the data
-if strcmp(choice, 'Proceed')
-    h.figure.Visible = false;
-    studyFolder = uigetdir(EEGPath, 'Select data folder');
-    h.figure.Visible = true;
-    if studyFolder == 0
-        study = [];
-        return
-    end
-
-    %extract just the folder portion so the path is relative ot the EEGPath
-    i = strfind(studyFolder, EEGPath);
-    studyFolder = studyFolder(i+length(EEGPath):length(studyFolder));    
-    study.path = studyFolder;
-    
-    %now get the channel locations file for the study
-    msg = 'Select the file that contains channel location information.';
-    msg = [msg, 'The same positions will be assigned to each file during conversion'];
-    selection = uiconfirm(h.figure, msg, 'Add channel locations',...
-            'Options', {'Add Locations', 'Cancel'}, 'Icon', 'info');
-        
-    if strcmp(selection, 'Add Locations')
-        h.figure.Visible = false;
-        [loc_file, loc_path] = uigetfile('*.*', 'Select channel locations file');
-        h.figure.Visible = true;
-        if ~isempty(loc_file)
-            %use the eeglab readlocs function to get the position
-            %information
-            chanlocs = readlocs(fullfile(loc_path,loc_file));
-            if ~isempty(chanlocs)
-                study.chanlocs = chanlocs;
-            end
-        end
-    else
-        study = [];
-        return
-    end
-
-    %now get the channel locations file for the study
-    msg = 'Would you like to try and autodetect the subject folders for this experiment?';
-    msg = [msg, 'If you select NO you can add subjets manually using the Subjects tab.'];
-    selection = uiconfirm(h.figure, msg, 'Add channel locations',...
-            'Options', {'Yes', 'No'}, 'Icon', 'question');
-        
-    if strcmp(selection, 'Yes')
-        study = autoAssignSubjects(study);
-    end
-    
-    setstudy(h, study);
-    %save the study
-    [study, notsaved_flag] = study_SaveStudy(study, 'saveas', true);
-    if notsaved_flag
-        study = [];
-        return
-    end
-
+if strcmp(choice, 'Cancel')
+    study = [];
+    return
 end
+h.figure.Visible = false;
+studyFolder = uigetdir(EEGPath, 'Select data folder');
+h.figure.Visible = true;
+if studyFolder == 0
+    study = [];
+    return
+end
+
+%extract just the folder portion so the path is relative ot the EEGPath
+i = strfind(studyFolder, EEGPath);
+studyFolder = studyFolder(i+length(EEGPath):length(studyFolder));
+study.path = studyFolder;
+
+%now get the channel locations file for the study
+msg = 'Select the file that contains channel location information.';
+msg = [msg, 'The same positions will be assigned to each file during conversion'];
+selection = uiconfirm(h.figure, msg, 'Add channel locations',...
+    'Options', {'Add Locations', 'Cancel'}, 'Icon', 'info');
+
+if strcmp(selection, 'Add Locations')
+    h.figure.Visible = false;
+    [loc_file, loc_path] = uigetfile('*.*', 'Select channel locations file');
+    h.figure.Visible = true;
+    if ~isempty(loc_file)
+        %use the eeglab readlocs function to get the position
+        %information
+        chanlocs = readlocs(fullfile(loc_path,loc_file));
+        if ~isempty(chanlocs)
+            study.chanlocs = chanlocs;
+        end
+    end
+else
+    study = [];
+    return
+end
+
+%now get the channel locations file for the study
+msg = 'Would you like to try and autodetect the subject folders for this experiment?';
+msg = [msg, 'If you select NO you can add subjets manually using the Subjects tab.'];
+selection = uiconfirm(h.figure, msg, 'Add channel locations',...
+    'Options', {'Yes', 'No'}, 'Icon', 'question');
+
+if strcmp(selection, 'Yes')
+    study = autoAssignSubjects(study);
+end
+
+setstudy(h, study);
+%save the study
+[study, notsaved_flag] = study_SaveStudy(study, 'saveas', true);
+if notsaved_flag
+    study = [];
+    return
+end
+
+msg = sprintf('The new study %s has been created and saved.\n',study.name);
+msg = sprintf('%sYou can edit the study using the Study Editing tool, or close the tool to return to the main interface.', msg);
+uialert(h.figure,msg,'Study saved','Icon','info');
+
+
 
 %************************************************************************
 %helper functions
@@ -213,102 +222,102 @@ smHandle.ButtonDownFcn = {@callback_channelClick, h};
 %************************************************************************
 function callback_channelClick(hObject, ~, h)
 
-  study = getstudy(h);
+study = getstudy(h);
 
-  [yp, xp] =  wwu_ChannelProjection(study.chanlocs);
+[yp, xp] =  wwu_ChannelProjection(study.chanlocs);
 
 
-  mp = h.axis_chanpicker.CurrentPoint;
-  x = mp(1,1); y = mp(1,2);
-  %get the cartesian distance to all the electrodes
-  dx = xp - x; dy = yp - y;
-  d = sqrt(dx.^2 + dy.^2);
+mp = h.axis_chanpicker.CurrentPoint;
+x = mp(1,1); y = mp(1,2);
+%get the cartesian distance to all the electrodes
+dx = xp - x; dy = yp - y;
+d = sqrt(dx.^2 + dy.^2);
 
-  %the smallest is the one that was clicked
-  [~, en] = min(d);
-  i = find(h.list_chanpicker.Value==en);
-  if isempty(i)
-      h.list_chanpicker.Value = sort([h.list_chanpicker.Value, en]);
-  else
-      h.list_chanpicker.Value(i) = [];
-  end
-  
-  callback_drawchannelpositions(hObject, [], h)
+%the smallest is the one that was clicked
+[~, en] = min(d);
+i = find(h.list_chanpicker.Value==en);
+if isempty(i)
+    h.list_chanpicker.Value = sort([h.list_chanpicker.Value, en]);
+else
+    h.list_chanpicker.Value(i) = [];
+end
+
+callback_drawchannelpositions(hObject, [], h)
 
 function callback_handleMouseDown(hObject, hEvent, h)
-    
 
-    if contains(hObject.SelectionType, 'extend')
-        cp = hObject.CurrentPoint;
-        ap = h.axis_chanpicker.Position;
-        pp = h.infotabs.Position;
 
-        xp = cp(1,1); yp = cp(1,2);
-        axWin(1) = ap(1) + pp(1);
-        axWin(2) = ap(2) + pp(2);
-        axWin(3) = axWin(1) + ap(3);
-        axWin(4) = axWin(2) + ap(4);
+if contains(hObject.SelectionType, 'extend')
+    cp = hObject.CurrentPoint;
+    ap = h.axis_chanpicker.Position;
+    pp = h.infotabs.Position;
 
-        isInAxis = (xp > axWin(1)) && (yp > axWin(2)) && (xp < axWin(3)) && (yp < axWin(4));
-        if isInAxis
-            css = h.axis_chanpicker.UserData;
-            css.drawing = true;
-            %initialize drawing
-            cp = h.axis_chanpicker.CurrentPoint;
-            css.line = line(h.axis_chanpicker, cp(1,1), cp(1,2), 'Color', 'g',...
-                'LineWidth', 2);
-            h.axis_chanpicker.UserData = css;
-            fprintf('started drawing...')
-        end
-    end
+    xp = cp(1,1); yp = cp(1,2);
+    axWin(1) = ap(1) + pp(1);
+    axWin(2) = ap(2) + pp(2);
+    axWin(3) = axWin(1) + ap(3);
+    axWin(4) = axWin(2) + ap(4);
 
-%*************************************************************************        
-function callback_handleMouseUp(hObject, hEvent, h)
-    
-    css = h.axis_chanpicker.UserData;
-    if isempty(css) || css.drawing == false
-        return
-    else
-        %delete the line object
-        %close the shape
-        css.line.XData(end+1) = css.line.XData(1);
-        css.line.YData(end+1) = css.line.YData(1);
-        drawnow
-  
-        %figure out which channels are in the shape
-        study = getstudy(h);
-        [yp, xp] = wwu_ChannelProjection(study.chanlocs);
-        selected = find(inpolygon(xp, yp, css.line.XData, css.line.YData));
-        h.list_chanpicker.Value = selected;
-        callback_drawchannelpositions(hObject, hEvent, h);
-
-        %clear the drawing and stop drawing mode
-        css.drawing = false;
+    isInAxis = (xp > axWin(1)) && (yp > axWin(2)) && (xp < axWin(3)) && (yp < axWin(4));
+    if isInAxis
+        css = h.axis_chanpicker.UserData;
+        css.drawing = true;
+        %initialize drawing
+        cp = h.axis_chanpicker.CurrentPoint;
+        css.line = line(h.axis_chanpicker, cp(1,1), cp(1,2), 'Color', 'g',...
+            'LineWidth', 2);
         h.axis_chanpicker.UserData = css;
-        fprintf('finished drawing\n');
-        delete(css.line);
-        
-
+        fprintf('started drawing...')
     end
+end
+
+%*************************************************************************
+function callback_handleMouseUp(hObject, hEvent, h)
+
+css = h.axis_chanpicker.UserData;
+if isempty(css) || css.drawing == false
+    return
+else
+    %delete the line object
+    %close the shape
+    css.line.XData(end+1) = css.line.XData(1);
+    css.line.YData(end+1) = css.line.YData(1);
+    drawnow
+
+    %figure out which channels are in the shape
+    study = getstudy(h);
+    [yp, xp] = wwu_ChannelProjection(study.chanlocs);
+    selected = find(inpolygon(xp, yp, css.line.XData, css.line.YData));
+    h.list_chanpicker.Value = selected;
+    callback_drawchannelpositions(hObject, hEvent, h);
+
+    %clear the drawing and stop drawing mode
+    css.drawing = false;
+    h.axis_chanpicker.UserData = css;
+    fprintf('finished drawing\n');
+    delete(css.line);
+
+
+end
 %************************************************************************
 function callback_handleMouseMove(hObject, hEvent, h)
 
-    css = h.axis_chanpicker.UserData;
-    if ~isempty(css) && css.drawing == true
-        %the handle may get deleted
-        if ~isvalid(css.line)
-            css.drawing = false;
-            h.axis_chanpicker.UserData  = css;
-            return
-        end
-
-        cp = h.axis_chanpicker.CurrentPoint;
-        css.line.XData(end+1) = cp(1,1);
-        css.line.YData(end+1) = cp(1,2);
-        drawnow;
+css = h.axis_chanpicker.UserData;
+if ~isempty(css) && css.drawing == true
+    %the handle may get deleted
+    if ~isvalid(css.line)
+        css.drawing = false;
+        h.axis_chanpicker.UserData  = css;
+        return
     end
 
-    
+    cp = h.axis_chanpicker.CurrentPoint;
+    css.line.XData(end+1) = cp(1,1);
+    css.line.YData(end+1) = cp(1,2);
+    drawnow;
+end
+
+
 
 %*************************************************************************
 %edit the description of the study in real time
@@ -346,7 +355,7 @@ else
     eg.filename = epochgroup_filename;
 end
 
-    
+
 if epoch_start >= epoch_end
     uialert(h.figure, 'the epoch start cannot be greater than the epoch end.', 'Error');
 else
@@ -355,11 +364,11 @@ end
 
 
 if ~isNew %this is an update and not a new bin group
-   n = h.tree_bingrouplist.SelectedNodes;
-   cnum = n.NodeData{1};
-   eg.bins = study.bingroup(cnum).bins; %save the bin information
+    n = h.tree_bingrouplist.SelectedNodes;
+    cnum = n.NodeData{1};
+    eg.bins = study.bingroup(cnum).bins; %save the bin information
 elseif ~isfield(study, 'bingroup')
-    cnum = 1;   
+    cnum = 1;
     eg.bins = [];
 else
     cnum = length(study.bingroup) + 1;
@@ -408,7 +417,7 @@ end
 
 study = study_SaveStudy(study);
 setstudy(h,study);
-populate_bintree(study, h, [enum, cnum]);    
+populate_bintree(study, h, [enum, cnum]);
 
 %*************************************************************************
 %callback function for allowing editing of an existing condition
@@ -428,34 +437,34 @@ else
     end
 
     gnum = n.NodeData{1};
-    
+
     h.edit_bingroupname.Value = study.bingroup(gnum).name;
     h.edit_epochfilename.Value = study.bingroup(gnum).filename;
     h.edit_epochstart.Value = study.bingroup(gnum).interval(1);
     h.edit_epochend.Value = study.bingroup(gnum).interval(2);
-    
+
 end
 
-%pass the isNew flag forward to the update button so the 
+%pass the isNew flag forward to the update button so the
 %add bin function knows whether to update or add.
 h.button_bingroupupdate.UserData = isNew;
 callback_changeBinGroupEditStatus(hObject, eventdata, h, true)
 
 %*************************************************************************
 function callback_changeBinGroupEditStatus(hObject, hEvent, h, editing)
-    
-    h.button_bingroupadd.Enable = ~editing;
-    h.button_bingroupremove.Enable = ~editing;
-    h.button_bingroupedit.Enable = ~editing;
-   
-    h.tree_bingrouplist.Enable = ~editing;
 
-    if editing
-         h.panel_bingroup.Enable = 'on';
-    else
-         h.panel_bingroup.Enable = 'off';
-    end
-  
+h.button_bingroupadd.Enable = ~editing;
+h.button_bingroupremove.Enable = ~editing;
+h.button_bingroupedit.Enable = ~editing;
+
+h.tree_bingrouplist.Enable = ~editing;
+
+if editing
+    h.panel_bingroup.Enable = 'on';
+else
+    h.panel_bingroup.Enable = 'off';
+end
+
 
 %*************************************************************************
 %adds a new condition to an Epoch group or adds edited information to an
@@ -528,14 +537,14 @@ node_to_select = [];
 for ii = 1:length(study.bingroup)
     n = uitreenode('Parent', h.tree_bingrouplist,'Text', study.bingroup(ii).name,'NodeData', {ii, 0}, 'ContextMenu',h.cm_epochlist);
     uitreenode('Parent', n, 'Text', sprintf('start:\t%0.3g', study.bingroup(ii).interval(1)),...
-                'NodeData', {ii, 0}, 'ContextMenu',h.cm_epochlist);
+        'NodeData', {ii, 0}, 'ContextMenu',h.cm_epochlist);
     uitreenode('Parent', n, 'Text', sprintf('end:\t\t%0.3g', study.bingroup(ii).interval(2)),...
-                'NodeData', {ii, 0}, 'ContextMenu',h.cm_epochlist);
+        'NodeData', {ii, 0}, 'ContextMenu',h.cm_epochlist);
     n2 = uitreenode('Parent', n, 'Text', 'bins',...
-                'NodeData', {ii, 0}, 'ContextMenu',h.cm_epochlist);
-                    
+        'NodeData', {ii, 0}, 'ContextMenu',h.cm_epochlist);
+
     if isfield(study.bingroup(ii), 'bins')
-        for jj = 1:length(study.bingroup(ii).bins)      
+        for jj = 1:length(study.bingroup(ii).bins)
             n3 = uitreenode('Parent', n2, 'Text', sprintf('%i:\t%s',jj, study.bingroup(ii).bins(jj).name),...
                 'NodeData', {ii, jj}, 'ContextMenu',h.cm_epochlist);
             uitreenode('Parent', n3, 'Text', sprintf('bin events:\t%s ', study.bingroup(ii).bins(jj).events{:}),...
@@ -543,10 +552,10 @@ for ii = 1:length(study.bingroup)
             if (ii==select(1)) && (jj==select(2))
                 node_to_select = n3;
             end
-                      
+
         end
     end
-  
+
 end
 if ~isempty(node_to_select)
     expand(node_to_select.Parent);
@@ -569,15 +578,20 @@ else
 end
 
 %get a name for this group
-prompt = {'Enter a name for the channel group'};
-dlgtitle = 'New Channel Group';
-dims = [1 35];
-definput = {default_groupname};
-answer = inputdlg(prompt,dlgtitle,dims,definput);
+dlgparams.msg = 'Enter a name for the new channel group';
+dlgparams.title = 'New Channel Group';
+dlgparams.options = {'OK', 'Cancel'};
+dlgparams.default = default_groupname;
+info = wwu_inputdlg(dlgparams);
+%answer = inputdlg(prompt,dlgtitle,dims,definput);
 
+if isempty(info.input) || strcmp(info.input, '') || contains(info.option, 'Cancel')
+    fprintf('No valid group name or operation aborted\n');
+    return
+end
 %now make the group
 
-study.chgroups(gnum).name = answer{:};
+study.chgroups(gnum).name = info.input;
 study.chgroups(gnum).chans = h.list_chanpicker.Value;
 study.chgroups(gnum).chanlocs = study.chanlocs(study.chgroups(gnum).chans);
 
@@ -598,13 +612,13 @@ end
 msg = sprintf('Are you sure you want to remove channgel group %s', study.chgroups(n.NodeData).name);
 
 if strcmp(uiconfirm(h.figure, msg, 'Remove Channel Group'), 'OK')
-    
+
     study.chgroups(n.NodeData) = [];
-    
+
     setstudy( h, study)
     study_SaveStudy(study);
     populate_ChanGroupDisplay(study, h)
-    
+
 end
 
 %**************************************************************************
@@ -632,10 +646,10 @@ if ~isNew
         uialert(h.figure, 'Please select a subject to edit', 'Subject Edit');
         return
     end
-    
+
     sn = n.NodeData;
-    
-    
+
+
     %place the values from the selected subject in the appropriate controls
     h.edit_subjectid.Value = study.subject(sn).ID;
     h.edit_subjectpath.Value = study.subject(sn).path;
@@ -643,14 +657,14 @@ if ~isNew
     h.spinner_subjectage.Value = str2double(study.subject(sn).age);
     h.dropdown_subjecthand.Value = study.subject(sn).hand;
     h.check_subjectstatus.Value = strcmp(study.subject(sn).status, 'good');
-    
+
     h.button_updatesubject.UserData = sn;
 
 else
     set_subjectdefaults(h);
 end
 
-%change the status of the controls so the user cannot 
+%change the status of the controls so the user cannot
 %do anything until they finish editing the subject
 callback_changeSubjectEntryMode(hObject, hEvent, h, false);
 
@@ -688,12 +702,12 @@ end
 
 if ~isempty(sn)   %this is the edit mode
     study.subject(sn) = subject;
-    %change the status of the controls so the user cannot 
+    %change the status of the controls so the user cannot
     %do anything until they finish editing the subject
     callback_changeSubjectEntryMode(hObject, hEvent, h, true);
-    
+
 else
-    if ~isfield(study, 'subject') 
+    if ~isfield(study, 'subject')
         study.subject = subject;
     else
         if isempty(study.subject)
@@ -720,16 +734,16 @@ populate_SubjectDisplay(study, h);
 %*************************************************************************
 function callback_changeSubjectEntryMode(hObject, hEvent, h, state)
 
-    h.button_subjectadd.Enable = state;
-    h.button_subjectremove.Enable = state;
-    h.button_subjectedit.Enable = state;
-    h.tree_subjectlist.Enable = state;
-    
-    if state
-        h.panel_sbj.Enable = 'off';
-    else
-        h.panel_sbj.Enable = 'on';
-    end
+h.button_subjectadd.Enable = state;
+h.button_subjectremove.Enable = state;
+h.button_subjectedit.Enable = state;
+h.tree_subjectlist.Enable = state;
+
+if state
+    h.panel_sbj.Enable = 'off';
+else
+    h.panel_sbj.Enable = 'on';
+end
 
 %*************************************************************************
 function callback_removesubject(hObject, event, h)
@@ -738,20 +752,20 @@ sn = hObject.UserData;
 study = getstudy(h);
 
 if ~isempty(sn)   %this is the cancel mode
-    
+
     h.button_subjectadd.Text = 'Add';
     h.button_subjectadd.UserData = [];
     h.button_subjectremove.Text = 'Remove';
     h.button_subjectremove.UserData = [];
     h.button_subjectedit.Enable = 'on';
-    
+
 else
     n = h.tree_subjectlist.SelectedNodes;
     if isempty(n)
         uialert(h.figure, 'Please select a subject to edit', 'Subject Edit');
         return
     end
-    
+
     sn = n.NodeData;
     msgstr = sprintf('Are you sure you want to remove subject %s from this study?',...
         study.subject(sn).ID);
@@ -762,18 +776,18 @@ else
     if strcmp(selection, 'Remove')
         study.subject(sn) = [];
         study.nsubjects = study.nsubjects -1;
-        
+
         %save the study within the figure
         setstudy(h, study);
-        
+
         %save the study on the disk
         study_SaveStudy(study);
-        
+
         %refresh the node tree
         populate_studyinfo(study, h);
     end
-    
-    
+
+
 end
 set_subjectdefaults(h);
 
@@ -822,26 +836,26 @@ end
 %*************************************************************************
 function set_subjectdefaults(h)
 
-    h.edit_subjectid.Value = '';
-    h.edit_subjectpath.Value = '';
-    h.dropdown_subjectgender.Value = 'female';
-    h.dropdown_subjecthand.Value = 'right';
-    h.spinner_subjectage.Value = 20;
-    h.check_subjectstatus.Value = 1;
+h.edit_subjectid.Value = '';
+h.edit_subjectpath.Value = '';
+h.dropdown_subjectgender.Value = 'female';
+h.dropdown_subjecthand.Value = 'right';
+h.spinner_subjectage.Value = 20;
+h.check_subjectstatus.Value = 1;
 
 %******************************************************************
 function callback_changeStudyName(hObject, hEvent, h)
 
-    study = getstudy(h);
+study = getstudy(h);
 
-    newName = h.edit_studyname.Value;
-    if ~isempty(newName)
-        study.name = newName;
-        study = study_SaveStudy(study);
-    end
+newName = h.edit_studyname.Value;
+if ~isempty(newName)
+    study.name = newName;
+    study = study_SaveStudy(study);
+end
 
-    fprintf('saving changes to study name\n');
-    setstudy(h, study);
+fprintf('saving changes to study name\n');
+setstudy(h, study);
 %*****************************************************************
 function study = autoAssignSubjects(study)
 
@@ -849,7 +863,7 @@ eeg_path = study_GetEEGPath();
 
 %build the path for this study
 studypath = wwu_buildpath(eeg_path, study.path);
-d = dir(studypath); 
+d = dir(studypath);
 d = d([d.isdir]);  %eliminate any that arent folders
 folderNames = {d.name};
 
@@ -878,12 +892,15 @@ for ii = 1:length(r)
         study.nsubjects = study.nsubjects + 1;
     end
 end
-
+%**************************************************************************
+function callback_closefigure(hObject, hEvent, h)
+    delete(h.figure);
+%**************************************************************************
 function study = getstudy(h)
-    study = h.figure.UserData;
-
+study = h.figure.UserData;
+%**************************************************************************
 function setstudy(h, study)
-    h.figure.UserData = study;
+h.figure.UserData = study;
 %**************************************************************************
 function h = assign_callbacks(h)
 %a function that assigns all of the control callback functions
@@ -891,33 +908,35 @@ function h = assign_callbacks(h)
 %objects and the assignment of the callbacks in two smaller callbacks
 %rather than one large one.
 
-    h.figure.WindowButtonUpFcn = {@callback_handleMouseUp, h};
-    h.figure.WindowButtonDownFcn = {@callback_handleMouseDown, h};
-    h.figure.WindowButtonMotionFcn = {@callback_handleMouseMove, h};
-    
-    h.edit_studyname.ValueChangedFcn = {@callback_changeStudyName, h};
-    h.edit_studydescr.ValueChangedFcn = {@callback_editstudydescr, h};
+h.figure.WindowButtonUpFcn = {@callback_handleMouseUp, h};
+h.figure.WindowButtonDownFcn = {@callback_handleMouseDown, h};
+h.figure.WindowButtonMotionFcn = {@callback_handleMouseMove, h};
 
-    h.button_subjectedit.ButtonPushedFcn = {@callback_editsubject, h, false};
-    h.button_subjectadd.ButtonPushedFcn =  {@callback_editsubject, h, true};
-    h.button_subjectpath.ButtonPushedFcn = {@callback_getsubjectpath, h};
-    h.button_updatesubject.ButtonPushedFcn = {@callback_addsubject, h};
-    h.button_cancelsubject.ButtonPushedFcn = {@callback_changeSubjectEntryMode, h, true};
-    h.button_subjectremove.ButtonPushedFcn = {@callback_removesubject, h};
+h.edit_studyname.ValueChangedFcn = {@callback_changeStudyName, h};
+h.edit_studydescr.ValueChangedFcn = {@callback_editstudydescr, h};
 
-    h.button_bingroupupdate.ButtonPushedFcn = {@callback_addbingroup, h};
-    h.button_addbin.ButtonPushedFcn = {@callback_addbintogroup, h};
-    h.button_bingroupremove.ButtonPushedFcn = {@callback_removebingroup, h};
-    h.button_bingroupadd.ButtonPushedFcn = {@callback_editbingroup, h, true};
-    h.button_bingroupedit.ButtonPushedFcn = {@callback_editbingroup, h, false};
-    h.list_binevents.ValueChangedFcn = {@callback_addtoeventlist, h};
-    h.button_bingroupcancel.ButtonPushedFcn = {@callback_changeBinGroupEditStatus, h, false};
+h.button_return.ButtonPushedFcn = {@callback_closefigure, h};
 
-    h.button_addchangroup.ButtonPushedFcn  = {@callback_createchangroup, h};
-    h.button_removechangroup.ButtonPushedFcn = {@callback_removechangroup, h};
-    h.tree_changroup.SelectionChangedFcn = {@callback_selectchangroup, h};
-    h.list_chanpicker.ValueChangedFcn = {@callback_drawchannelpositions, h};
-  
+h.button_subjectedit.ButtonPushedFcn = {@callback_editsubject, h, false};
+h.button_subjectadd.ButtonPushedFcn =  {@callback_editsubject, h, true};
+h.button_subjectpath.ButtonPushedFcn = {@callback_getsubjectpath, h};
+h.button_updatesubject.ButtonPushedFcn = {@callback_addsubject, h};
+h.button_cancelsubject.ButtonPushedFcn = {@callback_changeSubjectEntryMode, h, true};
+h.button_subjectremove.ButtonPushedFcn = {@callback_removesubject, h};
+
+h.button_bingroupupdate.ButtonPushedFcn = {@callback_addbingroup, h};
+h.button_addbin.ButtonPushedFcn = {@callback_addbintogroup, h};
+h.button_bingroupremove.ButtonPushedFcn = {@callback_removebingroup, h};
+h.button_bingroupadd.ButtonPushedFcn = {@callback_editbingroup, h, true};
+h.button_bingroupedit.ButtonPushedFcn = {@callback_editbingroup, h, false};
+h.list_binevents.ValueChangedFcn = {@callback_addtoeventlist, h};
+h.button_bingroupcancel.ButtonPushedFcn = {@callback_changeBinGroupEditStatus, h, false};
+
+h.button_addchangroup.ButtonPushedFcn  = {@callback_createchangroup, h};
+h.button_removechangroup.ButtonPushedFcn = {@callback_removechangroup, h};
+h.tree_changroup.SelectionChangedFcn = {@callback_selectchangroup, h};
+h.list_chanpicker.ValueChangedFcn = {@callback_drawchannelpositions, h};
+
 %**************************************************************************
 function h = build_GUI()
 
@@ -931,22 +950,16 @@ bottom = (screenSize(4) - height)/3;
 h.figure = uifigure('Position', [left,bottom,width,height]);
 %h.figure.WindowStyle = 'alwaysontop';
 h.figure.Resize = false;
-h.figure.Name = 'Edit Study';
+h.figure.Name = 'Study Editor';
 h.figureNumberTitle = false;
 
 %main buttons
 x = width - 10 - p.buttonwidth;
 
-h.btn_return = uibutton('Parent', h.figure,...
+h.button_return = uibutton('Parent', h.figure,...
     'Position', [x, 10, p.buttonwidth, p.buttonheight],...
     'BackgroundColor', p.buttoncolor,...
     'Text', 'Return',...
-    'FontColor', p.buttonfontcolor);
-
-h.btn_newstudy = uibutton('Parent', h.figure,...
-    'Position', [x-10-p.buttonwidth, 10, p.buttonwidth, p.buttonheight],...
-    'BackgroundColor', p.buttoncolor,...
-    'Text', 'New',...
     'FontColor', p.buttonfontcolor);
 
 h.infotabs = uitabgroup(...

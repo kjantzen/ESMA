@@ -26,17 +26,28 @@ STUDYPATH = fullfile(EEGPath, 'STUDIES');
 
 if isempty(study.filename) || p.saveas==1
     
-    newstudyname = inputdlg({'Enter a name for this study'}, 'Save As', 1);
-    fsname = fullfile(STUDYPATH, [newstudyname{:}, '.study']);
+    dp.title = 'Save Study';
+    dp.msg = 'Enter a name for saving this study';
+    dp.options = {'OK', 'Cancel'};
+    op = wwu_inputdlg(dp);
+    if isempty(op.input) || contains(op.option, 'Cancel')
+        fprintf('No valid file or the user clicked Cancel\n');
+        not_saved = 1;
+        return
+    end
+
+    fsname = fullfile(STUDYPATH, [op.input, '.study']);
     if ~ isempty(dir(fsname))
-        btn = questdlg(sprintf('The STUDY %s exists.\nDo you want to overwrite?', newstudyname{:}), 'Overwrite Request', 'yes', 'no', 'no');
+        btn = questdlg(sprintf('The STUDY %s exists.\nDo you want to overwrite?', op.input), 'Overwrite Request', 'yes', 'no', 'no');
         if strcmp(btn, 'no')
             not_saved = 1;
             return
         end     
     end
-    study.filename = [newstudyname{:}, '.study'];   
-    study.name = newstudyname{:};
+    study.filename = [op.input, '.study'];
+    if isempty(study.name)
+        study.name = op.input;
+    end
 end
 savefile = fullfile(STUDYPATH, study.filename);
 save(savefile, 'study', '-mat');

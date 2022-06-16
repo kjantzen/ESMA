@@ -27,9 +27,9 @@ pstruct.monospaced = 'Monaco';
 
 
 pstruct.buttonheight = 25;
-pstruct.buttonwidth = 75;
-pstruct.buttoncolor = [80/255, 80/255, 80/255]';
-pstruct.buttonfontcolor = [200/255,200/255,200/255]';
+pstruct.buttonwidth = 90;
+pstruct.buttoncolor = pstruct.backcolor;%[80/255, 80/255, 80/255]';
+pstruct.buttonfontcolor = 'k';%[200/255,200/255,200/255]';
 
 pstruct.goodsubjectcolor = [.2,.6,.2];
 pstruct.badsubjectcolor = [.8,.2,.2];
