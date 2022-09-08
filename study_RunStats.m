@@ -247,6 +247,15 @@ else
     indx = length(GND.ANOVA) + 1;
 end
 
+%get a name for the stats test
+p.msg = 'Enter a name for this test.';
+p.title = 'Statistics';
+p.options = {'OK'};
+statsName = wwu_inputdlg(p);
+if isempty(statsName)
+    statsName = model;
+end
+GND.ANOVA(indx).name = statsName.input;
 GND.ANOVA(indx).type = stats.measure;
 GND.ANOVA(indx).source_table = ANOVAresult;
 GND.ANOVA(indx).data = data_table;

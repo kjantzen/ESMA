@@ -16,8 +16,9 @@ function EEGPath = study_GetEEGPath
        end
     end
     if nopath
-        msg = sprintf('Could not find path file %s\nClick OK and specify the path where EEG data can be found.', EEGPATHFILE);
-        msgbox(msg);
+        msg = sprintf('Could not the find path file %s\nClick OK and specify the path where EEG data can be found.', EEGPATHFILE);
+        f = msgbox(msg,'Missing Path File', 'modal');
+        waitfor(f);
         EEGPath = uigetdir('','Specify the EEG Data Path');
         if isempty(EEGPath)
            return
@@ -25,4 +26,4 @@ function EEGPath = study_GetEEGPath
             save(EEGPATHFILE, 'EEGPath');
         end
     end
-    
+end

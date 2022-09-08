@@ -23,7 +23,6 @@ fprintf('Starting hcnd_eeg ....\n');
 
 EEGPath = study_GetEEGPath;
 
-
 p = plot_params;
 
 W = 420; H = 500;
@@ -39,17 +38,26 @@ addpath(eeglabpath);
 
 fprintf('...building GUI\n');
 
-%setup the main figure window
-handles.figure = uifigure;
+
+existingFigure = findall(groot,'Type', 'Figure', 'Tag', 'hcndV1.0');
+if ~isempty(existingFigure)
+    handles.figure = existingFigure;
+    clf(handles.figure);
+    fprintf('hcnd_eeg is already running.  Reinitialiing display');
+else    
+    %setup the main figure window
+    handles.figure = uifigure;
+end
 handles.p = p;
 
 set(handles.figure,...
     'Color', p.backcolor, ...
     'name', 'HCND EEG Study Management and Analysis',...
     'NumberTitle', 'off',...
-    'position', FIGPOS,...
+    'Position', FIGPOS,...
     'Resize', 'off',...
-    'menubar', 'none');%,...
+    'menubar', 'none',...
+    'Tag', 'hcndV1.0');
 msg = uiprogressdlg(handles.figure, 'Message', 'Building GUI', 'Cancelable',false);
 drawnow
 
@@ -923,7 +931,7 @@ if f==-1
 end
 
 %combine the events from the differnt bins since the routine wants to have
-%themn in a single vector.
+%them in a single vector.
 events = [];
 for ii = 1:length(study.bingroup(gnum).bins)
     fprintf(f, '%i) %s=%s\n', ii, study.bingroup(gnum).bins(ii).events{1}, study.bingroup(gnum).bins(ii).name);

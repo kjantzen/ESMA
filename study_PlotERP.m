@@ -576,11 +576,9 @@ handles.figure.UserData = p;
 %initialize the displays and plot the data
 callback_reloadfiles([],[],handles, false)
 callback_toggleallchannel([],handles.check_allchans,handles);
-%callback_ploterp([],[],handles);
 event.Source.Tag = 'add';
 callback_managecursors([], event, handles);
 
-handles.figure.Visible = true;
 fprintf('...done\n');
 
 %***************************************************************************
@@ -1015,12 +1013,16 @@ end
 if isfield(p.GND,'ANOVA')
     if ~isempty(p.GND.ANOVA)
         disable = false;
-        n = arrayfun(@(x) join(x.factors), p.GND.ANOVA);
-        n = cellfun(@(x) strrep(x, ' ', ' X '), n, 'UniformOutput', false);
+    %    if ~isfield(p.GND.ANOVA, 'name')
+            n = arrayfun(@(x) join(x.factors), p.GND.ANOVA);
+            n = cellfun(@(x) strrep(x, ' ', ' X '), n, 'UniformOutput', false);
+    %    else
+    %        n = arrayfun(@(x) join(x.name), p.GND.ANOVA);
+    %    end
         t = num2cell(1:length(p.GND.ANOVA));
         tn = cellfun(@num2str, t, 'un', 0);
         labels = strcat(tn,'. ',  n);
-        
+    
         h.dropdown_ANOVAtest.Items = labels;
         h.dropdown_ANOVAtest.ItemsData = 1:length(p.GND.ANOVA);
         

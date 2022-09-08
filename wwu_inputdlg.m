@@ -29,8 +29,8 @@ assert(isfield(p, 'options'), 'wwu_inputdlg:noOptionsInput',...
 
 nButtons = length(p.options);
 
-assert(~isempty(nButtons) && nButtons >1, 'wwu_inputdlg:emptyOptions',...
-    'The options parameters does not contain valid entries');
+assert(~isempty(nButtons) && nButtons >=1, 'wwu_inputdlg:emptyOptions',...
+    'The options parameters must contain at least one string cell containing a button label');
 
 pp = plot_params;
 width = 400; height = 150;
