@@ -253,9 +253,9 @@ p.title = 'Statistics';
 p.options = {'OK'};
 statsName = wwu_inputdlg(p);
 if isempty(statsName)
-    statsName = model;
+    statsName = cond_name_matrix;
 end
-GND.ANOVA(indx).name = statsName.input;
+GND.ANOVA(indx).name = statsName;
 GND.ANOVA(indx).type = stats.measure;
 GND.ANOVA(indx).source_table = ANOVAresult;
 GND.ANOVA(indx).data = data_table;

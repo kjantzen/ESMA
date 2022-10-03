@@ -1013,12 +1013,20 @@ end
 if isfield(p.GND,'ANOVA')
     if ~isempty(p.GND.ANOVA)
         disable = false;
-    %    if ~isfield(p.GND.ANOVA, 'name')
-            n = arrayfun(@(x) join(x.factors), p.GND.ANOVA);
-            n = cellfun(@(x) strrep(x, ' ', ' X '), n, 'UniformOutput', false);
-    %    else
-    %        n = arrayfun(@(x) join(x.name), p.GND.ANOVA);
-    %    end
+         n = arrayfun(@(x) join(x.factors), p.GND.ANOVA);
+         n = cellfun(@(x) strrep(x, ' ', ' X '), n, 'UniformOutput', false);
+
+        if ~isfield(p.GND.ANOVA, 'name')
+            for ii = 1:length(n)
+                p.GND.ANOVA(ii).name = n{ii};
+            end
+        else
+            missing = find(arrayfun(@(x) isempty(x.name), p.GND.ANOVA));
+            for ii = missing
+                p.GND.ANOVA(ii).name = n{ii};
+            end
+        end
+        n = arrayfun(@(x) join(x.name), p.GND.ANOVA, 'UniformOutput',false);
         t = num2cell(1:length(p.GND.ANOVA));
         tn = cellfun(@num2str, t, 'un', 0);
         labels = strcat(tn,'. ',  n);
