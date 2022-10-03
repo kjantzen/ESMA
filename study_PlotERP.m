@@ -178,7 +178,7 @@ handles.panel_po = uipanel('Parent', handles.gl,...
 handles.panel_po.Layout.Column = 1;
 handles.panel_po.Layout.Row = [1 3];
 drawnow;
-pause(.1);
+pause(1);
 
 psh = handles.panel_po.InnerPosition(4);
 
@@ -1350,6 +1350,10 @@ pg.Annotation.LegendInformation.IconDisplayStyle = 'off';
 h.axis_erp.YLim = yl;
 hold(h.axis_erp, 'off');
 
+%**************************************************************************
+function r = range(x)
+
+r = max(x) - min(x);
 %*************************************************************************
 %switch between current cursors
 function cinfo = switch_cursors(cinfo, new_cnum)
