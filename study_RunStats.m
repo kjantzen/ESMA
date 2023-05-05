@@ -75,11 +75,24 @@ h.button_dostats = uibutton(...
 
 h.button_cancel = uibutton(...
     'Parent', h.figure,...
-    'Position', [265, 5, 80, 25],...
+    'Position', [275, 5, 80, 25],...
     'Text', 'Cancel', ...
     'BackgroundColor', p.buttoncolor,...
     'FontColor', p.buttonfontcolor,...
     'Tag', 'rem');
+
+
+if contains(stats.test, 'ANOVA')
+    h.button_export = uibutton(...
+        'Parent', h.figure,...
+        'Position', [190, 5, 80, 25],...
+        'Text', 'Export', ...
+        'BackgroundColor', p.buttoncolor,...
+        'FontColor', p.buttonfontcolor,...
+        'Tag', 'rem');
+  
+
+end
 
 
 %fill in the blank model information
@@ -120,11 +133,15 @@ h.list_conditions.ItemsData = 1:length(GND.bin_info);
 
 h.button_add.ButtonPushedFcn = {@callback_assignconditions,h};
 h.button_remove.ButtonPushedFcn = {@callback_assignconditions,h};
-h.button_dostats.ButtonPushedFcn = {@callback_dostats, h, GND, stats};
+h.button_dostats.ButtonPushedFcn = {@callback_dostats, h, GND, stats, false};
 h.button_cancel.ButtonPushedFcn = {@callback_cancel, h.figure};
 
+if contains(stats.test, 'ANOVA')
+  h.button_export.ButtonPushedFcn = {@callback_dostats, h, GND, stats, true};
+end
+
 %**************************************************************************
-function callback_dostats(hObject, event, h, GND, stats)
+function callback_dostats(hObject, event, h, GND, stats, exportFlag)
 
 cond_info = h.list_model.ItemsData;
 if sum(cellfun(@(a) a(1)=='[',cond_info))
@@ -141,6 +158,7 @@ if contains(stats.test, 'ANOVA')
     pb = uiprogressdlg(h.figure, 'Title', 'Please Wait', 'Message', 'Solving GLM ... this won''t take long.', 'Indeterminate', 'on');
     GND = do_ANOVA(h,GND,stats);
 else
+  
     pb = uiprogressdlg(h.figure, 'Title', 'Please Wait', 'Message', 'Running mass univariate statistics ... this could take a while.', 'Indeterminate', 'on');
     GND = do_MassUniv(h,GND,stats);
 end
@@ -213,6 +231,7 @@ if n_chans> 1
 end
 
 data_table = array2table(ANOVAdata');
+
 stats.factors = strtrim(stats.factors);
 if n_chans > 1
     stats.factors = [stats.factors, 'Channel'];
@@ -236,7 +255,6 @@ within = convertvars(within, stats.factors, 'categorical');
 withinmodel = join(stats.factors, '*');
 rm_model = fitrm(data_table,model,'WithinDesign',within,'WithinModel',withinmodel{1});
 ANOVAresult = ranova(rm_model,'WithinModel',withinmodel{1});
-
 %add the stats into the GND file
 if ~isfield(GND, 'ANOVA')
     GND.ANOVA = [];
@@ -252,8 +270,10 @@ p.msg = 'Enter a name for this test.';
 p.title = 'Statistics';
 p.options = {'OK'};
 statsName = wwu_inputdlg(p);
-if isempty(statsName)
+if isempty(statsName.input)
     statsName = cond_name_matrix;
+else
+    statsName = statsName.input;
 end
 GND.ANOVA(indx).name = statsName;
 GND.ANOVA(indx).type = stats.measure;
@@ -269,6 +289,9 @@ GND.ANOVA(indx).conditions = {GND.bin_info(cond_order).bindesc};
 GND.ANOVA(indx).factors  = stats.factors;
 GND.ANOVA(indx).levels  = stats.levels;
 GND.ANOVA(indx).level_matrix = cond_matrix;
+
+writetable(data_table, 'test_data.csv');
+writetable(ANOVAresult, 'test_ANOVA.csv')
 
 %**************************************************************************
 function GND = do_MassUniv(h,GND,stats)

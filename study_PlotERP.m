@@ -865,10 +865,6 @@ end
 myh = study_RunStats(p.GND, stats);
 uiwait(myh);
 callback_reloadfiles([],[],h,1)
-
-%set the last item in the dropdown as active.
-%h.dropdown_ANOVAtest.Value = h.dropdown_ANOVAtest.ItemsData(end);
-%callback_plotANOVAresult([],[],h);
        
 %*************************************************************************
 %function to handle when user changes the status of the "All Channel" option
@@ -1828,10 +1824,9 @@ for ii = 1:size(d,3)
     legend_handles(ii) = ph(1);
     legend_names(ii) = h.list_condition.Items(cond_sel(ii));
     
-    %just storing this loop here for now
+    %plot the statistics
     if MUoverlay && ~isempty(s)
         hold(h.axis_erp, 'on');
-       % dd = squeeze(d(:,:,ii));
         tt = repmat(p.GND.time_pts, size(s,1),1);
         
         splot = scatter(h.axis_erp, tt(s>0)', dd(s>0)',60,'filled');

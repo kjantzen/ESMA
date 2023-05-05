@@ -15,7 +15,8 @@ for ii = 1:length(tmpepochs)
     
     tl_event_type = tmpepochs(ii).eventtype(find(tl_events)); %get the event type
    
-    if sum(tl_events>1) %there is probably already a valid bin entry
+    r = sum(tl_events);
+    if r > 1 %there is probably already a valid bin entry
         hasbin =  contains(tl_event_type, 'bin');
         if sum(hasbin>0) %looks ok
             continue

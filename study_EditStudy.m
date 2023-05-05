@@ -428,8 +428,8 @@ n = h.tree_bingrouplist.SelectedNodes;
 if isNew
     h.edit_bingroupname.Value = '';
     h.edit_epochfilename.Value = '';
-    h.edit_epochstart.Value = '';
-    h.edit_epochend.Value = '';
+    h.edit_epochstart.Value = double(-.1);
+    h.edit_epochend.Value = double(.6);
 else
     if isempty(n)
         uialert(h.figure, 'You must select a Bin Group to edit.', 'Edit Bin Group');
