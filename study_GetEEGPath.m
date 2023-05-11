@@ -4,14 +4,12 @@
 %*************************************************************************
 function EEGPath = study_GetEEGPath
     
-    EEGPATHFILE = fullfile(matlabroot,'EEGpath.mat');
-    result = dir(EEGPATHFILE);
-
     nopath = true;
+    EEGPATHFILE = fullfile(fileparts(mfilename("fullpath")),'config','EEGpath.mat');
 
-    if ~isempty(result)
-       load(EEGPATHFILE);
-       if isfolder(num2str(EEGPath))
+    if isfile(EEGPATHFILE)
+       load(EEGPATHFILE, "EEGPath");
+       if isfolder(EEGPath)
            nopath = false;
        end
     end

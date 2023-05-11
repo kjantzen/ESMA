@@ -23,23 +23,29 @@ fprintf('Starting hcnd_eeg ....\n');
 
 EEGPath = study_GetEEGPath;
 
-p = plot_params;
-
-W = 420; H = 500;
-FIGPOS = [0,(p.screenheight-H), W, H];
-
 %checking for eeglab installation and path
 eeglabpath = which('eeglab.m');
 if isempty(eeglabpath)
     error('Could not find eeglab installation.  Please make sure eeglab is installed on this computer.')
 end
-eeglabpath = eeglabpath(1:end-length('eeglab.m'));
+eeglabpath = fileparts(eeglabpath(1:end-length('eeglab.m')));
 addpath(eeglabpath);
+
+addSubFolderPaths
 
 fprintf('...building GUI\n');
 
+p = plot_params;
+scheme = eeg_LoadScheme;
+sz = get(0, 'ScreenSize');
 
-existingFigure = findall(groot,'Type', 'Figure', 'Tag', 'hcndV1.0');
+%size of the figure
+W = 420; H = 500;
+FIGPOS = [0,(sz(4)-H), W, H];
+VERSION = 'hcndV2.0';
+
+%restart the display if it is already loaded
+existingFigure = findall(groot,'Type', 'Figure', 'Tag', VERSION);
 if ~isempty(existingFigure)
     handles.figure = existingFigure;
     clf(handles.figure);
@@ -51,49 +57,49 @@ end
 handles.p = p;
 
 set(handles.figure,...
-    'Color', p.backcolor, ...
-    'name', 'HCND EEG Study Management and Analysis',...
+    'Color', scheme.Window.BackgroundColor.Value, ...
+    'name', 'EEG Study Management and Analysis',...
     'NumberTitle', 'off',...
     'Position', FIGPOS,...
     'Resize', 'off',...
     'menubar', 'none',...
-    'Tag', 'hcndV1.0');
+    'Tag', VERSION);
+
 msg = uiprogressdlg(handles.figure, 'Message', 'Building GUI', 'Cancelable',false);
 drawnow
 
 handles.dropdown_study = uidropdown(...
     'Parent', handles.figure,...
-    'Position', [10,H-20,400,20],...
+    'Position', [10,H-25,400,scheme.Dropdown.Height.Value],...
     'Editable', 'off',...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
+    'BackgroundColor', scheme.Dropdown.BackgroundColor.Value,...
+    'FontColor', scheme.Dropdown.FontColor.Value,...
+    'FontName', scheme.Dropdown.Font.Value,...
+    'FontSize', scheme.Dropdown.FontSize.Value);
 
 handles.tree_filetree = uitree(...
     'Parent', handles.figure,...
     'Multiselect', 'on',...
     'Editable', 'on',...
-    'Position', [10,H-250,400,225],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
+    'Position', [10,H-260,400,225],...
+    'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
+    'FontColor', scheme.Edit.FontColor.Value,...
+    'FontName', scheme.Edit.Font.Value,...
+    'FontSize', scheme.Edit.FontSize.Value);
 
 handles.panel_info = uipanel(...
     'Parent', handles.figure,...
     'Title','Study Information', ...
-    'BackgroundColor', p.backcolor,...
+    'BackgroundColor', scheme.Panel.BackgroundColor.Value,...
+    'FontName', scheme.Panel.Font.Value,...
+    'FontSize', scheme.Panel.FontSize.Value,...
+    'ForegroundColor', scheme.Panel.FontColor.Value,...
+    'HighlightColor', scheme.Panel.BorderColor.Value,...
+    'BorderType', 'line',...
     'Position',[10,H-490, 400,225]);
 
 handles.label_info = uihtml(handles.panel_info,...
     'Position', [10,10,380,190]);
-
-
-% handles.label_info = uitextarea(...
-%     'Parent', handles.panel_info,...
-%     'Position', [20,20,360,185],...
-%     'FontSize', 12,...
-%     'FontName', p.monospaced,...
-%     'WordWrap','on',...
-%     'Editable','off',...
-%     'BackgroundColor',p.backcolor);
 
 msg.Message = 'Creating menus';
 drawnow
@@ -146,8 +152,6 @@ handles.menu_convert = uimenu(handles.menu_utils, 'Label', 'Convert Biosemi File
 handles.menu_script = uimenu(handles.menu_utils, 'Label', 'Run Custom Script');
 handles.menu_evtsummary = uimenu(handles.menu_utils, 'Label', 'Event Summary');
 handles.menu_trimraw = uimenu(handles.menu_utils, 'Label', 'Trim Continuous (CNT) EEG File');
-
-
 
 %assign all the callbacks
 set(handles.dropdown_study, 'ValueChangedFcn', {@callback_loadstudy, handles})
@@ -454,7 +458,7 @@ else
 end
 
 
-msg = ['<body style="font-family:arial;font-size:12px"><p style="line-height:115%"><b>Study:</b>',...
+msg = ['<body style="font-family:arial;font-size:12px;color: white"><p style="line-height:115%"><b>Study:</b>',...
      '<span style=padding-left:40>',study.name,'</span></p>'];
 msg = [msg,'<p style="line-height:115%"><b>Folder:</b>',...
      '<span style=padding-left:37>',study.path,'</span></p>'];
@@ -934,10 +938,11 @@ end
 %them in a single vector.
 events = [];
 for ii = 1:length(study.bingroup(gnum).bins)
-    fprintf(f, '%i) %s=%s\n', ii, study.bingroup(gnum).bins(ii).events{1}, study.bingroup(gnum).bins(ii).name);
-    events = strcat(events,{' '}, study.bingroup(gnum).bins(ii).events);
+    for jj = 1:length(study.bingroup(gnum).bins(ii).events)
+        fprintf(f, '%i) %s=%s\n', ii, study.bingroup(gnum).bins(ii).events{jj}, study.bingroup(gnum).bins(ii).name);
+        events = strcat(events,{' '}, study.bingroup(gnum).bins(ii).events{jj});
+    end
 end
-
 fclose(f);
 
 pg = uiprogressdlg(h.figure,...
@@ -1152,3 +1157,110 @@ if isempty(study)
     return
 end
 %*************************************************************************
+%add paths to critical subfolders
+function addSubFolderPaths()
+    cPath = fileparts(mfilename("fullpath"));
+    subfolders = {'config', 'functions', 'toolboxes', 'icons'};
+    s = pathsep;
+    pathStr = [s, path, s];
+    
+    for ii = subfolders
+        sFolderPath = fullfile(cPath, ii);
+        onPath  = contains(pathStr, [s, sFolderPath, s], 'IgnoreCase', ispc);
+        if ~onPath
+            addpath(sFodlerPath);
+        end
+    end
+
+%*************************************************************************
+function checkForNewVersion(user, repository, downloadType, name)
+% Code to check and download a new version if it exists
+% Adapted from - Zoltan Csati's function filestr = githubFetch
+% GITHUBFETCH  Download file from GitHub.
+%   
+%   Inputs:
+%       user: name of the user or the organization
+%       repository: name of the repository
+%       downloadType: 'branch' or 'release'
+%       name (optional):
+%           if downloadType is 'branch': branch name (default: 'master')
+%           if downloadType is 'release': release version (default: 'latest')
+%   Output:
+%       filestr: path to the downloaded file
+%
+%   The downloaded file type is .zip.
+%
+%   Examples:
+%       1) githubFetch('GLVis', 'glvis', 'branch')
+%       % same as githubFetch('GLVis', 'glvis', 'branch', 'master')
+%       2) githubFetch('matlab2tikz', 'matlab2tikz', 'branch', 'develop')
+%       3) githubFetch('matlab2tikz', 'matlab2tikz', 'release', '1.1.0')
+%       4) githubFetch('matlab2tikz', 'matlab2tikz', 'release')
+%       % same as githubFetch('matlab2tikz', 'matlab2tikz', 'release', 'latest')
+%   Zoltan Csati
+%   04/02/2018
+
+narginchk(3, 4);
+website = 'https://github.com';
+% Check for download type
+branchRequested = strcmpi(downloadType, 'branch');
+releaseRequested = strcmpi(downloadType, 'release');
+assert(branchRequested | releaseRequested, ...
+    'Type must be either ''branch'' or ''release''.');
+% Check if the user exists
+try
+    urlread(fullfile(website, user));
+catch ME
+    if strcmp(ME.identifier, 'MATLAB:urlread:FileNotFound')
+        error('User does not exist.');
+    end
+end
+% Check if the repository exists for the given user
+try
+    urlread(fullfile(website, user, repository));
+catch ME
+    if strcmp(ME.identifier, 'MATLAB:urlread:FileNotFound')
+        error('Repository does not exist.');
+    end
+end
+% Process branch or release versions
+if nargin < 4 % no branch or release version provided
+    if branchRequested
+        name = 'master';
+    elseif releaseRequested
+        name = 'latest';
+    end
+end
+if releaseRequested
+    if strcmpi(name, 'latest') % extract the latest version number
+        s = urlread(fullfile(website, user, repository, 'releases', 'latest'));
+        % Search based on https://stackoverflow.com/a/23756210/4892892
+        [startIndex, endIndex] = regexp(s, '(?<=<title>).*?(?=</title>)');
+        releaseLine = s(startIndex:endIndex);
+        % Extract the release number
+        [startIndex, endIndex] = regexp(releaseLine, '([0-9](\.?))+');
+        name = releaseLine(startIndex:endIndex);
+        assert(~isempty(name), 'No release found. Try downloading a branch.');
+    end
+    versionName = ['v', name];
+elseif branchRequested
+    versionName = name;
+end
+% Download the requested branch or release
+githubLink = fullfile(website, user, repository, 'archive', [versionName, '.zip']);
+downloadName = [repository, '-', name, '.zip'];
+try
+    fprintf('Download started ...\n');
+    filestr = urlwrite(githubLink, downloadName);
+    fprintf('Repository %s successfully downloaded.\n', repository);
+catch ME
+    if strcmp(ME.identifier, 'MATLAB:urlwrite:FileNotFound')
+        if branchRequested
+            error('Branch ''%s'' does not exist.', name);
+        elseif releaseRequested
+            error('Release version %s does not exist.', name);
+        end
+    else
+        rethrow(ME);
+    end
+end

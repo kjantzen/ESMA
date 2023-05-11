@@ -15,103 +15,28 @@
 %                   automatically assumes one filename for each participant 
 %                   listed in the study structure.
 
+%TODO list
+%  1. Allow for selection of number of channels displayed
+%  2. Allow for selection of bad sections of data
+%  3. Include automatic selection of bad data (for one participant here and
+%  for all in the main display).
+%   
 % Update 5/13/20 KJ Jantzen
 function study_PlotCNT(study, filenames)
 
-%build the figure
-
-p = plot_params;
-
-
-W = round(p.screenwidth * .8); H = round(p.screenheight * .6);
-figpos = [(p.screenwidth - W)/2, (p.screenheight - H)/2, W, H];
-
-
-handles.figure = uifigure(...
-    'Color', p.backcolor,...
-    'Position', figpos,...
-    'NumberTitle', p.numbertitle, ...
-    'Toolbar', 'none');
-
-handles.axis_main = uiaxes(...
-    'Parent', handles.figure,...
-    'Units', 'Pixels',...
-    'Position', [50,50,W-60,H-100],...
-    'Interactions', []);
-
-handles.panel_chpanel = uipanel(...
-    'Parent', handles.figure,...
-    'Position', [300, H-35, 230, 35],...
-    'Title', '');
-
-handles.axis_main.Toolbar.Visible = 'off';
-
-temp = handles.axis_main.InnerPosition;
-
-handles.slider_datascroll = uislider(...
-    'Parent', handles.figure,...
-    'Position', [temp(1),20,temp(3),3],...
-    'Limits', [0,100],...
-    'MajorTicks', [],...
-    'MinorTicks', []);
-
-handles.panel_subjpanel = uipanel(...
-    'Parent', handles.figure,...
-    'Position', [temp(1), H-35, 230, 35],...
-    'Title', '');
-
-handles.dropdown_subjselect = uidropdown(...
-    'Parent', handles.panel_subjpanel,...
-    'Position', [10, 5, 100, 25]);
-
-handles.label_subjectstatus = uilabel(...,
-    'Parent', handles.panel_subjpanel,...
-    'Position', [120, 5, 100, 25], ...
-    'FontColor', 'w',...
-    'HorizontalAlignment', 'center');
-
-handles.spinner_changescale = uispinner(...
-    'Parent', handles.figure,...
-    'Position', [temp(1) + temp(3) - 100, H-25, 100, 20],...
-    'Limits', [1, inf],...
-    'RoundFractionalvalues', 'on', ...
-    'ValueDisplayFormat', '%i mV');
-
-handles.spinner_changepwidth = uispinner(...
-    'Parent', handles.figure,...
-    'Position', [temp(1) + temp(3) - 210, H-25, 100, 20],...
-    'Limits', [1, 20],...
-    'RoundFractionalvalues', 'on', ...
-    'ValueDisplayFormat', '%i sec');
-handles.menu_file = uimenu('Parent', handles.figure, 'Text', 'File');
-handles.menu_trim = uimenu('Parent', handles.menu_file, 'Text', 'Trim file to first and last markers');
-handles.menu_channel = uimenu('Parent', handles.figure, 'Text', 'Channels');
-handles.menu_badchan = uimenu('Parent', handles.menu_channel,...
-    'Text',"Set selected to bad channels ");
-handles.menu_goodchan = uimenu('Parent', handles.menu_channel,...
-    'Text',"Set selected to good channels ");
-handles.menu_clearchan = uimenu('Parent', handles.menu_channel,...
-    'Text','Clear selections', 'Separator','on');
-clear temp
-
-handles.slider_datascroll.ValueChangingFcn = {@callback_drawdata, handles};
-handles.spinner_changescale.ValueChangedFcn = {@callback_changescale, handles};
-handles.spinner_changepwidth.ValueChangedFcn = {@callback_changepwidth, handles};
-handles.dropdown_subjselect.ValueChangedFcn = {@callback_loadnewfile, study, handles};
-handles.figure.ButtonDownFcn = {@callback_selectchannel, handles};
-handles.menu_badchan.MenuSelectedFcn = {@callback_markchannels, handles, 'bad'};
-handles.menu_goodchan.MenuSelectedFcn = {@callback_markchannels, handles, 'good'};
-handles.menu_clearchan.MenuSelectedFcn = {@callback_deselectchans, handles};
-handles.menu_trim.MenuSelectedFcn = {@callback_trim, study,handles};
-
-%do a more sophisticated check later to make sure this information matches
-handles.dropdown_subjselect.Items   = {study.subject.ID};
-handles.dropdown_subjselect.ItemsData = 1:length(study.subject);
-handles.dropdown_subjselect.UserData = filenames;
-
-callback_loadnewfile([], [], study, handles)
-
-
+try
+    %build the figure
+    handles = build_gui();
+    handles = setCallbacks(handles, study);
+    handles = initializeControls(handles, study, filenames);
+    callback_loadnewfile([], [], study, handles);
+catch me
+    if exist('handles', 'var') && ~isempty(handles)
+        close(handles.figure);
+    end
+    rethrow(me);
+end
+% ***********************************************************************
 function callback_deselectchans(hObject, eventdata, h)
 
 p = h.figure.UserData;
@@ -201,14 +126,14 @@ callback_drawdata([], [],h)
 
 %**************************************************************************
 function callback_selectchannel(hobject, eventdata,h, ch_num)
-
-    p = h.figure.UserData;
-    p.selchans(ch_num) = ~p.selchans(ch_num);
-    
-    h.figure.UserData = p;
-    
-    callback_drawdata([],[],h);
-    
+    %make sure the shift key is not pressed because that enables a
+    %different function
+    if ~any(strcmp(h.figure.CurrentModifier, 'shift'))
+        p = h.figure.UserData;
+        p.selchans(ch_num) = ~p.selchans(ch_num);
+        h.figure.UserData = p;  
+        callback_drawdata([],[],h);
+    end    
 %*************************************************************************    
 function callback_loadnewfile(hObject, eventdata, study, h)
 
@@ -264,7 +189,6 @@ if isempty(plot)
     h.spinner_changepwidth.Value = 10;
 
     plot.scale = max(range(EEG.data'))/10;
-    class(plot.scale) 
     plot.scale = double(plot.scale);
     
     fprintf('\n%f\n', plot.scale);
@@ -280,26 +204,60 @@ plot.EEG = EEG;
 h.figure.UserData = plot;
 
 %reset the slider
-h.slider_datascroll.Limits = [1, EEG.pnts - plot.pwidth];
-h.slider_datascroll.Value = 1;
+h.slider_timescroll.Limits = [1, EEG.pnts - plot.pwidth];
+h.slider_timescroll.Value = 1;
+cchan = h.spinner_changechannum.Value;
+if cchan > EEG.nbchan
+    h.spinner_changechannum.Value = EEG.nbchan;
+end
+h.spinner_changechannum.Limits = [1. EEG.nbchan];
+slider_max = EEG.nbchan - h.spinner_changechannum.Value+1;
+if h.slider_channelscroll.Value > slider_max
+    h.slider_channelscroll.Value = slider_max;
+end
+if slider_max == 1
+    h.slider_channelscroll.Limits = [1,2 ];
+    h.slider_channelscroll.Visible = 'off';
+else
+    h.slider_channelscroll.Limits = [1, slider_max];
+    h.slider_channelscroll.Visible = 'on';
+end
+   
+
 callback_drawdata([],[],h);
 close(pb);
 %*************************************************************************
 function callback_drawdata(hObject, eventdata, h)
 
+%TO DO
+%fix the selected channels vector so that it reflects all possible
+%channels, not just those shown on the screen.
+
 %get some plotting information
 p = h.figure.UserData;
+chans_to_plot = h.spinner_changechannum.Value;
 
 %get the plotting position from the slider
 if ~isempty(eventdata)
-    startpos = round(eventdata.Value);
+    switch eventdata.Source.Tag 
+        case 'TimeScroll'
+            startpos = round(eventdata.Value);
+            start_chan = p.EEG.nbchan - chans_to_plot + 1 - (round(h.slider_channelscroll.Value)-1);
+
+        case 'ChannelScroll'
+            startpos = round(h.slider_timescroll.Value);
+            start_chan = p.EEG.nbchan - chans_to_plot + 1 - (round(eventdata.Value-1));
+    end
 else
-    startpos = round(h.slider_datascroll.Value);
+   startpos = round(h.slider_timescroll.Value);
+   start_chan = p.EEG.nbchan - chans_to_plot + 1 - (round(h.slider_channelscroll.Value)-1);
 end
+
+end_chan = start_chan + chans_to_plot -1;
 
 %grab the data to plot
 endpos = startpos + p.pwidth-1;
-d = p.EEG.data(:,startpos:endpos);
+d = p.EEG.data(start_chan:end_chan,startpos:endpos);
 t = p.EEG.times(startpos:endpos)./1000;
 
 if isfield(p.EEG.chaninfo,'badchans')
@@ -309,35 +267,32 @@ else
 end
 
 %scale it so that that channels are not stacked
-scalefac = (0:1:p.EEG.nbchan-1) * p.scale;
+scalefac = (0:1:chans_to_plot-1) * p.scale;
 scalefacarray = repmat(scalefac', 1, p.pwidth);
 d = d + scalefacarray;
+xlims = [t(1), t(end)]; ylims = [scalefac(1) - p.scale, scalefac(end) + p.scale];
 
-ph = plot(h.axis_main, t,d, 'Color', 'b');
-
+ph = plot(h.axis_main, t,d, 'Color', [.4,1,.4]);
 for ii = 1:length(ph)
-    ph(ii).ButtonDownFcn = {@callback_selectchannel, h, ii};
-    ph(ii).LineWidth = (p.selchans(ii) * 2) + .5;
-    if p.selchans(ii) 
-        ph(ii).Color = 'k';
+    chIndx = start_chan + ii-1;
+    ph(ii).ButtonDownFcn = {@callback_selectchannel, h, chIndx};
+    ph(ii).LineWidth = (p.selchans(chIndx) * 2) + .5;
+    if p.selchans(chIndx) 
+        ph(ii).Color = 'c';
     end
-    if badchans(ii)
-        ph(ii).Color = 'r';
+    if badchans(chIndx)
+        ph(ii).Color = [1,.3,.3];
     end
     
 end
 
 h.axis_main.YTick = scalefac;
-h.axis_main.YTickLabel = {p.EEG.chanlocs.labels};
+h.axis_main.YTickLabel = {p.EEG.chanlocs(start_chan:end_chan).labels};
 
-xlims = [t(1), t(end)]; ylims = [scalefac(1) - p.scale, scalefac(end) + p.scale];
+
 h.axis_main.XLim = xlims;
 h.axis_main.YLim = ylims;
 h.axis_main.YDir = 'reverse';
-h.axis_main.XGrid = 'on';
-h.axis_main.YGrid = 'on';
-h.axis_main.GridColor = [.25,.25,.25];
-h.axis_main.GridAlpha = .5;
 h.axis_main.Layer = 'bottom';
 
 %get event markers that lie within the plotting range
@@ -351,12 +306,52 @@ if ~isempty(evt_indx)
         if isnumeric(evt_label)
             evt_label = num2str(evt_label);
         end
-        line(h.axis_main, [evt_time, evt_time], [ylims(1)+p.scale, ylims(2)], 'Color',[.2,.5,.2], 'LineWidth', 1.5);
-        text(h.axis_main, evt_time, ylims(1), evt_label, ...
-            'Color', [.2, .5,.2], 'HorizontalAlignment', 'center',...
-            'Interpreter','none');
+        line(h.axis_main, [evt_time, evt_time], [ylims(1)-p.scale, ylims(2)], 'Color','c', 'LineWidth', 1.5);
+        text(h.axis_main, evt_time, ylims(1)-p.scale, evt_label, ...
+            'Color', 'c', 'HorizontalAlignment', 'center',...
+            'Interpreter','none','Rotation',90,...
+            'VerticalAlignment','middle')
     end
 end
+if isfield(p.EEG, 'SelectedRects')
+    if ~isempty(p.EEG.SelectedRects)
+        h.button_reject.Enable = 'on';
+        for ii = 1:length(p.EEG.SelectedRects)
+            po = patch('Parent', h.axis_main,...
+                'XData', p.EEG.SelectedRects(ii).XData,...
+                'YData', [ylims(1), ylims(1), ylims(2), ylims(2)],...
+                'FaceColor', [1, 1, 1], ...
+                'LineStyle', 'none',...
+                'FaceAlpha', .25,...
+                'Tag', p.EEG.SelectedRects(ii).Tag);
+            po.ButtonDownFcn = {@removeSelectedPatch, h};
+          
+        end
+    else
+        h.button_reject.Enable = 'off';
+    end
+end
+%*************************************************************************
+function callback_changechannnum(~, ~, h)
+    
+%get users input for how many channels to show
+    chans_to_show = h.spinner_changechannum.Value;
+%update the slider
+    mx = h.spinner_changechannum.Limits;
+    mx = mx(2);
+    slider_mx = mx - chans_to_show + 1;
+    if h.slider_channelscroll.Value > slider_mx
+        h.slider_channelscroll.Value = slider_mx;
+    end
+    if slider_mx == 1
+        h.slider_channelscroll.Limits = [1, 2];
+        h.slider_channelscroll.Visible = 'off';
+    else
+        h.slider_channelscroll.Limits = [1, slider_mx];
+        h.slider_channelscroll.Visible = 'on';
+    end
+    callback_drawdata([],[],h)
+
 %*************************************************************************
 function callback_changescale(hObject, eventdata, h)
 
@@ -372,14 +367,347 @@ plot = h.figure.UserData;
 plot.pwidth = eventdata.Value * plot.EEG.srate;
 h.figure.UserData = plot;
 
-h.slider_datascroll.Limits = [1, plot.EEG.pnts - plot.pwidth];
+h.slider_timescroll.Limits = [1, plot.EEG.pnts - plot.pwidth];
 callback_drawdata([], [], h);
+%**************************************************************************
+function callback_mouseeventhandler(hObject, event, h)
+    persistent isdragging;
+    persistent Xstart Xend;
+    persistent r;
+
+    if isempty(isdragging)
+        isdragging = 0;
+    end
+
+    mousePos = hObject.CurrentPoint;
+    shiftKey = any(strcmp(hObject.CurrentModifier, 'shift'));
+    if mouseIsInRegion(mousePos, h.axis_main.Position) && shiftKey
+        
+        switch event.EventName
+            case 'WindowMousePress'
+                isdragging = true;
+                Xstart = h.axis_main.CurrentPoint;
+                Xstart = Xstart(1);
+                %create rectangular highlight
+                r = gobjects(1,1);
+            case 'WindowMouseRelease'
+                if isdragging
+                    isdragging = false;
+                    %add the patch to the file so we have a record of what has
+                    %been marked as bad
+                    p = h.figure.UserData;
+                    r.ButtonDownFcn = {@removeSelectedPatch, h};
+                    %make sure the 
+                   
+                    if ~isfield(p.EEG, 'SelectedRects')
+                        r.Tag = num2str(1);
+                        p.EEG.SelectedRects(1).XData = r.XData;
+                        p.EEG.SelectedRects(1).Tag = r.Tag;
+                    else
+                        r.Tag = num2str(length(p.EEG.SelectedRects) + 1);
+                        p.EEG.SelectedRects(end+1).XData = r.XData;
+                        p.EEG.SelectedRects(end).Tag = r.Tag;
+                    end
+                    p.EEG.saved = 'no';
+                    h.figure.UserData = p;
+                    h.button_reject.Enable = 'on';
+                end
+
+            case 'WindowMouseMotion'
+                if isdragging
+                    Xend = h.axis_main.CurrentPoint;
+                    Xend = Xend(1);
+                    y = h.axis_main.YLim;                        
+                    if contains(class(r), 'Placeholder')
+                        %change to patch so it can be transparent
+                        r = patch('Parent',h.axis_main,...
+                            'XData', [Xstart, Xend, Xend, Xstart],...
+                            'YData', [y(1), y(1), y(2), y(2)],...
+                            'FaceColor',[1, 1, 1],...
+                            'FaceAlpha', .2,...
+                            'LineStyle', 'none');
+                    else
+                        r.XData = [Xstart, Xend, Xend, Xstart];
+                    end
+                end
+        end
+    end
+% ***********************************************************************
+function removeSelectedPatch(hObject, ~,h)
+    p = h.figure.UserData;
+    if isfield(p.EEG, 'SelectedRects')
+        for ii = 1:length(p.EEG.SelectedRects)
+            if strcmp(hObject.Tag, p.EEG.SelectedRects(ii).Tag)
+                p.EEG.SelectedRects(ii) = [];
+                break
+            end
+        end
+    end
+    if isempty(p.EEG.SelectedRects)
+        h.button_reject.Enable = 'off';
+    end
+
+    h.figure.UserData = p;
+    callback_drawdata(hObject, [], h);
+%**************************************************************************
+function callback_removeSelectedData(~,~,h)
+    p = h.figure.UserData;
+
+    msg = 'This will remove selected data segments from this participant and overwrite the existing data.';
+    msg = sprintf('%s\n\nTo remove segments from all participants without overwriting use the Preprocess->Remove bad segments menu option in the main window.',msg);
+    response = uiconfirm(h.figure, msg, 'Remove selected data segments', 'Options',{'Continue', 'Cancel'}, 'CancelOption',2,'DefaultOption',2);
+    if strcmp(response, 'Continue')
+        %collect all the data segments
+        rmTimes = [p.EEG.SelectedRects.XData];
+        rmTimes = sort(rmTimes(1:2,:))';
+        
+        %check for overlapping boundaries
+%        rmTimes = checkForOverlap(rmTimes);
+        p.EEG = pop_select(p.EEG,'rmtime',rmTimes);
+        p.EEG.save = 'no';
+        p.EEG.SelectedRects = [];
+        h.figure.UserData = p;
+        callback_drawdata([],[],h);
+    end
+%************************************************************************** 
+function callback_moveToSelectedRect(hObject, event, h, direction)
+
+    p = h.figure.UserData;
+    if isfield(p.EEG, 'SelectedRects') && ~isempty(p.EEG.SelectedRects)
+        nRects = length(p.EEG.SelectedRects);
+        if isfield(p, 'SelectedRect')
+            if p.SelectedRect > nRects
+                p.SelectedRect = nRects;
+            else
+                newRect = p.SelectedRect + direction;
+                if newRect < 1
+                    newRect = 1;
+                elseif newRect > nRects
+                     newRect = nRects;
+                end
+                p.SelectedRect = newRect;
+            end
+        else
+            p.SelectedRect = 1;
+        end
+        xData = p.EEG.SelectedRects(p.SelectedRect).XData;
+       % middle = min(xData) + (max(xData) - min(xData))/2;
+        h.slider_timescroll.Value = min(xData) * p.EEG.srate;
+        h.figure.UserData = p;
+        callback_drawdata([],[],h);
+    else
+        fprintf('No selected regions found.\n')
+    end
+
+%**************************************************************************
+% function bOut = checkForOverlap(bIn)
+% nRegions = size(bIn,1);
+% checking = true;
+% 
+% 
+% if nRegions > 1
+%     while checking
+%         hasOverlap = false;
+%         for ii = 1:nRegions
+%             for jj = 1:nRegions
+%                 if ii==jj
+%                     continue
+%                 end
+%                 if ((bIn(ii,1) > bIn(jj,1)) && (bIn(ii,1) < bIn(jj,2))) ...
+%                         || ((bIn(ii,2) > bIn(jj,1)) && (bIn(ii,1) < bIn(jj,2)))
+%                     fprintf('found overlappiing selections...fixing\n');
+%                     mn = min(bIn(ii,1), bIn(jj,1));
+%                     mx = max(bIn(ii,2), bIn(jj,2));
+%                     bIn(ii,:) = [mn, mx];
+%                     bIn(jj,:) = [];
+%                     hasOverlap = true;
+%                     break
+%                 end
+%     
+%             end
+%             if hasOverlap
+%                 break
+%             end
+%         end
+%         checking = false;
+%     end
+% end
+% bOut = bIn;
+%**************************************************************************
+function result = mouseIsInRegion(mousePos, region)
+    mouseX = mousePos(1);
+    mouseY = mousePos(2);
+
+    result= mouseX> region(1) && mouseX < (region(1)+ region(3)) ...
+            && mouseY > region(2) && mouseY < (region(2) + region(4));
+%**************************************************************************
+function handles = build_gui(study)
+
+%p = plot_params;
+scheme = eeg_LoadScheme;
+sz = get(0, 'screenSize');
+W = round(sz(3) * .8); H = round(sz(4) * .6);
+figpos = [(sz(3) - W)/2, (sz(4) - H)/2, W, H];
+
+handles.figure = uifigure(...
+    'Color', scheme.Window.BackgroundColor.Value,...
+    'Position', figpos,...
+    'NumberTitle', 'off', ...
+    'Toolbar', 'none');
+
+handles.axis_main = uiaxes(...
+    'Parent', handles.figure,...
+    'Units', 'Pixels',...
+    'Position', [50,50,W-100,H-100],...
+    'Interactions', [],...
+    'Color', scheme.Axis.BackgroundColor.Value,...
+    'XColor',scheme.Axis.AxisColor.Value,...        
+    'YColor',scheme.Axis.AxisColor.Value,...
+    'FontName', scheme.Axis.Font.Value,...
+    'FontSize', scheme.Axis.FontSize.Value,...
+    'GridLineStyle','-',...
+    'XGrid','on','YGrid','on');
+handles.axis_main.Toolbar.Visible = 'off';
+handles.axis_main.XLabel.String = 'Time (seconds)';
+handles.axis_main.YLabel.String = 'Channel X Amplitude (uV)';
+
+handles.panel_chpanel = uipanel(...
+    'Parent', handles.figure,...
+    'Position', [300, H-35, 230, 35],...
+    'Title', '',...
+    'BackgroundColor',scheme.Panel.BackgroundColor.Value,...
+    'HighlightColor',scheme.Panel.BorderColor.Value,...
+    'BorderType','none');
+
+axis_pos = handles.axis_main.InnerPosition;
+handles.slider_timescroll = uislider(...
+    'Parent', handles.figure,...
+    'Position', [axis_pos(1),20,axis_pos(3),3],...
+    'Limits', [0,100],...
+    'MajorTicks', [],...
+    'MinorTicks', [],...
+    'FontColor', scheme.Label.FontColor.Value,...
+    'Tag', 'TimeScroll');
+
+handles.slider_channelscroll = uislider(...
+    'Parent', handles.figure,...
+    'Position', [axis_pos(1)+axis_pos(3)+20,axis_pos(2), axis_pos(4),3],...
+    'Limits', [1,64],...
+    'MajorTicks', [],...
+    'MinorTicks', [],...
+    'FontColor', scheme.Label.FontColor.Value,...
+    'Orientation','vertical',...
+    'Tag', 'ChannelScroll');
+
+handles.panel_subjpanel = uipanel(...
+    'Parent', handles.figure,...
+    'Position', [axis_pos(1), H-35, 230, 35],...
+    'Title', '',...
+    'BackgroundColor',scheme.Panel.BackgroundColor.Value,...
+    'BorderType','none');
+
+handles.dropdown_subjselect = uidropdown(...
+    'Parent', handles.panel_subjpanel,...
+    'Position', [10, 5, 100, 25],...
+    'BackgroundColor',scheme.Dropdown.BackgroundColor.Value,...
+    'FontColor', scheme.Dropdown.FontColor.Value,...
+    'FontSize',scheme.Dropdown.FontSize.Value,...
+    'FontName', scheme.Dropdown.Font.Value);
+
+handles.label_subjectstatus = uilabel(...,
+    'Parent', handles.panel_subjpanel,...
+    'Position', [120, 5, 100, 25], ...
+    'HorizontalAlignment', 'center',...
+    'FontName', scheme.Label.Font.Value,...
+    'FontColor', scheme.Label.FontColor.Value,...
+    'FontSize', scheme.Label.FontSize.Value);
+
+handles.spinner_changescale = uispinner(...
+    'Parent', handles.figure,...
+    'Position', [axis_pos(1) + axis_pos(3) - 100, H-25, 100, 20],...
+    'Limits', [1, inf],...
+    'RoundFractionalvalues', 'on', ...
+    'ValueDisplayFormat', '%i mV',...
+    'BackgroundColor',scheme.Dropdown.BackgroundColor.Value,...
+    'FontName',scheme.Dropdown.Font.Value,...
+    'FontSize', scheme.Dropdown.FontSize.Value,...
+    'FontColor',scheme.Dropdown.FontColor.Value);
+
+handles.spinner_changepwidth = uispinner(...
+    'Parent', handles.figure,...
+    'Position', [axis_pos(1) + axis_pos(3) - 210, H-25, 100, 20],...
+    'Limits', [1, 20],...
+    'RoundFractionalvalues', 'on', ...
+    'ValueDisplayFormat', '%i sec',...
+    'BackgroundColor',scheme.Dropdown.BackgroundColor.Value,...
+    'FontName',scheme.Dropdown.Font.Value,...
+    'FontSize', scheme.Dropdown.FontSize.Value,...
+    'FontColor',scheme.Dropdown.FontColor.Value);
+
+handles.spinner_changechannum = uispinner(...
+    'Parent', handles.figure,...
+    'Position', [axis_pos(1) + axis_pos(3) - 320, H-25, 100, 20],...
+    'Limits', [1, 64],...
+    'Value', 64,...
+    'RoundFractionalvalues', 'on', ...
+    'ValueDisplayFormat', '%i channels',...
+    'BackgroundColor',scheme.Dropdown.BackgroundColor.Value,...
+    'FontName',scheme.Dropdown.Font.Value,...
+    'FontSize', scheme.Dropdown.FontSize.Value,...
+    'FontColor',scheme.Dropdown.FontColor.Value);
+
+handles.button_reject = uibutton(...
+    'Parent', handles.figure,...
+    'Position', [axis_pos(1) + axis_pos(3) - 430, H-25, 100, 20],...
+    'BackgroundColor',scheme.Button.BackgroundColor.Value,...
+    'FontName',scheme.Button.Font.Value,...
+    'FontSize', scheme.Button.FontSize.Value,...
+    'FontColor', scheme.Button.FontColor.Value,...
+    'Text','Reject',...
+    'Enable','off');
+
+%menu items
+handles.menu_file = uimenu('Parent', handles.figure, 'Text', 'File');
+handles.menu_trim = uimenu('Parent', handles.menu_file, 'Text', 'Trim file to first and last markers');
+handles.menu_channel = uimenu('Parent', handles.figure, 'Text', 'Channels');
+handles.menu_badchan = uimenu('Parent', handles.menu_channel,...
+    'Text',"Set selected to bad channels ");
+handles.menu_goodchan = uimenu('Parent', handles.menu_channel,...
+    'Text',"Set selected to good channels ");
+handles.menu_clearchan = uimenu('Parent', handles.menu_channel,...
+    'Text','Clear selections', 'Separator','on');
+handles.menu_segment = uimenu('Parent', handles.figure, 'Text','Selected Segments');
+handles.menu_nextsegment = uimenu('Parent', handles.menu_segment, 'Text', 'Go to Next', 'Accelerator', '>');
+handles.menu_previoussegment = uimenu('Parent', handles.menu_segment, 'Text', 'Go to Previous', 'Accelerator', '<');
 
 
+clear axis_pos
+
+% ***********************************************************************
+function handles = setCallbacks(handles, study)
+handles.figure.WindowButtonDownFcn = {@callback_mouseeventhandler, handles};
+handles.figure.WindowButtonMotionFcn = {@callback_mouseeventhandler, handles};
+handles.figure.WindowButtonUpFcn = {@callback_mouseeventhandler, handles};
+handles.slider_timescroll.ValueChangingFcn = {@callback_drawdata, handles};
+handles.slider_channelscroll.ValueChangingFcn = {@callback_drawdata, handles};
+handles.slider_channelscroll.ValueChangedFcn = {@callback_drawdata, handles};
+handles.spinner_changescale.ValueChangedFcn = {@callback_changescale, handles};
+handles.spinner_changepwidth.ValueChangedFcn = {@callback_changepwidth, handles};
+handles.spinner_changechannum.ValueChangedFcn = {@callback_changechannnum, handles};
+handles.dropdown_subjselect.ValueChangedFcn = {@callback_loadnewfile, study, handles};
+handles.button_reject.ButtonPushedFcn = {@callback_removeSelectedData, handles};
+
+handles.menu_badchan.MenuSelectedFcn = {@callback_markchannels, handles, 'bad'};
+handles.menu_goodchan.MenuSelectedFcn = {@callback_markchannels, handles, 'good'};
+handles.menu_clearchan.MenuSelectedFcn = {@callback_deselectchans, handles};
+handles.menu_trim.MenuSelectedFcn = {@callback_trim, study,handles};
+handles.menu_nextsegment.MenuSelectedFcn = {@callback_moveToSelectedRect, handles, 1};
+handles.menu_previoussegment.MenuSelectedFcn = {@callback_moveToSelectedRect, handles, -1};
 
 
-
-
-
-
- 
+% ************************************************************************
+function handles = initializeControls(handles, study, filenames)
+%do a more sophisticated check later to make sure this information matches
+handles.dropdown_subjselect.Items   = {study.subject.ID};
+handles.dropdown_subjselect.ItemsData = 1:length(study.subject);
+handles.dropdown_subjselect.UserData = filenames;

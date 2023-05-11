@@ -34,27 +34,21 @@ p = wwu_finputcheck(varargin, {...
     'BinFile',      'string', [], []...
     }, [], 'ignore');
 
-
-
 status = 0;  %assume things went wrong
-
 if isempty(selfiles)
     return
 end
-
 
 OWrite = p.Overwrite;
 p.Events = split(p.Events);
 
 if isempty(p.ExcludeBad)
-    
     %get an idea of what kind of data this is
     [fpath, fname, fext] = fileparts(selfiles{1});
     EEGHead = wwu_LoadEEGFile(selfiles{1});
 
     %EEGHead = pop_loadset('filename', [fname, fext], 'filepath', fpath, 'loadmode', 'info');
     if EEGHead.trials>1  && isempty(p.ExcludeBad)
-        
         response = uiconfirm(p.FigHandle, 'It looks like you are epoching already epoched data.  Do you want to exclude bad trials from your new epochs?', 'Extract Epochs', 'Options', {'Cancel','No', 'Yes'},...
             'DefaultOption', 3, 'CancelOption', 1);
         switch response
@@ -68,15 +62,11 @@ if isempty(p.ExcludeBad)
     end
 end
 
-
 exclude_decision = p.ExcludeBad;
 for kk = 1:length(selfiles)
-    
-    
     [fpath, fname, fext] = fileparts(selfiles{kk});
     outfilename =  fullfile(fpath, [p.Outfile, p.FileExt]);
     
-
     if exist(outfilename, 'file')
         if OWrite == 0 %skip when output file exists 
             fprintf('File %s already exists\nAborting file creation ...\n', outfilename);
@@ -93,11 +83,7 @@ for kk = 1:length(selfiles)
             end 
         end
     end
-                    
- 
-    %remove bad trials before extracting epochs
     
-    %EEGraw = pop_loadset('filepath',  fpath, 'filename', [fname, fext]);
     EEGraw = wwu_LoadEEGFile(selfiles{kk});
     badtrial_list = study_GetBadTrials(EEGraw);
     bad_comps = EEGraw.reject.gcompreject;  %store the bad component list so it can be restored to the new epochs
@@ -120,18 +106,16 @@ for kk = 1:length(selfiles)
         EEG.reject = [];
         EEG = eeg_checkset(EEG);
         EEG.reject.gcompreject = bad_comps;
+        %use the mass univariate toolbox tools for creating a bin file
+        %compatible with the statistical tools
         if ~isempty(p.BinFile)
             if isfield(EEG, 'bindesc')
                 EEG = remove_bins(EEG);
             end
             EEG = bin_info2EEG(EEG, p.BinFile);
-            
-            
         end
         wwu_SaveEEGFile(EEG, fullfile(fpath, [p.Outfile, p.FileExt]));
-        
-  
-    end
+     end
     
 end
 status = 1; %must be OK if we got this far
