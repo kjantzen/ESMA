@@ -257,6 +257,8 @@ cla(h.axis_icatopo);
 wwu_topoplot(ic,  p.EEG.chanlocs, 'axishandle', h.axis_icatopo);
 colorbar(h.axis_icatopo);
 
+%if this is epcohed data
+if p.EEG.trials > 1
 %get the ICA data without the bad trials
 btrials = ~study_GetBadTrials(p.EEG);
 icaact = squeeze(p.EEG.icaact(ic_number,:,:));
@@ -334,7 +336,7 @@ h.axis_icafft.XLabel.String = 'Frequency (Hz)';
 h.axis_icafft.YLabel.String = 'Log Power (mV/freq)';
 h.axis_icafft.YScale = 'log';
 h.axis_icafft.Box = 'off';
-
+end
 %plot the classification for the selected component
 pbar_data = p.EEG.etc.ic_classification.ICLabel.classifications(ic_number,:);
 for ii = 1:length(pbar_data)

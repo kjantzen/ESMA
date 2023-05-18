@@ -16,12 +16,8 @@
 %                   listed in the study structure.
 
 %TODO list
-%  1. Allow for selection of number of channels displayed
-%  2. Allow for selection of bad sections of data
-%  3. Include automatic selection of bad data (for one participant here and
-%  for all in the main display).
 %   
-% Update 5/13/20 KJ Jantzen
+% Update 5/11/23 KJ Jantzen
 function study_PlotCNT(study, filenames)
 
 try
@@ -44,45 +40,7 @@ p.selchans = zeros(1,p.EEG.nbchan);
 h.figure.UserData = p;
 
 callback_drawdata([],[],h);
-%*************************************************************************
-function callback_trim(~,~,study,h)
-%trims empty space from the beginning and end of a continouous file.
-p = h.figure.UserData;
-%get the time of the first marker
-%it should just be the first one, but lets not take that chance
-[pstart, indxstart] = min([p.EEG.event.latency]);
-[pend, indxend] = max([p.EEG.event.latency]);
 
-%set the trim boundaries to 5 seconds before the first marker
-pstart = pstart-(p.EEG.srate * 5);
-if pstart < 1
-    pstart = 1;
-    msg = '';
-else
-    msg = sprintf('%i points (%3.2f s) will be trimmed from the the start of the file\n',...
-        pstart, pstart/p.EEG.srate);
-end
-pend = pend + (p.EEG.srate * 10);
-if pend > p.EEG.pnts
-    pend = p.EEG.pnts;
-else
-    msg = [msg, sprintf('%i points (%3.2f s) will be trimmed from the the end of the file\n',...
-        p.EEG.pnts-pend, (p.EEG.pnts-pend)/p.EEG.srate);];
-end
-msg = [msg, 'This step will overwrite the current file and cannot be undone!'];
-
-if pstart==1 && pend == p.EEG.pnts
-    uialert(h.figure,'These data appear to have been trimmed or do not require trimming!', 'Data Trim');
-else
-    choice = uiconfirm(h.figure, msg, 'Confirm Trim');
-    if contains(choice, 'OK')
-        p.EEG = pop_select(p.EEG, 'point',[pstart, pend]);
-        p.EEG.saved = 'no';
-        p.EEG = wwu_SaveEEGFile(p.EEG);
-        h.figure.UserData = p;
-        callback_loadnewfile([],[],study,h);
-    end
-end
 %*************************************************************************
 function callback_markchannels(hObject, eventdata, h, status)
 
@@ -125,15 +83,31 @@ h.figure.UserData = p;
 callback_drawdata([], [],h)
 
 %**************************************************************************
-function callback_selectchannel(hobject, eventdata,h, ch_num)
+function callback_selectchannel(hObject, eventdata,h, ch_num)
     %make sure the shift key is not pressed because that enables a
     %different function
     if ~any(strcmp(h.figure.CurrentModifier, 'shift'))
         p = h.figure.UserData;
         p.selchans(ch_num) = ~p.selchans(ch_num);
         h.figure.UserData = p;  
-        callback_drawdata([],[],h);
-    end    
+
+        badchans = getBadChans(p.EEG);
+        if p.selchans(ch_num) 
+            hObject.Color = 'c';
+        else
+            hObject.Color = [.4, 1, .4];
+        end
+        if badchans(ch_num)
+            hObject.Color = [1,.3,.3];
+        end
+    
+        if strcmp(hObject.Tag, 'FFT_Channel')
+           callback_drawdata([],[],h);
+        end
+    end
+ 
+    
+        
 %*************************************************************************    
 function callback_loadnewfile(hObject, eventdata, study, h)
 
@@ -227,6 +201,13 @@ end
 callback_drawdata([],[],h);
 close(pb);
 %*************************************************************************
+function badchans = getBadChans(EEG)
+    if isfield(EEG.chaninfo,'badchans')
+        badchans = EEG.chaninfo.badchans;
+    else
+        badchans = zeros(1,EEG.nbchan);
+    end
+%*************************************************************************
 function callback_drawdata(hObject, eventdata, h)
 
 %TO DO
@@ -247,6 +228,9 @@ if ~isempty(eventdata)
         case 'ChannelScroll'
             startpos = round(h.slider_timescroll.Value);
             start_chan = p.EEG.nbchan - chans_to_plot + 1 - (round(eventdata.Value-1));
+        otherwise
+           startpos = round(h.slider_timescroll.Value);
+           start_chan = p.EEG.nbchan - chans_to_plot + 1 - (round(h.slider_channelscroll.Value)-1);
     end
 else
    startpos = round(h.slider_timescroll.Value);
@@ -260,11 +244,7 @@ endpos = startpos + p.pwidth-1;
 d = p.EEG.data(start_chan:end_chan,startpos:endpos);
 t = p.EEG.times(startpos:endpos)./1000;
 
-if isfield(p.EEG.chaninfo,'badchans')
-    badchans = p.EEG.chaninfo.badchans;
-else
-    badchans = zeros(1,p.EEG.nbchan);
-end
+badchans = getBadChans(p.EEG);
 
 %scale it so that that channels are not stacked
 scalefac = (0:1:chans_to_plot-1) * p.scale;
@@ -330,6 +310,8 @@ if isfield(p.EEG, 'SelectedRects')
     else
         h.button_reject.Enable = 'off';
     end
+else
+    h.button_reject.Enable = 'off';
 end
 %*************************************************************************
 function callback_changechannnum(~, ~, h)
@@ -409,6 +391,7 @@ function callback_mouseeventhandler(hObject, event, h)
                         p.EEG.SelectedRects(end).Tag = r.Tag;
                     end
                     p.EEG.saved = 'no';
+                    p.SelectedRect = str2double(r.Tag);
                     h.figure.UserData = p;
                     h.button_reject.Enable = 'on';
                 end
@@ -469,9 +452,10 @@ function callback_removeSelectedData(~,~,h)
         h.figure.UserData = p;
         callback_drawdata([],[],h);
     end
+%************************************************************************** 
 function callback_moveToSelectedRect(hObject, event, h, direction)
 
-    p = h.figure.UserData
+    p = h.figure.UserData;
     if isfield(p.EEG, 'SelectedRects') && ~isempty(p.EEG.SelectedRects)
         nRects = length(p.EEG.SelectedRects);
         if isfield(p, 'SelectedRect')
@@ -479,52 +463,31 @@ function callback_moveToSelectedRect(hObject, event, h, direction)
                 p.SelectedRect = nRects;
             else
                 newRect = p.SelectedRect + direction;
-                if newRect < 0 || newRect > nRects
+                if newRect < 1
                     newRect = 1;
+                elseif newRect > nRects
+                     newRect = nRects;
                 end
-                p.SelectedRect = newRect
+                p.SelectedRect = newRect;
             end
         else
             p.SelectedRect = 1;
         end
         xData = p.EEG.SelectedRects(p.SelectedRect).XData;
-        middle = min(XData) + (max(xData) - min(xData))/2
-
-
+       % middle = min(xData) + (max(xData) - min(xData))/2;
+        h.slider_timescroll.Value = min(xData) * p.EEG.srate;
+        h.figure.UserData = p;
+        callback_drawdata([],[],h);
+    else
+        fprintf('No selected regions found.\n')
+    end
 %**************************************************************************
-% function bOut = checkForOverlap(bIn)
-% nRegions = size(bIn,1);
-% checking = true;
-% 
-% 
-% if nRegions > 1
-%     while checking
-%         hasOverlap = false;
-%         for ii = 1:nRegions
-%             for jj = 1:nRegions
-%                 if ii==jj
-%                     continue
-%                 end
-%                 if ((bIn(ii,1) > bIn(jj,1)) && (bIn(ii,1) < bIn(jj,2))) ...
-%                         || ((bIn(ii,2) > bIn(jj,1)) && (bIn(ii,1) < bIn(jj,2)))
-%                     fprintf('found overlappiing selections...fixing\n');
-%                     mn = min(bIn(ii,1), bIn(jj,1));
-%                     mx = max(bIn(ii,2), bIn(jj,2));
-%                     bIn(ii,:) = [mn, mx];
-%                     bIn(jj,:) = [];
-%                     hasOverlap = true;
-%                     break
-%                 end
-%     
-%             end
-%             if hasOverlap
-%                 break
-%             end
-%         end
-%         checking = false;
-%     end
-% end
-% bOut = bIn;
+function callback_clearAllRects(~,~,h)
+    p = h.figure.UserData;
+    p.EEG.SelectedRects = [];
+    h.figure.UserData = p;
+    callback_drawdata([],[],h);
+
 %**************************************************************************
 function result = mouseIsInRegion(mousePos, region)
     mouseX = mousePos(1);
@@ -532,6 +495,55 @@ function result = mouseIsInRegion(mousePos, region)
 
     result= mouseX> region(1) && mouseX < (region(1)+ region(3)) ...
             && mouseY > region(2) && mouseY < (region(2) + region(4));
+%**************************************************************************
+function callback_makefreqplot(~,~,h)
+
+    scheme = eeg_LoadScheme;
+    p = h.figure.UserData;
+
+    pb = uiprogressdlg(h.figure, 'Message', 'Computing FFT for all channels', 'Title', 'Computing FFT', 'Indeterminate', 'on');
+    
+    [s, f] = spectopo(p.EEG.data, 0, p.EEG.srate, 'plot', 'off', 'winsize', p.EEG.srate * 2);
+    fig = uifigure;
+    fig.Name = p.EEG.setname;
+    fig.NumberTitle = 'off';
+    g = uigridlayout(fig, [1,1]);
+    g.BackgroundColor =  scheme.Window.BackgroundColor.Value;
+    
+    a = uiaxes(...
+    'Parent', g,...
+    'Units', 'Pixels',...
+    'Interactions', [],...
+    'Color', scheme.Axis.BackgroundColor.Value,...
+    'XColor',scheme.Axis.AxisColor.Value,...        
+    'YColor',scheme.Axis.AxisColor.Value,...
+    'FontName', scheme.Axis.Font.Value,...
+    'FontSize', scheme.Axis.FontSize.Value,...
+    'GridLineStyle','-',...
+    'XGrid','on','YGrid','on');
+
+    badchans = getBadChans(p.EEG);
+
+    ph = plot(a, f,s', 'Color', [.4,1,.4]);
+    for ii = 1:length(ph)
+        ph(ii).ButtonDownFcn = {@callback_selectchannel, h, ii};
+        ph(ii).Tag = 'FFT_Channel';
+        if p.selchans(ii) 
+            ph(ii).Color = 'c';
+        end
+        if badchans(ii)
+            ph(ii).Color = [1,.3,.3];
+        end
+        
+    end
+    pb.Message = 'Close the FFT figure to return to the Continuous Data Plot Tool.';
+    a.XLim = [0, 100];
+    drawnow;
+    uiwait(fig);
+    close(pb)
+
+    
+
 %**************************************************************************
 function handles = build_gui(study)
 
@@ -628,7 +640,7 @@ handles.spinner_changescale = uispinner(...
 handles.spinner_changepwidth = uispinner(...
     'Parent', handles.figure,...
     'Position', [axis_pos(1) + axis_pos(3) - 210, H-25, 100, 20],...
-    'Limits', [1, 20],...
+    'Limits', [1, inf],...
     'RoundFractionalvalues', 'on', ...
     'ValueDisplayFormat', '%i sec',...
     'BackgroundColor',scheme.Dropdown.BackgroundColor.Value,...
@@ -659,8 +671,9 @@ handles.button_reject = uibutton(...
     'Enable','off');
 
 %menu items
-handles.menu_file = uimenu('Parent', handles.figure, 'Text', 'File');
-handles.menu_trim = uimenu('Parent', handles.menu_file, 'Text', 'Trim file to first and last markers');
+handles.menu_data = uimenu('Parent', handles.figure, 'Text', 'Data');
+handles.menu_freq = uimenu('Parent', handles.menu_data, 'Text', 'Show frequency plot');
+
 handles.menu_channel = uimenu('Parent', handles.figure, 'Text', 'Channels');
 handles.menu_badchan = uimenu('Parent', handles.menu_channel,...
     'Text',"Set selected to bad channels ");
@@ -668,9 +681,10 @@ handles.menu_goodchan = uimenu('Parent', handles.menu_channel,...
     'Text',"Set selected to good channels ");
 handles.menu_clearchan = uimenu('Parent', handles.menu_channel,...
     'Text','Clear selections', 'Separator','on');
-handles.menu_segment = uimenu('Parent', handles.figure, 'Test','Selected Segments');
-handles.menu_nextsegment = uimenu('Parent', handles.menu_segment, 'Text', 'Go to Next', 'Accelerator', '>');
-handles.menu_previoussegment = uimenu('Parent', handles.menu_segment, 'Text', 'Go to Previous', 'Accelerator', '<');
+handles.menu_segment = uimenu('Parent', handles.figure, 'Text','Selected Segments');
+handles.menu_nextsegment = uimenu('Parent', handles.menu_segment, 'Text', 'Go to Next', 'Accelerator', 'N');
+handles.menu_previoussegment = uimenu('Parent', handles.menu_segment, 'Text', 'Go to Previous', 'Accelerator', 'P');
+handles.menu_clearsegment = uimenu('Parent', handles.menu_segment, 'Text', 'Clear all selections');
 
 
 clear axis_pos
@@ -689,12 +703,14 @@ handles.spinner_changechannum.ValueChangedFcn = {@callback_changechannnum, handl
 handles.dropdown_subjselect.ValueChangedFcn = {@callback_loadnewfile, study, handles};
 handles.button_reject.ButtonPushedFcn = {@callback_removeSelectedData, handles};
 
+handles.menu_freq.MenuSelectedFcn = {@callback_makefreqplot, handles};
 handles.menu_badchan.MenuSelectedFcn = {@callback_markchannels, handles, 'bad'};
 handles.menu_goodchan.MenuSelectedFcn = {@callback_markchannels, handles, 'good'};
 handles.menu_clearchan.MenuSelectedFcn = {@callback_deselectchans, handles};
-handles.menu_trim.MenuSelectedFcn = {@callback_trim, study,handles};
 handles.menu_nextsegment.MenuSelectedFcn = {@callback_moveToSelectedRect, handles, 1};
-handles.menu_previoussegment.MenuSelectedFncn = {@callback_moveToSelectedRect, handles, -1};
+handles.menu_previoussegment.MenuSelectedFcn = {@callback_moveToSelectedRect, handles, -1};
+handles.menu_clearsegment.MenuSelectedFcn = {@callback_clearAllRects, handles};
+
 
 
 % ************************************************************************

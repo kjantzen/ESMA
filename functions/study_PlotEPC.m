@@ -1,26 +1,38 @@
 function study_PlotEPC(study, filenames)
 
 %build the figure
-p = plot_params;
+scheme = eeg_LoadScheme;
+p.goodtrialcolor = 'g';
+p.badtrialcolor = 'r';
+p.goodsubjectcolor = scheme.Axis.BackgroundColor.Value;
+p.badsubjectcolor = 'w';
+p.backcolor = scheme.Window.BackgroundColor.Value;
+p.goodbackgroundcolor = scheme.Window.BackgroundColor.Value;
+p.badbackgroundcolor = [.3, 0,0];
+p.goodicactcolor = 'c';
+p.badicactcolor = [1.,.5,.5];
+p.scheme = scheme;
 
+sz = get(0, 'ScreenSize');
+screenwidth = sz(3);
+screenheight = sz(4);
 
-if p.screenwidth < 1000 
-    W = round(p.screenwdith); H = round(p.screenheight);
+if screenwidth < 1000 
+    W = round(screenwdith); H = round(screenheight);
 else   
-    W = round(p.screenwidth * .5); H = round(p.screenheight * .6);
+    W = round(screenwidth * .5); H = round(screenheight * .6);
 end
 
-figpos = [(p.screenwidth - W)/2, (p.screenheight - H)/2, W, H];
+figpos = [(screenwidth - W)/2, (screenheight - H)/2, W, H];
 
 %create the figure
 %************************************************************************
 handles.figure = uifigure(...
-    'Color', p.backcolor,...
+    'Color', scheme.Window.BackgroundColor.Value,...
     'Position', figpos,...
-    'NumberTitle', p.numbertitle,...
-    'Menubar', p.menubar,...
+    'NumberTitle', 'off',...
+    'Menubar', 'none',...
     'AutoResizeChildren', 'off');
-
 
 %toolbar items
 %************************************************************************
@@ -92,10 +104,11 @@ handles.tool_plotfft.UserData = statedata;
 %************************************************************************
 handles.gl = uigridlayout('Parent', handles.figure,...
     'ColumnWidth',{'1x','1x'},...
-    'RowHeight',{35, '2x', '1x', 40}, ...
+    'RowHeight',{40, '2x', '1x', 40}, ...
     'Padding', [5,5,0,0], ...
     'ColumnSpacing', 5,...
-    'RowSpacing', 5);
+    'RowSpacing', 5,...
+    'BackgroundColor',scheme.Window.BackgroundColor.Value);
 
 %main plotting axis
 %************************************************************
@@ -103,36 +116,53 @@ handles.axis_main = uiaxes(...
     'Parent', handles.gl,...
     'Units', 'Pixels',...
     'OuterPosition', [10,50,W/2,H-100],...
-    'Interactions', []);
+    'Interactions', [],...
+    'Color', scheme.Axis.BackgroundColor.Value,...
+    'XColor', scheme.Axis.AxisColor.Value,...
+    'YColor',scheme.Axis.AxisColor.Value,...
+    'XGrid','on','YGrid','on');
+handles.axis_main.Title.Color = scheme.Axis.AxisColor.Value;
 handles.axis_main.Layout.Column = 1;
 handles.axis_main.Layout.Row = [2 3];
-
 
 handles.panel_summaryimage = uipanel(...
     'Parent', handles.gl,...
     'Units', 'Pixels',...
-    'BorderType','none');
+    'BorderType','none',...
+    'BackgroundColor',scheme.Panel.BackgroundColor.Value,...
+    'ForegroundColor',scheme.Panel.FontColor.Value);
 handles.panel_summaryimage.Layout.Column = 2;
 handles.panel_summaryimage.Layout.Row = 2;
 
 handles.label_summaryimagemsg = uilabel(...
     'Parent', handles.panel_summaryimage, ...
     'Text','this is a test',...
-    'FontSize', 16);
+    'FontSize', 16, ...
+    'FontColor', scheme.Label.FontColor.Value,...
+    'FontName', scheme.Label.Font.Value);
 
 handles.axis_quickaverage = uiaxes(...
     'Parent', handles.gl,...
-    'Color', 'w',...
-    'Interactions', []);
+    'Interactions', [],...
+    'Color', scheme.Axis.BackgroundColor.Value,...
+    'XColor',scheme.Axis.AxisColor.Value,...
+    'YColor', scheme.Axis.AxisColor.Value,...
+    'FontName', scheme.Axis.Font.Value,...
+    'FontSize', scheme.Axis.FontSize.Value,...
+    'XGrid','on','YGrid','on');
+
+ handles.axis_quickaverage.Title.Color = scheme.Axis.AxisColor.Value;
  handles.axis_quickaverage.Layout.Column = 2;
- handles.axis_quickaverage.Layout.Row = [3 4];
- 
-handles.axis_main.Toolbar.Visible = 'off';
+ handles.axis_quickaverage.Layout.Row = [3 4]; 
+ handles.axis_main.Toolbar.Visible = 'off';
 
 %panel for holding the trial slider and the bad trial indicator
 %**************************************************************************
 handles.slider_container = uipanel('Parent', handles.gl,...
-    'BorderType','none');
+    'BorderType','none',...
+    'BackgroundColor', scheme.Window.BackgroundColor.Value,...
+    'HighlightColor', scheme.Label.FontColor.Value,...
+    'FontName', scheme.Label.Font.Value);
 handles.slider_container.Layout.Column = 1;
 handles.slider_container.Layout.Row = 4;
 drawnow
@@ -143,7 +173,10 @@ handles.slider_datascroll = uislider(...
     'Limits', [0,100],...
     'MajorTicks', [],...
     'MinorTicks', [],...
-    'Position', [10,30,sw-20,3]);
+    'Position', [10,30,sw-20,3],...
+    'FontColor',scheme.Label.FontColor.Value,...
+    'FontName', scheme.Label.Font.Value,...
+    'FontSize', 9);
 
  handles.image_trialstatus = uiaxes(...
      'Parent', handles.slider_container,...
@@ -151,8 +184,12 @@ handles.slider_datascroll = uislider(...
      'UserData', [10,20,sw-20,10], ...
      'Units', 'pixels',...
      'XLimitMethod','tight',...
-     'YLimitMethod','tight');
-handles.axis_trialstatus.Toolbar.Visible = 'off';
+     'YLimitMethod','tight',...
+     'Color', scheme.Axis.BackgroundColor.Value,...
+     'XColor', scheme.Axis.AxisColor.Value,...
+     'YColor', scheme.Axis.AxisColor.Value);
+handles.image_trialstatus.Title.Color = scheme.Axis.AxisColor.Value;
+handles.image_trialstatus.Toolbar.Visible = 'off';
 
 %*****************************************************************
 handles.panel_infobar = uipanel(...
@@ -160,48 +197,51 @@ handles.panel_infobar = uipanel(...
     'Scrollable','on',...
     'Title', '',...
     'BorderType','none',...
-    'AutoResizeChildren', false);
+    'AutoResizeChildren', false,...
+    'BackgroundColor',scheme.Panel.BackgroundColor.Value);
 handles.panel_infobar.Layout.Column = [1,2];
 handles.panel_infobar.Layout.Row = 1;
 
-handles.label_subjectinfo = uilabel(...
-    'Parent', handles.panel_infobar,...
-    'Position', [10,5,300,25], ...
-    'HorizontalAlignment', 'center', ...
-    'FontColor', 'w');
-
 handles.dropdown_subjselect = uidropdown(...
     'Parent', handles.panel_infobar,...
-    'Position', [320, 5, 100, 25]);
+    'Position', [10, 5, 100, scheme.Dropdown.Height.Value],...
+    'BackgroundColor',scheme.Dropdown.BackgroundColor.Value,...
+    'FontName',scheme.Dropdown.Font.Value,...
+    'FontColor', scheme.Dropdown.FontColor.Value,...
+    'FontSize', scheme.Dropdown.FontSize.Value);
+
+handles.label_hoverChannel = uilabel(...,
+     'Parent', handles.panel_infobar,...
+     'Position', [120, 5, 200, 25], ...
+     'FontColor', scheme.Label.FontColor.Value,...
+     'FontSize', scheme.Label.FontSize.Value,...
+     'FontName', scheme.Label.Font.Value,...
+     'HorizontalAlignment', 'center',...
+     'FontWeight','bold');
 
 handles.button_trialstatus = uibutton(...,
    'Parent', handles.panel_infobar,...
-   'Position', [430,5,100,25], ...
+   'Position', [330,5,100,25], ...
    'Text', 'Good Trial', ...
    'BackgroundColor', p.goodtrialcolor,...
-   'FontColor', 'w');
+   'FontColor', 'k');
 
 handles.edit_badtrialcount = uilabel(...
     'Parent', handles.panel_infobar,...
-    'Position', [540,5,150,25], ...
+    'Position', [440,5,150,25], ...
     'Text', 'bad trial counter',...
-    'BackgroundColor', p.backcolor,...
-    'FontColor', p.textfieldfontcolor,...
+    'FontColor', scheme.Label.FontColor.Value,...
+    'FontName', scheme.Label.Font.Value,...
+    'FontSize', scheme.Label.FontSize.Value,...
     'HorizontalAlignment', 'center');
 
 handles.spinner_changescale = uispinner(...
     'Parent', handles.panel_infobar,...
-    'Position', [700, 5, 100, 25],...
+    'Position', [600, 5, 100, scheme.Dropdown.Height.Value],...
     'Limits', [1, inf],...
     'RoundFractionalvalues', 'on', ...
     'ValueDisplayFormat', '%i mV');
 
-handles.label_hoverChannel = uilabel(...,
-     'Parent', handles.panel_infobar,...
-     'Position', [810, 5, 200, 25], ...
-     'FontColor', 'k',...
-     'HorizontalAlignment', 'center',...
-     'FontWeight','bold');
 
 clear temp
 
@@ -225,6 +265,7 @@ handles.menu_clearcomps = uimenu(handles.menu_ICA, 'Label', 'Unselect all', 'Sep
 handles.menu_project = uimenu(handles.menu_ICA, 'Label', 'IC Projection', 'Separator', 'on');
 handles.menu_withsel = uimenu(handles.menu_project, 'Label', 'keep selected', 'UserData', 0, 'Checked', true, 'Separator', 'on');
 handles.menu_withoutsel = uimenu(handles.menu_project, 'Label', 'exclude selected', 'UserData', 1);
+handles.menu_plotboth = uimenu(handles.menu_project, 'Label', 'Overlay on original', 'Checked', 'on');
 handles.menu_icatobad = uimenu(handles.menu_ICA, 'Label', 'Mark components as bad');
 handles.menu_icaselbad = uimenu(handles.menu_icatobad,'Label', 'all selected', 'Separator', 'on', 'Tag', 'selected');
 handles.menu_icaunselbad = uimenu(handles.menu_icatobad,'Label', 'all unselected', 'Tag', 'unselected');
@@ -247,19 +288,6 @@ handles.menu_clearchans = uimenu(handles.menu_chans, 'Label', 'Unselect channels
 
 %assign callbacks
 
-%% code for assinging a custom lost (or gained) focus callback.
-
-% warning off MATLAB:structOnObject
-% figProps = struct(handles.figure);
-% controller = figProps.Controller;
-% controllerProps = struct(controller);
-% platformHost = controllerProps.PlatformHost;
-% platformHostProps = struct(platformHost);
-% win = platformHostProps.CEF;
-% win.FocusLost = {@losingFocus, handles};
-
-%%
-
 handles.menu_savefile.Callback = {@callback_saveCurrentData, handles};
 handles.menu_clearchans.Callback = {@callback_deselectchans, handles, 0};
 handles.menu_clearcomps.Callback = {@callback_deselectchans, handles, 1};
@@ -277,6 +305,7 @@ handles.menu_allbad.Callback = {@callback_selectICs, handles};
 handles.menu_icaselbad.Callback = {@callback_setcompbadstatus, handles};
 handles.menu_icaunselbad.Callback = {@callback_setcompbadstatus, handles};
 handles.menu_icaclear.Callback = {@callback_setcompbadstatus, handles};
+handles.menu_plotboth.Callback = {@callback_togglecheck, handles};
 
 handles.menu_withsel.Callback = {@callback_toggleprojopt, handles};
 handles.menu_withoutsel.Callback = {@callback_toggleprojopt, handles};
@@ -323,7 +352,7 @@ callback_loadnewfile([], [], study, handles);
 function losingFocus(hObject, hEvent, h)
 
 fprintf('losing focus');
-hObject
+
 
 function initialize_icmenus(h)
     
@@ -435,9 +464,11 @@ if strcmp(otype, 'matlab.graphics.chart.primitive.Line')
          t = h.axis_main.CurrentPoint;
          t = t(2,1);
          h.label_hoverChannel.Text = sprintf('%s : %3.2f ms.\n', obj.UserData,t);
+    %     h.axis_main.Title.String = sprintf('%s : %3.2f ms.\n', obj.UserData,t);
      end
 else
     h.label_hoverChannel.Text = '';
+ %   h.axis_main.Title.String = '';
  end
 
 %***************************************************************************
@@ -472,6 +503,15 @@ function callback_deselectchans(hObject, eventdata, h, clear_comps)
 
 if clear_comps
     p.selcomps = zeros(1, size(p.EEG.icaweights, 1));
+    h.menu_brain.Checked = 'off';
+    h.menu_muscle.Checked = 'off';
+    h.menu_eye.Checked = 'off';
+    h.menu_heart.Checked = 'off';
+    h.menu_line.Checked = 'off';
+    h.menu_noise.Checked = 'off';
+    h.menu_other.Checked = 'off';
+    h.menu_allgood.Checked = 'off';
+    h.menu_allbad.Checked = 'off';
 else
     p.selchans = zeros(1, p.EEG.nbchan);
 end
@@ -639,10 +679,9 @@ if contains(study.subject(snum).status, 'good')
 else    
     h.label_subjectinfo.BackgroundColor = plot.params.badsubjectcolor;
 end
-h.label_subjectinfo.Text =  sprintf('file: %s, sbj: %s, status: %s', upper(f), sid, upper(study.subject(snum).status));
+h.figure.Name =  sprintf('file: %s, sbj: %s, status: %s', upper(f), sid, upper(study.subject(snum).status));
 
-btrials = study_GetBadTrials(EEG);
-h.edit_badtrialcount.Text = sprintf('%i (%i%%) bad trials', sum(btrials), round((sum(btrials)/EEG.trials)*100));
+showBadTrialCount(h,EEG)
 
 %initialize the selected channels
 %if ~isfield(plot, 'selchans') || isempty(plot.selchans)
@@ -668,7 +707,10 @@ h.slider_datascroll.MajorTicks = [step:step:EEG.trials];
 close(pb);
 callback_drawdata([],[],h);
 
-
+%*************************************************************************
+function showBadTrialCount(h, EEG)
+    btrials = study_GetBadTrials(EEG);
+    h.edit_badtrialcount.Text = sprintf('%i (%i%%) bad trials', sum(btrials), round((sum(btrials)/EEG.trials)*100));
 %*************************************************************************
 %callback function for drawing the main data scroll plot
 function callback_drawdata(hObject, eventdata, h)
@@ -681,6 +723,7 @@ stacked = h.tool_stack.State;
 invert = ~h.tool_negup.State;
 projica = h.tool_projica.State;
 plotica = h.tool_ica.State;
+plotboth = h.menu_plotboth.Checked;
 scale = h.spinner_changescale.Value;
 overlay = true;
 
@@ -705,11 +748,13 @@ msg = getbadtrialstring(p.EEG, trialnum);
 if ~isempty(msg)
     h.button_trialstatus.BackgroundColor = p.params.badtrialcolor;
     h.button_trialstatus.Text = 'Bad trial';
-    h.axis_main.Color = [1,1,.8];
+    h.button_trialstatus.FontColor = 'w';
+    h.axis_main.Color = p.params.badbackgroundcolor;
 else
     h.button_trialstatus.BackgroundColor = p.params.goodtrialcolor;
+    h.button_trialstatus.FontColor = 'k';
     h.button_trialstatus.Text = 'Good trial';
-    h.axis_main.Color = 'w';
+    h.axis_main.Color = p.params.goodbackgroundcolor;
 end    
 
 %grab the data to plot
@@ -754,12 +799,14 @@ end
 
 %plot the data
 if overlay
-    plot(h.axis_main, t, d2, 'Color', 'b');
+    
+    ph = plot(h.axis_main, t, d2, 'Color', 'g');
     hold(h.axis_main, 'on');
-    ph = plot(h.axis_main, t,d, 'Color', 'r');
+    if plotboth
+        ph = plot(h.axis_main, t,d, 'Color', 'c');
+    end
     hold(h.axis_main, 'off');
-else
-   
+else  
     ph = plot(h.axis_main, t,d);
 end
 %assign a callback to each line object so it is easy to allow users to
@@ -767,7 +814,7 @@ end
 %increase its line thickness
 for ii = 1:length(ph)
     ph(ii).ButtonDownFcn = {@callback_selectchannel, h, ii};
-    ph(ii).LineWidth = (selected(ii) * 2.5) + .5;
+    ph(ii).LineWidth = (selected(ii) * 2.5) + 1;
     if plotica 
         ph(ii).UserData = sprintf('comp %i', ii);
     else
@@ -814,9 +861,7 @@ end
 h.axis_main.XGrid = 'on';
 h.axis_main.YGrid = 'on';
 
-
 %get event markers that lie within the plotting range
-
  if ~isempty(p.EEG.epoch(trialnum).eventlatency)
      n_events = length(p.EEG.epoch(trialnum).eventlatency);
      indx = [p.EEG.epoch(trialnum).eventlatency{:}]==0;
@@ -829,9 +874,9 @@ h.axis_main.YGrid = 'on';
          if isnumeric(evt_label)
              evt_label = num2str(evt_label);
          end
-         line(h.axis_main, [evt_time, evt_time], ylims, 'Color','k', 'linewidth', 2);
+         line(h.axis_main, [evt_time, evt_time], ylims, 'Color','w', 'linewidth', 2);
          text(h.axis_main, evt_time+10, text_yloc, evt_label, 'VerticalAlignment', 'Top',...
-             'Interpreter','none');
+             'Interpreter','none', 'Color', 'w');
      end
  end
  
@@ -845,9 +890,9 @@ end
 plot_quickave(h,p);
     
 if ~isempty(msg)
-    text(h.axis_main, p.EEG.times(1), text_yloc, msg,'FontSize', 20,...
-        'Color', [1,0,0],'VerticalAlignment', 'Top',...
-        'Interpreter','none');
+    text(h.axis_main, p.EEG.times(end), text_yloc, msg,'FontSize', 20,...
+        'Color', [1,.8,.8],'VerticalAlignment', 'Top',...
+        'HorizontalAlignment', 'right', 'Interpreter','none');
 end
 
 %draw an image of where the bad trials are located
@@ -885,12 +930,14 @@ end
 if p.EEG.reject.rejmanual(trialnum) == 0
     h.button_trialstatus.Text = 'Good trial';
     h.button_trialstatus.BackgroundColor = p.params.goodtrialcolor;
+
 else
     h.button_trialstatus.Text = 'Bad trial';
     h.button_trialstatus.BackgroundColor = p.params.badtrialcolor;
 end 
 
 p.EEG.saved = 'no';
+showBadTrialCount(h, p.EEG)
 h.figure.UserData = p;
 callback_drawdata([],[],h);
 %**************************************************************************
@@ -1007,7 +1054,7 @@ if isempty(mapind)
      h.label_summaryimagemsg.Text = 'No selected components to display';
      h.label_summaryimagemsg.Position = [pp(3)/2-150, pp(4)/2, 300, 25];
 else
-     h.label_summaryimagemsg.Text = '';
+    h.label_summaryimagemsg.Text = '';
     ax.Title = 'Selected ICA components';
     wratio = ax.InnerPosition(3)/ax.InnerPosition(4);
     cols = floor(sqrt(length(mapind)) * wratio); if cols<1; cols=1;end
@@ -1029,6 +1076,7 @@ else
             mylabel = sprintf('%s: %s (%2.1f%%)', mylabel, p.EEG.etc.ic_classification.ICLabel.classes{i(mapind(ii))}, v(mapind(ii)) * 100);
         end
         ah.Title.String =mylabel;
+        ah.Title.Color = p.params.scheme.Label.FontColor.Value;
         drawnow;
     end
     t.TileSpacing = 'compact';
@@ -1111,6 +1159,8 @@ else
     t = tiledlayout(ax, rows, cols);
     for ii = 1:length(erpind)
         ah = nexttile(t);
+    
+        
         d = squeeze(pdata(erpind(ii),:,:));
         %set the bad trials to 0;
         d(:,badtrials) = 0;
@@ -1145,12 +1195,16 @@ else
         cb = colorbar(ah);
         cb.Label.String  = cbLabel;
         cb.Label.Position(1) = 2;
+        cb.Color = h.axis_main.XColor;
     
        
         mylabel = sprintf('%i:%s', erpind(ii), p.EEG.chanlocs(erpind(ii)).labels);
         ah.Title.String =mylabel;
        
         ah.YLabel.String = 'Trials';
+        ah.XColor = p.params.scheme.Axis.AxisColor.Value;
+        ah.YColor = p.params.scheme.Axis.AxisColor.Value;
+        ah.Title.Color = p.params.scheme.Axis.AxisColor.Value;
     end
     t.TileSpacing = 'compact';
     t.Padding = 'compact';
@@ -1203,8 +1257,8 @@ if new.invert
 else
     h.axis_quickaverage.YDir = 'normal'; 
 end
-h.axis_quickaverage.XGrid = 'on'; h.axis_quickaverage.YGrid = 'on';
-line(h.axis_quickaverage, [0,0], h.axis_quickaverage.YLim, 'Color', 'k', 'LineWidth', 2);
+%h.axis_quickaverage.XGrid = 'on'; h.axis_quickaverage.YGrid = 'on';
+line(h.axis_quickaverage, [0,0], h.axis_quickaverage.YLim, 'Color', 'w', 'LineWidth', 2);
 h.axis_quickaverage.XLabel.String = 'time (ms)';
 h.axis_quickaverage.YLabel.String = 'voltage (mV)';
 h.axis_quickaverage.Title.String = ptitle;
@@ -1213,7 +1267,6 @@ h.axis_quickaverage.Title.String = ptitle;
  function callback_selectICs(hObject, event, h)
      
      p = h.figure.UserData;
-     hObject
      classes = hObject.UserData;
      %if there is a clicked event, toggle the status of the 
      if ~isempty(event); hObject.Checked = ~hObject.Checked; end

@@ -243,7 +243,7 @@ p.runtest = runTest;  %if true only a single channel will be calculated
 
 %output this to the  across subject folder
 study_path = study_GetEEGPath;
-outdir = wwu_buildpath(study_path, study.path, 'across subject');
+outdir = eeg_BuildPath(study_path, study.path, 'across subject');
 %create the output directory
 if ~exist(outdir, 'Dir')
     mkdir(outdir)

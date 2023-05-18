@@ -689,7 +689,7 @@ switch event.Source.Tag
         response = uiconfirm(h.figure, sprintf('Are you sure you want to delete %s?', TFData.bin_info(c_bin).bindesc), 'Confirm Delete');
         if contains(response, 'OK')
             TFData = rm_bins(TFData, c_bin);
-            outfile = wwu_buildpath(TFData.filepath, TFData.filename);
+            outfile = eeg_BuildPath(TFData.filepath, TFData.filename);
             save(outfile,'TFData', '-mat');
             callback_reloadfiles([],[],h, 1);
         end
@@ -704,7 +704,7 @@ switch event.Source.Tag
         response = uiconfirm(h.figure, sprintf('Are you sure you want to delete %s?', h.dropdown_MUtest.Items{c_stat}), 'Confirm Delete');
         if contains(response, 'OK')
             TFData.F_tests(c_stat) = [];
-            outfile = wwu_buildpath(TFData.filepath, TFData.filename);
+            outfile = eeg_BuildPath(TFData.filepath, TFData.filename);
             save(outfile,'TFData', '-mat');
             callback_reloadfiles([],[],h, 1);
             
@@ -909,7 +909,7 @@ if reload_flag
     
     
     %update with the most recent data file and the most recent study file
-    erp_filename =wwu_buildpath(p.TFData.filepath, p.TFData.filename);
+    erp_filename =eeg_BuildPath(p.TFData.filepath, p.TFData.filename);
     load(erp_filename, '-mat');
     
     if isfield(TFData, 'F_tests')

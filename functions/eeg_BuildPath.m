@@ -1,4 +1,4 @@
-function path = wwu_buildpath(varargin)
+function path = eeg_BuildPath(varargin)
 
 for ii = 1:nargin
     ppart(ii) = varargin(ii);

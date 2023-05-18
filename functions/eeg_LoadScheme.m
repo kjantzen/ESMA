@@ -47,3 +47,6 @@ else
 
     scheme.Window.BackgroundColor.Value =   [0,0.137254901960784,0.235294117647059];
 end
+sz = get(0, "ScreenSize");
+scheme.ScreenWidth = sz(3);
+scheme.ScreenHeight = sz(4);

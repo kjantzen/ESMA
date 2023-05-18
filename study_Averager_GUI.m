@@ -128,7 +128,7 @@ outfilename = h.edit_outfilename.Value;
 
 %set and create (if necessary) the output directory;
 study_path = study_GetEEGPath;
-outdir = wwu_buildpath(study_path, study.path, 'across subject');
+outdir = eeg_BuildPath(study_path, study.path, 'across subject');
 
 %check for an output filename
 if isempty(outfilename)
@@ -186,7 +186,7 @@ for ii = 1:size(p.filenames,1)
         pb.Value = jj/size(p.filenames,2);
         pb.Message = 'Loading EEG Data';
         
-        [fpath, fname, fext] = fileparts(wwu_buildpath(p.filenames{ii,jj}));
+        [fpath, fname, fext] = fileparts(eeg_BuildPath(p.filenames{ii,jj}));
         
         %figure out what subject this is and check to see if this subject
         %is a bad subject

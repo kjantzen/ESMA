@@ -1,17 +1,21 @@
-function status = study_ClassifyICA(filenames, varargin)
+function status = study_ClassifyICA(filenames, p)
 
+arguments
+    filenames (1,:) cell
+    p.Outfile = []
+    p.WindowHandle = []
+end
 
-p = wwu_finputcheck(varargin, {...
-    'Outfile', 'string', [], [];...
-    'WindowHandle', 'handle', [], []},...
-    [], 'ignore');
+    
+%     p = wwu_finputcheck(varargin, {...
+%     'Outfile', 'string', [], [];...
+%     'WindowHandle', 'handle', [], []},...
+%     [], 'ignore');
 
 status = 0;
 
-
 if isempty(filenames) || ~iscell(filenames)
-    fprintf('Excepting a cell array strings in study_classifyica');
-    return
+    error('study_ClassifyICA:NoFile', 'filenames must be a cell array strings containing valid names of files');
 end
 
 if ~isempty(p.WindowHandle)
@@ -23,17 +27,14 @@ fnum  = length(filenames); cnt = 0;
 for f = filenames
     cnt = cnt + 1;
     if ~isfile(f)
-        fprintf('the file %s was not found on the disk\n', f);
-        return
+        error('study_ClassifyICA:NoFile', 'The file %s was not found on the disk', f);
     end
     
-    %[fpath, fname, fext] = fileparts(f{:});
     try
         EEG = wwu_LoadEEGFile(f{:});
-       % EEG = pop_loadset('filepath', fpath, 'filename', [fname, fext]);
     catch ME
         fprintf(ME.identifier)
-        continue
+        rethrow ME
     end
     
     if ~isfield(EEG, 'icaweights')
@@ -43,19 +44,22 @@ for f = filenames
     
     %check to see if classifications already exist
     if isfield(EEG, 'etc')
-        if isfield(EEG.etc, 'ic_classificaiton') 
+        if isfield(EEG.etc, 'ic_classification') 
             if owrite == -1
-            response = questdlg('Classifications already exist for at least one file.', 'IC Classification', 'Overwrite Current', 'Overwrite All', 'Ignore Existing', 'Ignore Existing');
-            switch response
-                case 'Overwrite Current'
-                    %do nothing here since you want to ask again if another
-                    %file is found,  This is here for readability
-                case 'Overwrite All'
-                    owrite = 1;
-                case 'Ignore Existing'
-                    owrite = 0;
-            end
+                response = questdlg('Classifications already exist for at least one file.', 'IC Classification', 'Overwrite Current', 'Overwrite All', 'Ignore Existing', 'Ignore Existing');
+                switch response
+                    case 'Overwrite Current'
+                        %do nothing here since you want to ask again if another
+                        %file is found,  This is here for readability
+                    case 'Overwrite All'
+                        owrite = 1;
+                    case 'Ignore Existing'
+                        owrite = 0;
+                        fprintf('Labels found, not overwritting....\n')
+                        continue
+                end
             elseif owrite == 0
+                fprintf('Labels found, not overwritting....\n')
                 continue
             end
         end

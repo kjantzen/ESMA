@@ -22,6 +22,7 @@ function hcnd_eeg()
 fprintf('Starting hcnd_eeg ....\n');
 
 EEGPath = study_GetEEGPath;
+addSubFolderPaths
 
 %checking for eeglab installation and path
 eeglabpath = which('eeglab.m');
@@ -31,7 +32,6 @@ end
 eeglabpath = fileparts(eeglabpath(1:end-length('eeglab.m')));
 addpath(eeglabpath);
 
-addSubFolderPaths
 
 fprintf('...building GUI\n');
 
@@ -40,7 +40,7 @@ scheme = eeg_LoadScheme;
 sz = get(0, 'ScreenSize');
 
 %size of the figure
-W = 420; H = 500;
+W = 320; H = 500;
 FIGPOS = [0,(sz(4)-H), W, H];
 VERSION = 'hcndV2.0';
 
@@ -70,7 +70,7 @@ drawnow
 
 handles.dropdown_study = uidropdown(...
     'Parent', handles.figure,...
-    'Position', [10,H-25,400,scheme.Dropdown.Height.Value],...
+    'Position', [10,H-30,W-20,scheme.Dropdown.Height.Value],...
     'Editable', 'off',...
     'BackgroundColor', scheme.Dropdown.BackgroundColor.Value,...
     'FontColor', scheme.Dropdown.FontColor.Value,...
@@ -81,7 +81,7 @@ handles.tree_filetree = uitree(...
     'Parent', handles.figure,...
     'Multiselect', 'on',...
     'Editable', 'on',...
-    'Position', [10,H-260,400,225],...
+    'Position', [10,H-260,W-20,225],...
     'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
     'FontColor', scheme.Edit.FontColor.Value,...
     'FontName', scheme.Edit.Font.Value,...
@@ -96,10 +96,10 @@ handles.panel_info = uipanel(...
     'ForegroundColor', scheme.Panel.FontColor.Value,...
     'HighlightColor', scheme.Panel.BorderColor.Value,...
     'BorderType', 'line',...
-    'Position',[10,H-490, 400,225]);
+    'Position',[10,H-490, W-20,225]);
 
 handles.label_info = uihtml(handles.panel_info,...
-    'Position', [10,10,380,190]);
+    'Position', [10,10,W-40,190]);
 
 msg.Message = 'Creating menus';
 drawnow
@@ -482,7 +482,7 @@ EEGPath = study_GetEEGPath;
 flist = [];
 
 for ii = 1:study.nsubjects
-    searchpath = wwu_buildpath(EEGPath, study.path, study.subject(ii).path, '*.*');
+    searchpath = eeg_BuildPath(EEGPath, study.path, study.subject(ii).path, '*.*');
     d = dir(searchpath);
     temp = flist;
     
@@ -542,7 +542,7 @@ for ii = 1:length(flist)
 end
 
 %now get the average files from the across subect folder
-searchpath = wwu_buildpath(EEGPath, study.path, 'across subject');
+searchpath = eeg_BuildPath(EEGPath, study.path, 'across subject');
 
 if ~exist(searchpath, 'dir')
     return
@@ -712,7 +712,7 @@ n_uniquefiles = 0;
 %this is an average file not stored in the subject folders
 if contains(fext,'.GND') || contains(fext, '.ersp')
     for jj = 1:length(fnames)
-        temp = wwu_buildpath(eeg_path, study.path, 'across subject', fnames{jj});
+        temp = eeg_BuildPath(eeg_path, study.path, 'across subject', fnames{jj});
         if exist(temp, 'file') > 0
             cntr = cntr + 1;
             filelist{cntr} = temp;
@@ -722,7 +722,7 @@ else
 
 for ii = 1:study.nsubjects
     for jj = 1:length(fnames)
-        temp = wwu_buildpath(eeg_path, study.path,  study.subject(ii).path, fnames{jj});
+        temp = eeg_BuildPath(eeg_path, study.path,  study.subject(ii).path, fnames{jj});
         if (exist(temp)>0)
             cntr = cntr + 1;
             if stacked
@@ -927,7 +927,7 @@ else
 end
 
 %create a temporary bin list file
-bin_list_file = fullfile(wwu_buildpath(study_GetEEGPath, study.path), 'bin_list_file.txt');
+bin_list_file = fullfile(eeg_BuildPath(study_GetEEGPath, study.path), 'bin_list_file.txt');
 f = fopen(bin_list_file, 'w');
 if f==-1
     uialert(h.figure, 'Error creating temporary bin file', 'Extract Epochs');
@@ -1080,14 +1080,19 @@ function callback_computeersp(hObject, event, h)
     waitfor(fh);
  
 
-% classifies ICA components for use in noice reduction
+%*************************************************************************
+% classifies ICA components using IClabel
 function callback_classifyICA(hObject, event, h)
     
     study = getstudy(h);
     filelist = getselectedfiles(study, h);
     if isempty(filelist); return; end
-    
-    study_ClassifyICA(filelist, 'WindowHandle', h.figure);
+
+    try
+        study_ClassifyICA(filelist, 'WindowHandle', h.figure);
+    catch me
+        uialert(h.figure, me.message, me.identifier)
+    end
 %**************************************************************************
 %provides an in depth GUI for reviewing ICA's and their classificaiton.
 %The focus is on identifying ICA's for removal, not for using ICA's for
@@ -1106,21 +1111,31 @@ function callback_rejectICA(hObject, event,h)
     filelist = getselectedfiles(study, h);
     if isempty(filelist); return; end
     
-    study_RejectIC(filelist,[]);
+    try
+        fh = study_RejectIC(filelist,[]);
+        waitfor(fh)
+    catch me
+        uialert(h.figure, me.message, me.identifier);
+    end
+
+
 %**************************************************************************
 function callback_ICA(hObject, eventdata,h)
 study = getstudy(h);
 if isempty(study); return; end
 
 files = getselectedfiles(study, h);
-start = clock;
-study_ICA_GUI(files);
-
-study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'ICA decomposition', 'function', 'callback_ICA', 'paramstring', files, 'fileID', '');
-study = study_SaveStudy(study);
-setstudy(study,h);
-populate_filelist(study, h)
-populate_studyinfo(study,h)
+if ~isempty(files)
+    
+    start = clock;
+    study_ICA_GUI(files);
+    
+    study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'ICA decomposition', 'function', 'callback_ICA', 'paramstring', files, 'fileID', '');
+    study = study_SaveStudy(study);
+    setstudy(study,h);
+    populate_filelist(study, h)
+    populate_studyinfo(study,h)
+end
 %**************************************************************************
 function callback_average(hObject, eventdata, h)
     study = getstudy(h);
@@ -1165,10 +1180,10 @@ function addSubFolderPaths()
     pathStr = [s, path, s];
     
     for ii = subfolders
-        sFolderPath = fullfile(cPath, ii);
+        sFolderPath = fullfile(cPath, ii{1});
         onPath  = contains(pathStr, [s, sFolderPath, s], 'IgnoreCase', ispc);
         if ~onPath
-            addpath(sFodlerPath);
+            addpath(sFolderPath);
         end
     end
 

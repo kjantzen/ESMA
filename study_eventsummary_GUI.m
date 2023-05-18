@@ -1,36 +1,47 @@
 function study_eventsummary_GUI(study, filenames)
  
-p = plot_params;
+%p = plot_params;
+scheme = eeg_LoadScheme;
 
 %default the size of the window
 W = 400;
 H = 400;
 
-figpos = [(p.screenwidth - W)/2, (p.screenheight-H)/2, W, H];
+sz = get(0, 'ScreenSize');
+figpos = [(sz(3) - W)/2, (sz(4)-H)/2, W, H];
 
 handles.figure = uifigure(...
-    'Color', p.backcolor,...
     'Position', figpos,...
-    'NumberTitle', p.numbertitle,...
-    'Menubar', p.menubar);
+    'NumberTitle', 'off',...
+    'Menubar', 'none',...
+    'Color', scheme.Window.BackgroundColor.Value);
 
 handles.info = uilabel('Parent', handles.figure,...
-    'Position', [10, H-30, W-20, 30]);
+    'Position', [10, H-30, W-20, 30],...
+    'FontName',scheme.Label.Font.Value,...
+    'FontColor',scheme.Label.FontColor.Value,...
+    'FontSize', scheme.Label.FontSize.Value);
 
 handles.tabgrp = uitabgroup('Parent', handles.figure, ...
     'Units', 'pixels', ...
     'Position', [0,0,W,H-31]);
 
 handles.tab1 = uitab('Parent', handles.tabgrp,...
-    'Title', 'All Events');
+    'Title', 'All Events',...
+    'BackgroundColor',scheme.Panel.BackgroundColor.Value);
 
 handles.tab2 = uitab('Parent', handles.tabgrp,...
-    'Title', 'Epoch Onset Events');
+    'Title', 'Epoch Onset Events',...
+    'BackgroundColor',scheme.Panel.BackgroundColor.Value);
 
 drawnow;
 [eTable, pTable] = load_eventdata(handles, study, filenames);
-handles.allTable = uitable('Parent', handles.tab1, 'Data', eTable);
-handles.epochTable = uitable('Parent', handles.tab2, 'Data', pTable);
+handles.allTable = uitable('Parent', handles.tab1, 'Data', eTable,...
+    'RowStriping','off');
+
+if ~isempty(pTable)
+    handles.epochTable = uitable('Parent', handles.tab2, 'Data', pTable);
+end
 
 %**************************************************************************
 function [eventsTable, epochsTable] = load_eventdata(h, study, filenames)

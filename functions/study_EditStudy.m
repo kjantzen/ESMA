@@ -873,7 +873,7 @@ eeg_path = study_GetEEGPath();
 study = getstudy(h);
 
 %build the path for this study
-fullstudypath = wwu_buildpath(eeg_path, study.path);
+fullstudypath = eeg_BuildPath(eeg_path, study.path);
 
 %get the user path input
 h.figure.Visible = false;
@@ -935,7 +935,7 @@ function study = autoAssignSubjects(study)
 eeg_path = study_GetEEGPath();
 
 %build the path for this study
-studypath = wwu_buildpath(eeg_path, study.path);
+studypath = eeg_BuildPath(eeg_path, study.path);
 d = dir(studypath);
 d = d([d.isdir]);  %eliminate any that arent folders
 folderNames = {d.name};
