@@ -1052,7 +1052,9 @@ for ii = 1:length(selfiles)
         bchans = EEG.chaninfo.badchans;
         ch_names = join({EEG.chanlocs(find(bchans)).labels});
         fprintf('Removing channels\n%s.\n', ch_names{1});
-        EEG = eeg_interp(EEG, find(bchans));
+
+        EEG = pop_select(EEG, 'rmchannel', bchans);
+        %EEG = eeg_interp(EEG, find(bchans));
         EEG.chaninfo.badchans(:) = 0;
     end
     curpbVal = curpbVal + 1;

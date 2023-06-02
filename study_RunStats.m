@@ -1,112 +1,119 @@
 function fighandle = study_RunStats(GND, stats)
+% fh = STUDY_RUNSTATS(data, stats)
+%
+% Computes statistics on EEG time or time/frequency data within the eeg_sma
+% environment.  The tool creates an interface for users to assign
+% experimental conditions to statistical levels (passed in the stats
+% structure) and runs the statistical test using information provided in
+% the stats structure.  This function is meant to be called from the
+% study_PlotERP and study_PlotERSP tools rather than called directly.
+% 
+% Inputs
+% data - a data structure of the type .GND (which is s modified GND file of
+% the format used by the FMUT library) or of the type .ersp which is a
+% cobled together format that holds ersp data for an experiment.
+%
+% stats - a structure has the following fields
+%   stats.factors - a 1xn cell char array of factor names, one name for each of the n factors
+%
+%   stats.levels - a 1xn cell char array of factor levels indicating the number of levels of each factors
+%
+%   stats.winstart - the time (in ms) for the start of the time window that 
+%       defines the data used for analysis
+%   
+%   stats.windend - the time (in ms) for the end of the time window that
+%       defines the data used for analysis
+%
+%   stats.freqwinstart - the frequency (Hz) of the start of the frequency
+%       window t analyze stats.freqwinstart < stats.freqwinend.  Ignored
+%       unless stats.Test = 'FT_Parametric" or "FT_Permutation"
+%
+%   stats.freqwinend - the frequency (Hz) of the end of the frequency
+%       window t analyze where stats.freqwinend > stats.freqwinstart
+%
+%   stats.meanwindow - if true (1) data will be averaged within the time
+%       window before performing statistics.  If false  (0) a test will be 
+%       conducted on each time point separately.
+%    
+%       This variable is ignored when performing a GLM on time series data
+%       becase values are automatically averaged in time.   Mass univariate
+%       approaches should be used to conduct statistics on each time point.
+%    
+%   stats.meanfreq - if true (1) data will be averaged across frequency
+%       befor running stats
+%
+%   stat.test - the name of the test to perform
+%       For EEG time series mass univariate tests, this is the actual name
+%       of the FMUT m file to use and must be one of the following:
+%          'FmaxGND', 
+%           'FclustGND'
+%           'FfdrGND'
+%       For parametric statistics, this is the name of hte test to perform
+%       currently supporte options are - 
+%           'ANOVA'
+%       For time frequency statistics this should be one fo the following:
+%           'TF_Parametric'
+%           'TF_Permutation'       
+%
+%   stats.measure must be one of 
+%       'Amplitude' - performs stats on amplitude data
+%
+%        ** The following apply only to EEG time series analysis
+%       'Positive Peak Latency' - performs statistics on latency of the positive peak
+%           in the window 
+%       'Negative Peak Latency' - performs statistics on latency of the negative peak
+%           in the window 
+%       'Peak Plus Minus' - unused currently
+%       'Peak to Peak' - performs statistics on the amplitude difference
+%           between the highest and lowest values in the window.
+%
+%   stats.alpha - the alpha to use for determining significance
+%
+%   stats.eegchans -
+%       If conducting stats on a channel group this variable should be
+%       a structure vector with one element per channel group.  Each of the
+%       elements of the structure should have the following fields:
+%          chans - an integer vector with the number of channels in each group
+%          name = a string holding the name for the channel group
+%
+%       If conducting multivariate on the time series data this should be a
+%       cell array with the name of channels to use in teh statistical
+%       analaysis
+%
+%       This field is not used by the time frequency stats functions
+%
+%   stats.eegchan_numbers a integer vector with the channel numbers to use
+%      in the analysis.  THe order should match the names in stats.eegchans.
+%   
+%   stats.multcomparecorrection - the type of multiple comparison
+%       correction to perform.  Instituted for time frequency statistics
+%       only becaue the correction type is byuild into the FMUT selection
+%       already.
+%           'Cluster'
+%           'Others will go here'
+%       
+% Output
+% fh - a handle to the interface figure that can be used to halt processing
+% until the function call returns
+%
 
-p = plot_params;
-scheme = eeg_LoadScheme;
-
-sz = get(0, 'ScreenSize');
-W = 450; H = 300;
-L = (sz(3) - W)/2; B = (sz(4) - H)/2;
-h.figure = uifigure(...
-    'Position', [L,B,W,H],...
-    'Color', scheme.Window.BackgroundColor.Value,...
-    'Name', 'Assign Conditions',...
-    'NumberTitle', 'off',...
-    'Resize', 'off',...
-    'menubar', 'none');
-
-fighandle = h.figure;
-
-h.list_conditions = uilistbox(...
-    'Parent', h.figure,...
-    'Position', [10,40, 185, 200],...
-    'BackgroundColor', scheme.Dropdown.BackgroundColor.Value,...
-    'FontColor', scheme.Dropdown.FontColor.Value,...
-    'FontName', scheme.Dropdown.Font.Value,...
-    'FontSize', scheme.Dropdown.FontSize.Value,...
-    'MultiSelect', 'on');
-
-h.list_model = uilistbox(...
-    'Parent', h.figure,...
-    'Position', [255, 40, 185, 200],...
-    'BackgroundColor', scheme.Dropdown.BackgroundColor.Value,...
-    'FontColor', scheme.Dropdown.FontColor.Value,...
-    'FontName', scheme.Dropdown.Font.Value,...
-    'FontSize', scheme.Dropdown.FontSize.Value,...
-    'MultiSelect', 'off');
-
-modelkey = join(stats.factors,'x ');
-
-uilabel('Parent', h.figure,...
-    'Position', [255, 240, 185, 20],...
-    'Text', modelkey,...
-    'Fontsize', scheme.Label.FontSize.Value,...
-    'FontName', scheme.Label.Font.Value,...
-    'FontColor', scheme.Label.FontColor.Value);
-
-uilabel('Parent', h.figure,...
-    'Position', [255, 260, 185, 20],...
-    'Text', 'Within Subject Factors',...
-    'FontColor', p.labelfontcolor);
-
-uilabel('Parent', h.figure,...
-    'Position', [10, 240, 185, 20],...
-    'Text', 'Variables',...
-    'Fontsize', scheme.Label.FontSize.Value,...
-    'FontName', scheme.Label.Font.Value,...
-    'FontColor', scheme.Label.FontColor.Value);
-
-
-h.button_add = uibutton(...
-    'Parent', h.figure,...
-    'Position', [200, 215, 50, 25],...
-    'Text', '-->', ...
-    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
-    'FontColor', scheme.Button.FontColor.Value,...
-    'FontName', scheme.Button.Font.Value,...
-    'FontSize', scheme.Button.FontSize.Value,...
-    'Tag', 'add');
-
-h.button_remove = uibutton(...
-    'Parent', h.figure,...
-    'Position', [200, 150, 50, 25],...
-    'Text', '<--', ...
-    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
-    'FontColor', scheme.Button.FontColor.Value,...
-    'FontName', scheme.Button.Font.Value,...
-    'FontSize', scheme.Button.FontSize.Value,...
-    'Tag', 'rem');
-
-h.button_dostats = uibutton(...
-    'Parent', h.figure,...
-    'Position', [365, 5, 80, 25],...
-    'Text', 'Continue', ...
-    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
-    'FontColor', scheme.Button.FontColor.Value,...
-    'FontName', scheme.Button.Font.Value,...
-    'FontSize', scheme.Button.FontSize.Value);
-
-h.button_cancel = uibutton(...
-    'Parent', h.figure,...
-    'Position', [275, 5, 80, 25],...
-    'Text', 'Cancel', ...
-    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
-    'FontColor', scheme.Button.FontColor.Value,...
-    'FontName', scheme.Button.Font.Value,...
-    'FontSize', scheme.Button.FontSize.Value)
-
-
-if contains(stats.test, 'ANOVA')
-    h.button_export = uibutton(...
-        'Parent', h.figure,...
-        'Position', [190, 5, 80, 25],...
-        'Text', 'Export', ...
-    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
-    'FontColor', scheme.Button.FontColor.Value,...
-    'FontName', scheme.Button.Font.Value,...
-    'FontSize', scheme.Button.FontSize.Value)
-
+% dumb fix because I did not harmonize across file types
+%bin information is stored differently on the ferquency files than on teh
+%time files
+if ~isfield(GND, 'bin_info') && isfield(GND, 'bindesc')
+    for ii = 1:length(GND.bindesc)
+        GND.bin_info(ii).bindesc = GND.bindesc{ii};
+    end
+    %GND.bin_info.bindesc = GND.bindesc;
+    GND.time_pts = GND.times;
 end
 
+h = build_gui();
+fighandle = h.figure;
+initialize_gui(h, GND, stats);
+
+% *************************************************************************
+function h = initialize_gui(h, GND, stats)
 
 %fill in the blank model information
 n_factors = length(stats.factors);
@@ -142,16 +149,17 @@ h.list_model.Items = items;
 h.list_model.ItemsData = items;
 h.list_model.UserData = items;
 h.list_conditions.Items = {GND.bin_info.bindesc};
+%dmaybe change this to bindesc legnth since some files will not have 
+%.bin_info
 h.list_conditions.ItemsData = 1:length(GND.bin_info);
 
+modelkey = join(stats.factors,'x ');
+
+h.label_model.Text = modelkey;
 h.button_add.ButtonPushedFcn = {@callback_assignconditions,h};
 h.button_remove.ButtonPushedFcn = {@callback_assignconditions,h};
 h.button_dostats.ButtonPushedFcn = {@callback_dostats, h, GND, stats, false};
 h.button_cancel.ButtonPushedFcn = {@callback_cancel, h.figure};
-
-if contains(stats.test, 'ANOVA')
-  h.button_export.ButtonPushedFcn = {@callback_dostats, h, GND, stats, true};
-end
 
 %**************************************************************************
 function callback_dostats(hObject, event, h, GND, stats, exportFlag)
@@ -162,27 +170,165 @@ if sum(cellfun(@(a) a(1)=='[',cond_info))
     return
 end
 
-pb = uiprogressdlg(h.figure, 'Title', 'Please Wait', 'Message', 'Running mass univariate statistics ... this could take a while.', 'Indeterminate', 'on');
+pb = uiprogressdlg(h.figure, 'Title', 'Please Wait', 'Message', 'Running mass univariate statistics(FMUT) ... this could take a while.', 'Indeterminate', 'on');
 
+%convert the time window to to sample points
 [~,stats.winstartpt] = min(abs(stats.winstart - GND.time_pts));
 [~,stats.winendpt] = min(abs(stats.winend - GND.time_pts));
 
 if contains(stats.test, 'ANOVA')
-    pb = uiprogressdlg(h.figure, 'Title', 'Please Wait', 'Message', 'Solving GLM ... this won''t take long.', 'Indeterminate', 'on');
+    pb.Message = 'Solving the GLM ... this won''t take long.';
     GND = do_ANOVA(h,GND,stats);
-else  
-    pb = uiprogressdlg(h.figure, 'Title', 'Please Wait', 'Message', 'Running mass univariate statistics ... this could take a while.', 'Indeterminate', 'on');
+elseif contains(stats.test, 'TF_')
+    %convert the frequency window to sample points
+    [~,stats.freqwinstartpt] = min(abs(stats.freqwinstart - GND.freqs));
+    [~,stats.freqwinendpt] = min(abs(stats.freqwinend - GND.freqs));
+    pb.Message = 'Using fieldtrip (ft_freqstatistics) to compute time frequency statistics.  This could take a while';
+    GND = do_TFStats(h, GND, stats, pb);
+else
     GND = do_MassUniv(h,GND,stats);
 end
 
 outfile = eeg_BuildPath(GND.filepath, GND.filename);
-save(outfile, 'GND', '-mat');
+if isfield(GND, 'freqs')
+    TFData = GND;
+    save(outfile, 'TFData', '-mat');
+else
+    save(outfile, 'GND', '-mat');
+end
 
 delete(pb);
 delete(h.figure);
 %*************************************************************************
 function callback_cancel(~,~,h)
     delete(h)
+
+%*************************************************************************
+function GND = do_TFStats(h,GND,stats,hPB)
+
+cond_info = h.list_model.ItemsData;
+
+%get the saved experiment matrix
+stats.cond_matrix = h.figure.UserData';
+%popluate it with more human names
+stats.cond_name_matrix = cellfun(@(x) sprintf('level %i', x), num2cell(stats.cond_matrix), 'UniformOutput', false);
+%this is the order the data was assigned to the different conditions
+stats.cond_order = cellfun(@str2num, cond_info);
+stats.conditions = {GND.bin_info(stats.cond_order).bindesc};
+stats.factors = strtrim(stats.factors);
+stats.effects = stats.factors;
+if length(stats.factors) > 1
+    stats.effects{end+1} = [stats.factors{1}, ' X ', stats.factors{2}];
+end
+
+stats.eegchans_names = {GND.chanlocs(stats.eegchan_numbers).labels};
+n_chans = length(stats.eegchan_numbers);
+stats.group_n = size(GND.indiv_ersp, 1);
+lv = cellfun(@str2num, stats.levels);
+
+%change the order of the dimensions so that participants is second to last
+d = permute(GND.indiv_ersp(:,:,stats.freqwinstartpt:stats.freqwinendpt, stats.winstartpt:stats.winendpt,:), [2,3,4,1,5]);
+
+%start with three data dimensions (channel x frequency x time)
+%so we can track when the dimensions are reduced by averaging
+nDataDims = 3;
+
+%average across dimension here if doing that
+%if we have only time or only frequency, we can do the whole thing at once
+%and correct across channel
+if stats.meanfreq
+    d = mean(d, 2);
+    nDataDims = nDataDims-1;
+end
+if stats.meanwindow
+    d = mean(d,3);
+    nDataDims = nDataDims-1;
+end
+%get rid of singleton dimensions
+d = squeeze(d);
+
+if contains(stats.test, 'TF_Permutation')
+    stats.test = 'permutation';
+elseif contains(stats.test, 'TF_Parametric')
+    stats.test = 'parametric';
+else
+    error('RunsStats:InvalidMethod', '%s is not a valid test method.  Must be one of TF_Permutation or TF_Parametric', stats.test);
+end
+
+%check to see if this is a time x channel or a frequency by channel and if
+%it is then calculate a channel neighborhood and do the stats all in one
+%shot
+%*************************************************************************
+if nDataDims < 3
+
+    %command to convert the data to a cell array for each conditions
+    %add one to nDataDims so participants are included in each cell
+    cmd = ['squeeze(num2cell(squeeze(d(:,', sprintf('%s', repmat(':,', 1, nDataDims)), 'stats.cond_order)), 1:nDataDims+1))'];
+    
+    cfg.elec.label = {GND.chanlocs.labels}';
+    cfg.elec.chanpos = [[GND.chanlocs.X] ;[ GND.chanlocs.X] ;[ GND.chanlocs.X ]]';
+    cfg.elec.elecpos = cfg.elec.chanpos;
+    cfg.method = 'distance';
+    cfg.channel = 1:length(GND.chanlocs);
+    cfg.neighbourdist = 20;
+    neighborhood = ft_prepare_neighbours(cfg);
+
+    %do the whole analysis at once since we collapsed across at least one
+    %dimension
+    indata = eval(cmd);
+    indata = reshape(indata, lv);
+
+    s = wwu_TFStatistics(indata, 'method', stats.test ,'alpha',stats.alpha, 'ivar' , length(stats.levels), 'numrandomization','all', 'clusterstatistic',stats.clusterstatistic,...
+            'correctm',stats.multcomparecorrectino,'neighbours', neighborhood, 'chandim', 1);
+
+    %expand back to the original dimensions
+    
+    stats.F_obs = s.F;
+    stats.p_val = s.pval;
+
+%if the data are still time x frequency x channel, run the stats one
+%channel at a time and do correction based on active clusters in the t and
+%f domain
+% ******************************************************************
+else
+    
+    %change the waitbar to reflect the progress on each channel
+    hPB.Indeterminate = 'off';
+    hPB.Value = 0;
+
+    %preallocate arrays for the data output
+    fA = zeros(n_chans, size(d,2), size(d,3));fB = fA; fAB = fA;
+    pA = fA; pB = fA; pAB = fA;
+    %loop over channel
+    for ch = 1:n_chans
+        %update progress bar
+        hPB.Value = ch/n_chans;
+
+        %extract data for a single channel
+        indata = squeeze(num2cell(squeeze(d(stats.eegchan_numbers(ch), :,:,:,stats.cond_order)), 1:nDataDims));
+
+        %reshape data based on design
+        indata = reshape(indata, lv);
+        
+        %compute statistics
+        [s] = wwu_TFStatistics(indata, 'method', stats.test ,'alpha',stats.alpha, 'ivar' , length(stats.levels), 'numrandomization','all', 'clusterstatistic',stats.clusterstatistic,...
+            'correctm',stats.multcomparecorrectino);
+
+        %put the stats together into a single structure in the GND
+        fA(ch,:,:) = s.F{1}; fB(ch,:,:) = s.F{2}; fAB(ch,:,:) = s.F{3};
+        pA(ch,:,:) = s.pval{1}; pB(ch,:,:) = s.pval{2}; pAB(ch,:,:) = s.pval{3};
+    end
+    %add results to the stats structure
+    stats.F_obs = {fA, fB, fAB};
+    stats.p_val = {pA, pB, pAB};
+end
+
+% add the stats information to the data structure
+ if ~isfield(GND, 'F_tests')
+     GND.F_tests(1) = stats;
+ else
+     GND.F_tests(end+1) = stats;
+ end
 
 %*************************************************************************
 function GND = do_ANOVA(h,GND,stats)
@@ -205,13 +351,12 @@ if isstruct(stats.eegchans)  %conduct the analysis on the channel group
     end
     %these will be used as names for the channel IV
     lnames = {stats.eegchans.name};
-    lnums = 1:length(stats.eegchans);
 else
     n_chans = length(stats.eegchan_numbers);
     ANOVAdata = GND.indiv_erps(stats.eegchan_numbers, stats.winstartpt:stats.winendpt,cond_order,:); 
     lnames = {GND.chanlocs(stats.eegchan_numbers).labels};
-    lnums = 1:length(stats.eegchan_numbers);
 end
+lnums = 1:n_chans;
 
 %compile the data differently depending on whether the user wants to
 %analyze amplitude or latency
@@ -302,11 +447,9 @@ GND.ANOVA(indx).factors  = stats.factors;
 GND.ANOVA(indx).levels  = stats.levels;
 GND.ANOVA(indx).level_matrix = cond_matrix;
 
-%writetable(data_table, 'test_data.csv');
-%writetable(ANOVAresult, 'test_ANOVA.csv')
 
 %**************************************************************************
-function GND = do_MassUniv(h,GND,stats)
+function GND = do_MassUniv(~,GND,stats)
 
 cond_info = h.list_model.ItemsData;
 cond_order = cellfun(@str2num, cond_info);
@@ -324,9 +467,7 @@ end
 
 if contains(stats.test, 'clust')
     %figure out a good neighborhood
-
     head_radius = sprintf('''head_radius'', %f,', GND.chanlocs(1).sph_radius * 2 * pi / 10);
-
     ch_hood = sprintf('''chan_hood'', %f,', GND.chanlocs(1).sph_radius/2);
 else
     ch_hood = '';
@@ -456,8 +597,93 @@ switch event.Source.Tag
         
 end
 
-            
-    
+% **********************************************************************
+function h = build_gui    
+scheme = eeg_LoadScheme;
+
+W = 450; H = 300;
+L = (scheme.ScreenWidth - W)/2; B = (scheme.ScreenHeight - H)/2;
+h.figure = uifigure(...
+    'Position', [L,B,W,H],...
+    'Color', scheme.Window.BackgroundColor.Value,...
+    'Name', 'Assign Conditions',...
+    'NumberTitle', 'off',...
+    'Resize', 'off',...
+    'menubar', 'none');
 
 
+h.list_conditions = uilistbox(...
+    'Parent', h.figure,...
+    'Position', [10,40, 185, 200],...
+    'BackgroundColor', scheme.Dropdown.BackgroundColor.Value,...
+    'FontColor', scheme.Dropdown.FontColor.Value,...
+    'FontName', scheme.Dropdown.Font.Value,...
+    'FontSize', scheme.Dropdown.FontSize.Value,...
+    'MultiSelect', 'on');
 
+h.list_model = uilistbox(...
+    'Parent', h.figure,...
+    'Position', [255, 40, 185, 200],...
+    'BackgroundColor', scheme.Dropdown.BackgroundColor.Value,...
+    'FontColor', scheme.Dropdown.FontColor.Value,...
+    'FontName', scheme.Dropdown.Font.Value,...
+    'FontSize', scheme.Dropdown.FontSize.Value,...
+    'MultiSelect', 'off');
+
+
+h.label_model = uilabel('Parent', h.figure,...
+    'Position', [255, 240, 185, 20],...
+    'Fontsize', scheme.Label.FontSize.Value,...
+    'FontName', scheme.Label.Font.Value,...
+    'FontColor', scheme.Label.FontColor.Value);
+
+uilabel('Parent', h.figure,...
+    'Position', [255, 260, 185, 20],...
+    'Text', 'Within Subject Factors',...
+    'FontColor', scheme.Label.FontColor.Value);
+
+uilabel('Parent', h.figure,...
+    'Position', [10, 240, 185, 20],...
+    'Text', 'Variables',...
+    'Fontsize', scheme.Label.FontSize.Value,...
+    'FontName', scheme.Label.Font.Value,...
+    'FontColor', scheme.Label.FontColor.Value);
+
+
+h.button_add = uibutton(...
+    'Parent', h.figure,...
+    'Position', [200, 215, 50, 25],...
+    'Text', '-->', ...
+    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
+    'FontColor', scheme.Button.FontColor.Value,...
+    'FontName', scheme.Button.Font.Value,...
+    'FontSize', scheme.Button.FontSize.Value,...
+    'Tag', 'add');
+
+h.button_remove = uibutton(...
+    'Parent', h.figure,...
+    'Position', [200, 150, 50, 25],...
+    'Text', '<--', ...
+    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
+    'FontColor', scheme.Button.FontColor.Value,...
+    'FontName', scheme.Button.Font.Value,...
+    'FontSize', scheme.Button.FontSize.Value,...
+    'Tag', 'rem');
+
+h.button_dostats = uibutton(...
+    'Parent', h.figure,...
+    'Position', [365, 5, 80, 25],...
+    'Text', 'Continue', ...
+    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
+    'FontColor', scheme.Button.FontColor.Value,...
+    'FontName', scheme.Button.Font.Value,...
+    'FontSize', scheme.Button.FontSize.Value);
+
+h.button_cancel = uibutton(...
+    'Parent', h.figure,...
+    'Position', [275, 5, 80, 25],...
+    'Text', 'Cancel', ...
+    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
+    'FontColor', scheme.Button.FontColor.Value,...
+    'FontName', scheme.Button.Font.Value,...
+    'FontSize', scheme.Button.FontSize.Value);

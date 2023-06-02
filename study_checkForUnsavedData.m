@@ -3,7 +3,7 @@
 %CURRENTFIGURE handle.  If they are different it determines if the
 %current figure has any unsaved data and saves that before setting the
 %current figure to the past figure.
-%this function shuould be called before data is saved or plotted on a
+%this function should be called before data is saved or plotted on a
 %figure to make sure that any changes to the data made by a different
 %figure are included and not overwritten.
 

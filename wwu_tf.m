@@ -1,6 +1,6 @@
 function TFData = wwu_tf(cfg, EEG)
 % tf = wwu_tf(cfg, EEG) - computes the event related spectral perturbaiton
-% (time frequenct transform )on the channel x time x trial data in the
+% (time frequency transform )on the channel x time x trial data in the
 % EEG stucture.  If EEG is include ERPLAB %epoch and bin information,
 % ersp will be computed on each bin group or condition separately.
 % The cfg structure contains options for calculating the time frequency
@@ -105,9 +105,6 @@ end
 if isfield(cfg, 'preStim') && ~cfg.preStim
     cmd = [cmd, ', ''baseline'', cfg.baseline'];
 end
-
-
-
 
 
 allersp = [];

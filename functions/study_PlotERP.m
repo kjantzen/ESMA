@@ -352,6 +352,7 @@ stats.alpha = h.edit_massunivalpha.Value;
 stats.ave_channels = false;
 stats.eegchans = [];
 
+%an GLM without correction can be run on the channel groups
 if contains(stats.test, 'ANOVA')
     d = h.list_channels.Value;
     s = cell2mat(d');
@@ -422,20 +423,17 @@ callback_ploterp([],[],h);
 %erp display to reflect any changes.
 function callback_reloadfiles(hObject, event, h, reload_flag)
 
-
 h.figure.Pointer = 'watch';
 drawnow;
 
 %get the current information from the figure userdata
 p = h.figure.UserData;
 
-
 %if there is an explicit request to reload - otherwise the displays will
 %just be refreshed.  This allows the same code to be used to initialize the
 %displays
 if reload_flag
-    
-    
+       
     %update with the most recent data file and the most recent study file
     erp_filename =fullfile(p.GND.filepath, p.GND.filename);
     %erp_filename =eeg_BuildPath(p.GND.filepath, p.GND.filename);

@@ -38,7 +38,7 @@ study.nsubjects = 0;
 study.nconditions = 0;
 study.history = [];
 study.subject = [];
-
+study.version = 1;
 
 %make sure that the general tab is selected
 h.infotabs.SelectedTab = h.tab(1);
