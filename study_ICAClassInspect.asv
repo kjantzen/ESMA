@@ -56,7 +56,6 @@ handles.label.Text = 'Threshold (%)';
 handles.label.HorizontalAlignment = 'right';
 
 handles.spinner_threshold = uispinner('Parent', handles.grid,...
-    'BackgroundColor',scheme.Dropdown.BackgroundColor.Value,...
     'FontName', scheme.Dropdown.Font.Value,...
     'FontSize', scheme.Dropdown.FontSize.Value,...
     'FontColor', scheme.Dropdown.FontColor.Value);
@@ -87,7 +86,6 @@ handles.button_markcomps.Layout.Column = [6,7];
 handles.button_markcomps.Text = 'Reject Components...';
 
 handles.spinner_selcomp = uispinner('Parent', handles.grid,...
-    'BackgroundColor',scheme.Dropdown.BackgroundColor.Value,...
     'FontName', scheme.Dropdown.Font.Value,...
     'FontSize', scheme.Dropdown.FontSize.Value,...
     'FontColor', scheme.Dropdown.FontColor.Value);
@@ -323,7 +321,7 @@ curr_thresh = h.spinner_threshold.Value/100;
 cla(h.axis_icatopo);
 wwu_topoplot(ic,  p.EEG.chanlocs, 'axishandle', h.axis_icatopo);
 cb = colorbar(h.axis_icatopo);
-cb.Color = p.scheme.Axis.AxisColor.Value;
+cb.Color = p.scheme.Axis.FontColor.Value;
 
 %if this is epcohed data
 if p.EEG.trials > 1
@@ -378,8 +376,7 @@ else
     h.axis_icaerp.Title.Color = p.goodtrialcolor;
 end
 h.axis_icaerp.Title.String = mytitle;
-cb = colorbar(h.axis_icaerp);
-cb.Color = p.scheme.Axis.AxisColor.Value;
+colorbar(h.axis_icaerp);
 
 %plot the mean of the ica in the time domain
 scale(1) = floor(min(icamean) * 10)/10;
@@ -395,8 +392,8 @@ h.axis_icamean.InnerPosition([1,3]) = h.axis_icaerp.InnerPosition([1,3]);
 h.axis_icamean.Position(2) = 10;
 h.axis_icamean.Box = 'off';
 mp.LineWidth = 2;
-line(h.axis_icamean, [0,0], scale, 'Color', p.scheme.Axis.AxisColor.Value)
-line(h.axis_icamean, p.EEG.times, zeros(size(p.EEG.times)), 'Color', p.scheme.Axis.AxisColor.Value)
+line(h.axis_icamean, [0,0], scale, 'Color', 'k')
+line(h.axis_icamean, p.EEG.times, zeros(size(p.EEG.times)), 'Color', 'k')
 
 %plot the fft of the ica time series
 mp = plot(h.axis_icafft, faxis, icafft);
@@ -407,7 +404,6 @@ h.axis_icafft.YLabel.String = 'Log Power (mV/freq)';
 h.axis_icafft.YScale = 'log';
 h.axis_icafft.Box = 'off';
 end
-
 %plot the classification for the selected component
 pbar_data = p.EEG.etc.ic_classification.ICLabel.classifications(ic_number,:);
 for ii = 1:length(pbar_data)
@@ -419,7 +415,7 @@ hold(h.axis_compbar, 'off');
 
 h.axis_compbar.YLim = [0,1];
 h.axis_compbar.XTick = 1:length(pbar_data);
-h.axis_compbar.XTickLabel =p.EEG.etc.ic_classification.ICLabel.classes;
+h.axis_compbar.XTickLabel =[];% p.EEG.etc.ic_classification.ICLabel.classes;
 h.axis_compbar.Color = p.scheme.Window.BackgroundColor.Value;
 
 %get the classification
@@ -432,20 +428,16 @@ else
         round(v*100));
 end
 h.axis_compbar.Title.String = classname; 
-h.axis_compbar.Title.Color = p.scheme.Axis.AxisColor.Value;
 h.axis_compbar.YLabel.String = 'Weight';
-h.axis_compbar.YLabel.Color = p.scheme.Axis.AxisColor.Value;
 lh = legend(h.axis_compbar);
 lh.String = p.EEG.etc.ic_classification.ICLabel.classes;
-lh.TextColor = p.scheme.Label.FontColor.Value;
 lh.Location = 'northoutside';
 lh.NumColumns = 7;
 lh.Box = 'off';
 
-drawnow;
 
 line(h.axis_compbar, h.axis_compbar.XLim, [curr_thresh, curr_thresh], ...
-    'LineStyle', '--', 'Color',  p.scheme.Axis.AxisColor.Value);
+    'LineStyle', '--', 'Color', 'k');
 lh.String(end) = {'threshold'};
 
 %*************************************************************************
@@ -506,7 +498,7 @@ h.axis_compclassraw.XLim = [.5,size(w,1)+.5];
 h.axis_compclassraw.YLim = [.5,size(w,2)+.5];
 h.axis_compclassraw.YTickLabel = l;
 h.axis_compclassraw.Title.String = 'IC Classifications Weights';
-h.axis_compclassraw.Title.Color = p.scheme.Axis.AxisColor.Value;
+h.axis_compclassraw.Title.Color = p.scheme.Axis.FontColor.Value;
 cb = colorbar(h.axis_compclassraw);
 cb.Ticks = 0:.1:1;
 lv =  num2cell(0:10:100);
@@ -529,7 +521,7 @@ h.axis_compclassthresh.XTick = [];
 h.axis_compclassthresh.Box = 'on';
 h.axis_compclassthresh.UserData = ic_indx;
 h.axis_compclassthresh.Title.String = 'IC sorted by classification';
-h.axis_compclassthresh.Title.Color = p.scheme.Axis.AxisColor.Value;
+h.axis_compclassthresh.Title.Color = p.scheme.Axis.FontColor.Value;
 
 for ii = 2:size(thresh_w,1)
     ml = line(h.axis_compclassraw, [ii - .5, ii-.5], h.axis_compclassraw.YLim, 'Color', [.5,.5,.5]);

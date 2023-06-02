@@ -1,4 +1,4 @@
-%status study_ExtractEpochs(files, varargin)
+%status G_ExtractEpochs(files, varargin)
 %Inputs:
 %   files:  A cell array containing the full name and path of each file to
 %   process.

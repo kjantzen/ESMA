@@ -33,10 +33,7 @@ p = wwu_finputcheck(varargin, {...
         'fileID', 'string', '', '';...
          });
      
-if ~isfield(study, 'history')
-    study.history = p;
-    hentries = 1;
-elseif isempty(study.history)
+if ~isfield(study, 'history') || isempty(study.history)
     study.history = p;
     hentries = 1;
 else

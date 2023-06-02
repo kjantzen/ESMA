@@ -6,12 +6,6 @@ arguments
     p.WindowHandle = []
 end
 
-    
-%     p = wwu_finputcheck(varargin, {...
-%     'Outfile', 'string', [], [];...
-%     'WindowHandle', 'handle', [], []},...
-%     [], 'ignore');
-
 status = 0;
 
 if isempty(filenames) || ~iscell(filenames)
