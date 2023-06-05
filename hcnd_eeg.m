@@ -16,10 +16,10 @@
 %                       from https://github.com/ericcfields/FMUT.
 %            
 
-% Update 6/15/20 KJ Jantzen
 function hcnd_eeg()
 
-fprintf('Starting hcnd_eeg ....\n');
+VersionNumber = 1.0;
+fprintf('Starting hcnd_eeg V%i....\n', VersionNumber);
 
 EEGPath = study_GetEEGPath;
 addSubFolderPaths
@@ -32,16 +32,13 @@ end
 eeglabpath = fileparts(eeglabpath(1:end-length('eeglab.m')));
 addpath(eeglabpath);
 
-
 fprintf('...building GUI\n');
 
-p = plot_params;
 scheme = eeg_LoadScheme;
-sz = get(0, 'ScreenSize');
 
 %size of the figure
-W = 320; H = 500;
-FIGPOS = [0,(sz(4)-H), W, H];
+W = 400; H = 500;
+FIGPOS = [0,(scheme.ScreenWidth-H), W, H];
 VERSION = 'hcndV2.0';
 
 %restart the display if it is already loaded
@@ -54,7 +51,6 @@ else
     %setup the main figure window
     handles.figure = uifigure;
 end
-handles.p = p;
 
 set(handles.figure,...
     'Color', scheme.Window.BackgroundColor.Value, ...
@@ -80,7 +76,7 @@ handles.dropdown_study = uidropdown(...
 handles.tree_filetree = uitree(...
     'Parent', handles.figure,...
     'Multiselect', 'on',...
-    'Editable', 'on',...
+    'Editable', 'off',...
     'Position', [10,H-260,W-20,225],...
     'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
     'FontColor', scheme.Edit.FontColor.Value,...
@@ -116,6 +112,7 @@ handles.menu_exit = uimenu(handles.menu_study, 'Label', 'Exit', 'Separator', 'on
 %
 %files menu
 handles.menu_file = uimenu('Parent', handles.figure,'Label', '&File', 'Accelerator', 'f');
+handles.menu_renamefiles = uimenu(handles.menu_file, 'Label', '&Rename');
 handles.menu_deletefiles = uimenu(handles.menu_file, 'Label', '&Delete','Accelerator', 'd');
 handles.menu_exportfiles = uimenu(handles.menu_file, 'Label', 'Export to eeglab', 'Separator', 'on');
 
@@ -154,8 +151,8 @@ handles.menu_evtsummary = uimenu(handles.menu_utils, 'Label', 'Event Summary');
 handles.menu_trimraw = uimenu(handles.menu_utils, 'Label', 'Trim Continuous (CNT) EEG File');
 
 %assign all the callbacks
-set(handles.dropdown_study, 'ValueChangedFcn', {@callback_loadstudy, handles})
-
+set(handles.dropdown_study, 'ValueChangedFcn', {@callback_loadstudy, handles});
+set(handles.tree_filetree, 'NodeTextChanged', {@callback_changeFilenames, handles});
 set(handles.menu_new, 'Callback', {@callback_newstudy, handles, false});
 set(handles.menu_edit, 'Callback', {@callback_newstudy, handles, true});
 set(handles.menu_refresh, 'Callback', {@callback_refresh, handles});
@@ -168,6 +165,7 @@ set(handles.menu_evtsummary, 'Callback', {@callback_evtsummary, handles});
 set(handles.menu_trimraw, 'Callback', {@callback_trimraw, handles});
 set(handles.menu_trialplot, 'Callback', {@callback_trialplot, handles});
 set(handles.menu_deletefiles, 'Callback', {@callback_deletefiles, handles});
+set(handles.menu_renamefiles, 'Callback', {@callback_changeFilenames, handles});
 set(handles.menu_exportfiles, 'Callback', {@callback_exportfiles, handles});
 set(handles.menu_rbadchans, 'Callback', {@callback_interpchans, handles});
 set(handles.menu_resample, 'Callback', {@callback_resample, handles});
@@ -206,10 +204,9 @@ close(msg);
 %**************************************************************************
 function callback_copypastecomponents(hObject, event, h)
 
-
 study = getstudy(h);
 if study.nsubjects < 1
-    msgbox('No subjects are listed in your study','Conversion Error', 'error');
+    uialert(h.figure, 'No subjects are listed in your study','Conversion Error');
     return
 end
 
@@ -316,6 +313,61 @@ populate_studylist(h)
 callback_loadstudy(0,0,h)
 h.figure.Pointer = 'arrow';
 
+%**************************************************************************
+function callback_changeFilenames(hObject, event, h)
+
+    study = getstudy(h);
+    filestorename = getselectedfiles(study, h, true);
+    dims = size(filestorename);
+    if dims(1) > 1 && dims(2) > 1
+        uialert(h.figure, 'You cannot change more than one filename at a time.  Please select only a single file entry', 'Ooops!');
+        return
+    end
+    nFiles = length(filestorename);
+    if ~isempty(filestorename)
+        cfg.msg = 'Enter a new name for the files. Do not include the file path or extension.';
+        cfg.title = 'Rename files';
+        cfg.options = {'Accept', 'Cancel'};
+        [~,fname,~] = fileparts(filestorename{1});
+        cfg.default = fname;
+        try
+            resp = wwu_inputdlg(cfg);
+            if strcmp(resp.option, 'Accept') && ~isempty(resp.input)
+                pb = uiprogressdlg(h.figure, "Cancelable","off", "icon", "info",...
+                    'Message', 'Checking files for duplicates', 'Title', 'Rename Files', 'Value', 0);
+                % check to see if there are already files with the selected
+                % name 
+                checking = true;
+                while checking
+                    newFile{nFiles} = [];
+                    for ii = 1:nFiles
+                        pb.Value = ii/nFiles;
+                        [path, ~, ext] = fileparts(filestorename{ii});
+                        newFile{ii} = fullfile(path, [resp.input, ext]);
+                        if isfile(newFile{ii})
+                            resp.input = [resp.input, '_1'];
+                            break
+                        end
+                    end
+                    checking = false;
+                end
+                %now loop through again and change the name
+                pb.Message = sprintf('Renamining files to %s', resp.input);
+                for ii = 1:nFiles
+                    pb.Value = ii/nFiles;
+                    movefile(filestorename{ii}, newFile{ii})
+                end
+                close(pb);
+                callback_refresh(hObject, event, h)
+
+            else
+                fprintf('User pressed Cancel or the filename was empty\n');
+            end
+        catch me
+            uialert(h.figure, me.message, me.identifier);
+            return;
+        end
+    end
 %**************************************************************************
 %exports files to the eeglab set format
 function callback_exportfiles(hObject, eventdata, h, format)
@@ -477,10 +529,8 @@ h.label_info.HTMLSource = msg;
 %**************************************************************************
 function populate_filelist(study, h)
 
-%fprintf('populating study file list\n')
 EEGPath = study_GetEEGPath;
 flist = [];
-
 for ii = 1:study.nsubjects
     searchpath = eeg_BuildPath(EEGPath, study.path, study.subject(ii).path, '*.*');
     d = dir(searchpath);
@@ -525,6 +575,7 @@ n.delete;
 Nodes = [];
 for ii = 1:length(FileTypes)
     Nodes(ii).Node = uitreenode(h.tree_filetree, 'Text', FileTypes{ii});
+    Nodes(ii).Node.Tag = 'uneditable';
 end
 
 for ii = 1:length(flist)
@@ -537,8 +588,9 @@ for ii = 1:length(flist)
     %figure out which category it is
     category = find(strcmp(Included_Extensions,ext));
     if isempty(category); category = length(FileTypes); end
-    node_name = sprintf('(%i)\t%s', flist(ii).count,flist(ii).name);
-    uitreenode(Nodes(category).Node,'Text', node_name, 'NodeData', flist(ii).name);
+    [~,fNameOnly,~] = fileparts(flist(ii).name);
+    node_name = sprintf('(%i)\t%s', flist(ii).count,fNameOnly);
+    uitreenode(Nodes(category).Node,'Text', node_name, 'NodeData', flist(ii).name, 'Tag', 'editable');
 end
 
 %now get the average files from the across subect folder
@@ -555,12 +607,14 @@ else
         
              category = find(strcmp(Included_Extensions,Acrosssubj_Extensions{ee}));
              if isempty(category); category = length(FileTypes); end
-             node_name = sprintf('(%i)\t%s', 1 ,flist(ii).name);
-             uitreenode(Nodes(category).Node,'Text', node_name, 'NodeData', flist(ii).name);
+             [~,fNameOnly,~] = fileparts(flist(ii).name);
+             node_name = sprintf('(%i)\t%s', 1 ,fNameOnly);
+             uitreenode(Nodes(category).Node,'Text', node_name, 'NodeData', flist(ii).name, 'Tag', 'editable');
              
         end
     end
 end
+
 
 %*************************************************************************
 function callback_newstudy(hObject, eventdata, h, editMode)
@@ -679,7 +733,6 @@ h.figure.Pointer = 'arrow';
 %returns the files selected in the main file list
 function [filelist, n_uniquefiles] = getselectedfiles(study,h, stacked)
 
-
 if nargin < 3
     stacked = 0;
 end
@@ -770,6 +823,8 @@ study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Conver
 study = study_SaveStudy(study);
 setstudy(study,h);
 populate_studyinfo(study, h)
+callback_refresh(hObject, eventdata, h)
+
 %**************************************************************************
 function callback_resample(hObject, eventdata, h)
 
@@ -964,8 +1019,10 @@ study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Epochi
 study = study_SaveStudy(study);
 setstudy(study,h);
 
-populate_filelist(study, h)
-populate_studyinfo(study,h)
+callback_refresh(hObject, eventdata, h)
+
+%populate_filelist(study, h)
+%populate_studyinfo(study,h)
 %*************************************************************************
 function callback_reject(hObject, eventdata,h)
 study = getstudy(h);
@@ -1058,13 +1115,14 @@ for ii = 1:length(selfiles)
         ch_names = join({EEG.chanlocs(find(bchans)).labels});
         fprintf('Removing channels\n%s.\n', ch_names{1});
 
-        EEG = pop_select(EEG, 'rmchannel', bchans);
+        EEG = pop_select(EEG, 'rmchannel', find(bchans));
         %EEG = eeg_interp(EEG, find(bchans));
         EEG.chaninfo.badchans(:) = 0;
     end
     curpbVal = curpbVal + 1;
     pb.Message = 'saving data...';
     pb.Value = curpbVal/maxpbVal;
+    fprintf('saving data file with %i channels to %s\n', EEG.nbchan, outfilename);
     wwu_SaveEEGFile(EEG, outfilename);
 end
 study_AddHistory(study, 'start', stime, 'finish', clock, 'event', 'Removed bad channels', 'paramstring', selfiles);

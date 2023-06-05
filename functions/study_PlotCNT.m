@@ -112,7 +112,6 @@ function callback_selectchannel(hObject, eventdata,h, ch_num)
 function callback_loadnewfile(hObject, eventdata, study, h)
 
 p = h.figure.UserData;
-pp = plot_params;
 
 if isfield(p, 'EEG')
      if strcmp(p.EEG.saved, 'no')
@@ -130,9 +129,9 @@ filename = fnames{snum};
 
 h.label_subjectstatus.Text = study.subject(snum).status;
 if contains(study.subject(snum).status, 'good')
-    h.label_subjectstatus.BackgroundColor = pp.goodsubjectcolor;
+    h.label_subjectstatus.BackgroundColor = h.scheme.GoodSubjectColor;
 else    
-    h.label_subjectstatus.BackgroundColor = pp.badsubjectcolor;
+    h.label_subjectstatus.BackgroundColor = h.scheme.BadSubjectColor;
 end
 
 %make sure something was passed
@@ -549,10 +548,9 @@ function handles = build_gui(study)
 
 %p = plot_params;
 scheme = eeg_LoadScheme;
-sz = get(0, 'screenSize');
-W = round(sz(3) * .8); H = round(sz(4) * .6);
-figpos = [(sz(3) - W)/2, (sz(4) - H)/2, W, H];
-
+W = round(scheme.ScreenWidth * .8); H = round(scheme.ScreenHeight * .6);
+figpos = [(scheme.ScreenWidth - W)/2, (scheme.ScreenHeight - H)/2, W, H];
+handles.scheme = scheme;
 handles.figure = uifigure(...
     'Color', scheme.Window.BackgroundColor.Value,...
     'Position', figpos,...

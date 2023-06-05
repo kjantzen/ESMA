@@ -21,19 +21,23 @@ if ~isfile(filename)
     return
 end
 if ~isempty(field)
-    cmd = sprintf('load(''%s'', ''-mat''', filename);
-    if iscell(field)
-        for ii = 1:length(field)
-            cmd = [cmd, ',''',field{ii}, ''''];
-        end
-        cmd = [cmd, ')'];
+    if strcmp(field, 'header')
+        EEG = load(filename, '-mat', '-regexp', '^(?!data$).');
     else
-        cmd = [cmd, ',''', field, ''')'];
-    end
-    EEG = eval(cmd);
-    if ~isfield(EEG, field)
-        EEG = wwu_LoadEEGFile(filename);
-        return;
+        cmd = sprintf('load(''%s'', ''-mat''', filename);
+        if iscell(field)
+            for ii = 1:length(field)
+                cmd = [cmd, ',''',field{ii}, ''''];
+            end
+            cmd = [cmd, ')'];
+        else
+            cmd = [cmd, ',''', field, ''')'];
+        end
+        EEG = eval(cmd);
+        if ~isfield(EEG, field)
+            EEG = wwu_LoadEEGFile(filename);
+            return;
+        end
     end
 else
     EEG = load(filename, '-mat');

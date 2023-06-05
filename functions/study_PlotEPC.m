@@ -1262,6 +1262,7 @@ line(h.axis_quickaverage, [0,0], h.axis_quickaverage.YLim, 'Color', 'w', 'LineWi
 h.axis_quickaverage.XLabel.String = 'time (ms)';
 h.axis_quickaverage.YLabel.String = 'voltage (mV)';
 h.axis_quickaverage.Title.String = ptitle;
+h.axis_quickaverage.XLimitMethod = 'tight';
 
 %**************************************************************************    
  function callback_selectICs(hObject, event, h)

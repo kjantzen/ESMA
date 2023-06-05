@@ -449,7 +449,7 @@ GND.ANOVA(indx).level_matrix = cond_matrix;
 
 
 %**************************************************************************
-function GND = do_MassUniv(~,GND,stats)
+function GND = do_MassUniv(h,GND,stats)
 
 cond_info = h.list_model.ItemsData;
 cond_order = cellfun(@str2num, cond_info);

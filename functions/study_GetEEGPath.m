@@ -5,7 +5,7 @@
 function EEGPath = study_GetEEGPath
     
     nopath = true;
-    EEGPATHFILE = fullfile(fileparts(mfilename("fullpath")),'config','EEGpath.mat');
+    EEGPATHFILE = fullfile(fileparts(mfilename("fullpath")),'..', filesep, 'config','EEGpath.mat');
 
     if isfile(EEGPATHFILE)
        load(EEGPATHFILE, "EEGPath");

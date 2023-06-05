@@ -303,5 +303,5 @@ pb = uiprogressdlg(h.figure, 'Title', 'Marking bad trials', 'Message', 'starting
         pb.Value = jj/length(fnames);
     end
     
-   callback_closefig(hObject, eventdata, h);
+   callback_closefig(hObject, eventdata);
     

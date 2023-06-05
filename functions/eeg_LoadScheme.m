@@ -50,3 +50,5 @@ end
 sz = get(0, "ScreenSize");
 scheme.ScreenWidth = sz(3);
 scheme.ScreenHeight = sz(4);
+scheme.GoodSubjectColor = [.2, .8, .2];
+scheme.BadSubjectColor = [8, .2, .2];

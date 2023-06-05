@@ -140,7 +140,6 @@ for jj = 1:length(fnames)
         continue;
     end
     
-    %EEG = pop_loadset('filepath', fpath, 'filename', [fname, fext]);
     EEG = wwu_LoadEEGFile(fnames{jj});
     if FiltData
         fprintf('Pre filtering the data\n');
