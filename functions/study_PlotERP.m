@@ -24,15 +24,13 @@ handles = assign_callbacks(handles);
 
 % %sometimes the time points used variable is a cell vector and sometimes it is
 % %an integer vector.  I will harmonize it here rather than figure out why
-% if isfield(GND, 'F_tests')
-%     if ~isempty(GND.F_tests)
-%         for ii = 1:length(GND.F_tests)
-%             if iscell(GND.F_tests(ii).used_tpt_ids)
-%                 GND.F_tests(ii).used_tpt_ids = cell2mat(GND.F_tests(ii).used_tpt_ids);
-%             end
-%         end
-%     end
-% end
+if isfield(GND, 'F_tests') && ~isempty(GND.F_tests)
+    for ii = 1:length(GND.F_tests)
+        if iscell(GND.F_tests(ii).used_tpt_ids)
+             GND.F_tests(ii).used_tpt_ids = cell2mat(GND.F_tests(ii).used_tpt_ids);
+        end
+    end
+end
 
 pb.Message = 'Stashing data...';
 p.GND = GND;

@@ -294,7 +294,7 @@ EEG = wwu_LoadEEGFile(filename);
 
 
 %make sure there are components
-if isempty(EEG.icasphere)
+if ~isfield(EEG, "icasphere") || isempty(EEG.icasphere)
     uialert(h.figure, 'No ICA components found','Load Error');
     return
 end
@@ -326,86 +326,87 @@ cb = colorbar(h.axis_icatopo);
 cb.Color = p.scheme.Axis.AxisColor.Value;
 
 %if this is epcohed data
+%need to edit this to allow for non epoched data as well
 if p.EEG.trials > 1
-%get the ICA data without the bad trials
-btrials = ~study_GetBadTrials(p.EEG);
-icaact = squeeze(p.EEG.icaact(ic_number,:,:));
-icaact(:,~btrials) = 0;
-
-%compute the mean of the ica time series for display
-icamean = mean(icaact(:,btrials),2);
-%compute the 2 sided fft
-Y = fft(icaact(:,btrials));
-fftlength = size(icaact,1);
-ffthalf = round(fftlength/2 + 1);
-%compute the 2 sided power
-Y = abs(Y./fftlength).^2;
-%convert to one sided
-icafft = Y(1:ffthalf,:);
-icafft(2:end-1,:) = 2*icafft(2:end-1,:);
-%average across trial
-icafft = mean(icafft,2);
-
-%create an axis for the erp plot and for the  fft plot
-yaxis = 1:p.EEG.trials;
-yaxis = yaxis(btrials);
-faxis = p.EEG.srate * (0:(ffthalf-1))/fftlength; 
-
-%smooth the ica erp plot
-f = ones(10);
-icaact = conv2(icaact, f, 'same');
-mn = min(min(icaact)); mx = max(max(icaact));
-scale = max([abs(mn), mx]);
-cla(h.axis_icaerp);
-h.axis_icaerp.YTickMode = 'auto';
-
-im = imagesc('Parent', h.axis_icaerp, 'XData', [p.EEG.times(1), p.EEG.times(end)],'CData', icaact', [-scale, scale]);
-im.ButtonDownFcn = {@callback_gettrialfromerpimage, h};
-h.axis_icaerp.YLabel.String = 'Trials';
-h.axis_icaerp.YGrid = 'on';
-h.axis_icaerp.GridColor = [.4,.4,.4];
-h.axis_icaerp.XGrid = 'off';
-h.axis_icaerp.Layer = 'top';
-h.axis_icaerp.YDir = 'normal';
-h.axis_icaerp.XLim = [p.EEG.times(1), p.EEG.times(end)];
-h.axis_icaerp.YLim = [1,length(yaxis)];
-mytitle = sprintf('Component %i', ic_number);
-if p.EEG.reject.gcompreject(ic_number)
-    mytitle = [mytitle, ' BAD'];
-    h.axis_icaerp.Title.Color = p.badtrialcolor;
-else
-    mytitle = [mytitle, ' GOOD'];
-    h.axis_icaerp.Title.Color = p.goodtrialcolor;
-end
-h.axis_icaerp.Title.String = mytitle;
-cb = colorbar(h.axis_icaerp);
-cb.Color = p.scheme.Axis.AxisColor.Value;
-
-%plot the mean of the ica in the time domain
-scale(1) = floor(min(icamean) * 10)/10;
-scale(2) = ceil(max(icamean) * 10)/10;
-if scale(1) > 0; scale(1) = -.1; end
-if scale(2) < 0; scale(2) = .1; end
-mp = plot(h.axis_icamean, p.EEG.times, icamean);
-h.axis_icamean.YLim = scale; 
-h.axis_icamean.XLim = [p.EEG.times(1), p.EEG.times(end)];
-h.axis_icamean.XLabel.String = 'Time (ms)';
-h.axis_icamean.YLabel.String = 'Amplitude (mV)';
-h.axis_icamean.InnerPosition([1,3]) = h.axis_icaerp.InnerPosition([1,3]);
-h.axis_icamean.Position(2) = 10;
-h.axis_icamean.Box = 'off';
-mp.LineWidth = 2;
-line(h.axis_icamean, [0,0], scale, 'Color', p.scheme.Axis.AxisColor.Value)
-line(h.axis_icamean, p.EEG.times, zeros(size(p.EEG.times)), 'Color', p.scheme.Axis.AxisColor.Value)
-
-%plot the fft of the ica time series
-mp = plot(h.axis_icafft, faxis, icafft);
-mp.LineWidth = 2;
-h.axis_icafft.XLim = [0,40];
-h.axis_icafft.XLabel.String = 'Frequency (Hz)';
-h.axis_icafft.YLabel.String = 'Log Power (mV/freq)';
-h.axis_icafft.YScale = 'log';
-h.axis_icafft.Box = 'off';
+    %get the ICA data without the bad trials
+    btrials = ~study_GetBadTrials(p.EEG);
+    icaact = squeeze(p.EEG.icaact(ic_number,:,:));
+    icaact(:,~btrials) = 0;
+    
+    %compute the mean of the ica time series for display
+    icamean = mean(icaact(:,btrials),2);
+    %compute the 2 sided fft
+    Y = fft(icaact(:,btrials));
+    fftlength = size(icaact,1);
+    ffthalf = round(fftlength/2 + 1);
+    %compute the 2 sided power
+    Y = abs(Y./fftlength).^2;
+    %convert to one sided
+    icafft = Y(1:ffthalf,:);
+    icafft(2:end-1,:) = 2*icafft(2:end-1,:);
+    %average across trial
+    icafft = mean(icafft,2);
+    
+    %create an axis for the erp plot and for the  fft plot
+    yaxis = 1:p.EEG.trials;
+    yaxis = yaxis(btrials);
+    faxis = p.EEG.srate * (0:(ffthalf-1))/fftlength; 
+    
+    %smooth the ica erp plot
+    f = ones(10);
+    icaact = conv2(icaact, f, 'same');
+    mn = min(min(icaact)); mx = max(max(icaact));
+    scale = max([abs(mn), mx]);
+    cla(h.axis_icaerp);
+    h.axis_icaerp.YTickMode = 'auto';
+    
+    im = imagesc('Parent', h.axis_icaerp, 'XData', [p.EEG.times(1), p.EEG.times(end)],'CData', icaact', [-scale, scale]);
+    im.ButtonDownFcn = {@callback_gettrialfromerpimage, h};
+    h.axis_icaerp.YLabel.String = 'Trials';
+    h.axis_icaerp.YGrid = 'on';
+    h.axis_icaerp.GridColor = [.4,.4,.4];
+    h.axis_icaerp.XGrid = 'off';
+    h.axis_icaerp.Layer = 'top';
+    h.axis_icaerp.YDir = 'normal';
+    h.axis_icaerp.XLim = [p.EEG.times(1), p.EEG.times(end)];
+    h.axis_icaerp.YLim = [1,length(yaxis)];
+    mytitle = sprintf('Component %i', ic_number);
+    if p.EEG.reject.gcompreject(ic_number)
+        mytitle = [mytitle, ' BAD'];
+        h.axis_icaerp.Title.Color = p.badtrialcolor;
+    else
+        mytitle = [mytitle, ' GOOD'];
+        h.axis_icaerp.Title.Color = p.goodtrialcolor;
+    end
+    h.axis_icaerp.Title.String = mytitle;
+    cb = colorbar(h.axis_icaerp);
+    cb.Color = p.scheme.Axis.AxisColor.Value;
+    
+    %plot the mean of the ica in the time domain
+    scale(1) = floor(min(icamean) * 10)/10;
+    scale(2) = ceil(max(icamean) * 10)/10;
+    if scale(1) > 0; scale(1) = -.1; end
+    if scale(2) < 0; scale(2) = .1; end
+    mp = plot(h.axis_icamean, p.EEG.times, icamean);
+    h.axis_icamean.YLim = scale; 
+    h.axis_icamean.XLim = [p.EEG.times(1), p.EEG.times(end)];
+    h.axis_icamean.XLabel.String = 'Time (ms)';
+    h.axis_icamean.YLabel.String = 'Amplitude (mV)';
+    h.axis_icamean.InnerPosition([1,3]) = h.axis_icaerp.InnerPosition([1,3]);
+    h.axis_icamean.Position(2) = 10;
+    h.axis_icamean.Box = 'off';
+    mp.LineWidth = 2;
+    line(h.axis_icamean, [0,0], scale, 'Color', p.scheme.Axis.AxisColor.Value)
+    line(h.axis_icamean, p.EEG.times, zeros(size(p.EEG.times)), 'Color', p.scheme.Axis.AxisColor.Value)
+    
+    %plot the fft of the ica time series
+    mp = plot(h.axis_icafft, faxis, icafft);
+    mp.LineWidth = 2;
+    h.axis_icafft.XLim = [0,40];
+    h.axis_icafft.XLabel.String = 'Frequency (Hz)';
+    h.axis_icafft.YLabel.String = 'Log Power (mV/freq)';
+    h.axis_icafft.YScale = 'log';
+    h.axis_icafft.Box = 'off';
 end
 
 %plot the classification for the selected component

@@ -3,9 +3,6 @@ function h = study_Resample_GUI(study, filenames)
 scheme = eeg_LoadScheme;
 scrsize = get(0, 'ScreenSize');
 Wdth = 400; Hght = 160;
-Bttn_HalfWidth = 12;
-Bttn_HalfHeight = 18;
-LBHeight = Hght * .95;
 
 %setup the main figure window
 handles.figure = uifigure;

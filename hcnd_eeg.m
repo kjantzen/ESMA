@@ -991,8 +991,13 @@ if isempty(study); return; end
 
 filelist = getselectedfiles(study, h);
 if isempty(filelist); return; end
-fh = study_RunScript(study, filelist);
-waitfor(fh);
+try
+    fh = study_RunScript(study, filelist);
+    waitfor(fh);
+catch me
+    uialert(h.figure, me.message, me.identifier);
+    return
+end
 callback_loadstudy(hObject, eventdata, h)
 %*************************************************************************
 function callback_evtsummary(hObject, event, h)
