@@ -1,7 +1,6 @@
 function h = study_Resample_GUI(study, filenames)
 
 scheme = eeg_LoadScheme;
-scrsize = get(0, 'ScreenSize');
 Wdth = 400; Hght = 160;
 
 %setup the main figure window
@@ -15,7 +14,7 @@ set(handles.figure,...
     'Color', scheme.Window.BackgroundColor.Value, ...
     'Name', 'Resample Data',...
     'NumberTitle', 'off',...
-    'Position', [(scrsize(3)-Wdth)/2,(scrsize(4)-Hght)/2,Wdth,Hght],...
+    'Position', [(scheme.ScreenWidth-Wdth)/2,(scheme.ScreenHeight-Hght)/2,Wdth,Hght],...
     'Resize', 'off',...
     'menubar', 'none',...
     'WindowStyle', 'modal');
@@ -97,10 +96,13 @@ closereq();
 
 %**********************************************
 function callback_resample(hObject, eventdata, h, filenames, study)
-
-
+    
     file_id = '_resamp';
     start = clock;
+    tic
+
+    parameters.operation = {'Operation', 'Resample'};
+    parameters.date = {'Date and time', datetime("now")};
 
     newFs = h.edit_newFs.Value;
     owrite = h.check_overwrite.Value;
@@ -113,7 +115,9 @@ function callback_resample(hObject, eventdata, h, filenames, study)
    
     option = 0;
     nfile = length(filenames);
-       
+    reportColumnsNames = {'Original sample rate', 'New sample rate', 'Ouput File'};
+    reportValues = cell(nfile, length(reportColumnsNames));
+
         for jj = 1:nfile
             [path, file, ext] = fileparts(filenames{jj});
             if owrite
@@ -131,24 +135,29 @@ function callback_resample(hObject, eventdata, h, filenames, study)
             EEGIn = wwu_LoadEEGFile(filenames{jj});
             fprintf('Resampling the data from %i to %i Hz\n', EEGIn.srate, newFs);
             
+            reportValues{jj,end} = outfilename;
+            reportValues{jj,1} = EEGIn.srate;
+            reportValues{jj,2} = newFs;
+
             EEGIn = pop_resample( EEGIn, newFs);
             newfile = fullfile(path, [outfilename, ext]);
             wwu_SaveEEGFile(EEGIn, newfile);
-        
             pbar.Value  = jj/nfile;
-    
         end
         
         clear EEGIn
         close(pbar)
     
+        parameters.duration = {'Duration', toc}; 
+        wwu_UpdateProcessLog(study,"ColumnNames",reportColumnsNames,...
+            "Parameters",parameters,"RowNames",filenames,...
+            "SheetName",'resample','Values',reportValues)
         params = filenames;
         params(end+1) = {'new sample rate'};
         params(end+1) = {newFs};
         study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Resample', 'function', 'study_Resanple_GUI', 'paramstring', params, 'fileID', file_id);
         study = study_SaveStudy(study);
-    
-    
+        
         closereq();
     catch ME
         close(pbar);

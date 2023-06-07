@@ -138,9 +138,13 @@ closereq();
 %**********************************************
 function callback_filter(hObject, eventdata, h, filenames, study)
 
-
+    %extension to add to the output file
     file_id = '_filt';
     start = clock;
+    %for outputing record keeping information
+    Parameters.operation = {'Operation', 'filter'};
+    Parameters.date = {'Date and time', datetime("now")};
+    tic;
 
     if  h.radio_lowpass.Value == 1
         ledge = 0;
@@ -162,6 +166,9 @@ function callback_filter(hObject, eventdata, h, filenames, study)
         end
     end
 
+    Parameters.lowedge = {'Low cutoff', ledge};
+    Parameters.highedge = {'High cutoff', hedge};
+    Parameters.function = {'Function', 'pop_eegfiltnew'};
 
     revfilt = h.radio_notch.Value;
     owrite = h.check_overwrite.Value;
@@ -174,6 +181,7 @@ function callback_filter(hObject, eventdata, h, filenames, study)
    
     option = 0;
     nfile = length(filenames);
+    reportValues = cell(size(filenames));
        
         for jj = 1:nfile
             [path, file, ext] = fileparts(filenames{jj});
@@ -183,9 +191,11 @@ function callback_filter(hObject, eventdata, h, filenames, study)
                 [file_id, option,writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
                 if option == 3 && ~writeflag
                     fprintf('skipping existing file...\n')
+                    reportValues{jj} = 'not saved';
                     continue;
                 else
                     outfilename = [file, file_id];
+                    reportValues{jj} = outfilename;
                 end
             end
             
@@ -203,7 +213,9 @@ function callback_filter(hObject, eventdata, h, filenames, study)
         
         clear EEGIn
         close(pbar)
-    
+   
+        Parameters.elapsedtime = {'Elapsed Time (s)', toc}; 
+        wwu_UpdateProcessLog(study, 'RowNames', filenames, 'ColumnNames', {'Output file'}, 'Values',reportValues', 'SheetName','filter', 'Parameters', Parameters);
         params = filenames;
         params(end+1) = {'locutoff'};
         params(end+1) = {ledge};
@@ -211,8 +223,6 @@ function callback_filter(hObject, eventdata, h, filenames, study)
         params(end+1) = {hedge};
         study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Filter', 'function', 'study_Filter_GUI', 'paramstring', params, 'fileID', file_id);
         study = study_SaveStudy(study);
-    
-    
         closereq();
     catch ME
         close(pbar);

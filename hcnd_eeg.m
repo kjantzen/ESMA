@@ -124,11 +124,11 @@ handles.menu_trialplot = uimenu(handles.menu_plot, 'Label', 'Plot and Review Dat
 handles.menu_preprocess = uimenu('Parent', handles.figure, 'Label', 'Preprocess');
 handles.menu_resample = uimenu('Parent', handles.menu_preprocess, 'Label', 'Resample');
 handles.menu_filter = uimenu('Parent', handles.menu_preprocess, 'Label', 'Filter');
-handles.menu_rbadchans = uimenu('Parent', handles.menu_preprocess, 'Label', 'Remove and interpolate bad channels');
+handles.menu_rbadchans = uimenu('Parent', handles.menu_preprocess, 'Label', 'Remove bad channels');
 handles.menu_reref = uimenu('Parent', handles.menu_preprocess, 'Label', 'Average reference');
 handles.menu_cleanline = uimenu('Parent', handles.menu_preprocess, 'Label', 'Reduce line noise');
 handles.menu_extractepochs = uimenu('Parent', handles.menu_preprocess, 'Label', 'Create epoched files', 'Separator', 'on');
-handles.menu_markbadtrials = uimenu('Parent', handles.menu_preprocess, 'Label', 'Automatic trial rejection');
+handles.menu_markbadtrials = uimenu('Parent', handles.menu_preprocess, 'Label', 'Automatically mark bad tials');
 handles.menu_computetf = uimenu('Parent', handles.menu_preprocess, 'Label', 'Compute ERSP', 'Separator', 'on');
 
 
@@ -859,19 +859,23 @@ file_id = '_ref';
 option = 0;
 study = getstudy(h);
 fnames = getselectedfiles(study, h);
-
 if isempty(fnames)
-    uialert(h.figure, 'Select files to average reference.');
     return
 end
 
+parameters.operation = {'Operation', 'Average Reference'};
+parameters.date = {'Date and time', datetime('now')};
+
+tic
 start = clock;
 %include a progress bar for this process
 pb = uiprogressdlg(h.figure, 'Title','Average reference');
 pb.Message = sprintf('Applying Average to all participants');
 
+reportColumnNames = {'Previous Reference','New Reference', 'New filename'};
+reportValues = cell(length(filenames), length(reportColumnNames));
+
 for ii = 1:length(fnames)
-    
     [path, file, ext] = fileparts(fnames{ii});
     [file_id, option, writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
     if option == 3 && ~writeflag
@@ -880,16 +884,21 @@ for ii = 1:length(fnames)
     else
         newfile = [file, file_id];
     end
- %   EEG = pop_loadset('filename', [file, ext], 'filepath', path);
     EEG = wwu_LoadEEGFile(fnames{ii});
+    reportValues{ii,1} = EEG.ref;
+    
     EEG = pop_reref(EEG, []);
+    reportValues{ii,2} = EEG.ref;
+
+    reportValues{ii,end} = [newfile,ext];
     wwu_SaveEEGFile(EEG, fullfile(path, [newfile, ext]));
- %   EEG = pop_saveset(EEG, 'filename', newfile, 'filepath', path, 'savemode', 'onefile');
- %   movefile(fullfile(path, [newfile, '.set']), fullfile(path, [newfile, ext]));
     pb.Value = ii/length(fnames);
 end
 
-
+parameters.duration = {'Duration', toc};
+wwu_UpdateProcessLog(study,"ColumnNames",reportColumnNames,...
+    'Parameters',parameters,'RowNames',fnames,'SheetName','Rereference',...
+    'Values',reportValues);
 study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Average Reference', 'function', 'callback_reref', 'paramstring', fnames, 'fileID',file_id);
 study = study_SaveStudy(study);
 setstudy(study,h);
@@ -1069,6 +1078,9 @@ function callback_evtsummary(hObject, event, h)
     study_eventsummary_GUI(study, filelist);
 %*************************************************************************
 function callback_interpchans(hObject, eventdata, h)
+tic
+parameters.Operation = {'Operation', 'Remove bad channels'};
+parameters.date = {'Date and time', datetime("now");}
 
 study = getstudy(h);
 stime = clock;
@@ -1076,14 +1088,15 @@ option = 0;
 file_id = '_rchan';
 selfiles = getselectedfiles(study, h);
 if isempty(selfiles)
-    uialert(h.figure, 'Please select the file(s) from which to remove bad channels.', 'Remove bad channels');
     return
 end
-pb = uiprogressdlg(h.figure,'Message', 'Removing bad channels', 'Value',0,'Title','Interpolate bad channels');
+pb = uiprogressdlg(h.figure,'Message', 'Removing bad channels', 'Value',0,'Title','Remove bad channels');
 maxpbVal= length(selfiles) * 4;
 curpbVal = 0;
-for ii = 1:length(selfiles)
+nFiles = length(selfiles);
+reportData = cell(length(selfiles), 3);
 
+for ii = 1:nFiles
     curpbVal = curpbVal + 1;
     pb.Message = 'building output filename...';
     pb.Value = curpbVal/maxpbVal;
@@ -1092,9 +1105,11 @@ for ii = 1:length(selfiles)
     [file_id, option,writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
     if option == 3 && ~writeflag
         fprintf('skipping existing file...\n');
+        reportData{ii,3} = 'not saved';
         continue;
     else
         outfilename = fullfile(path,[file, file_id, ext]);
+        reportData{ii,3} = outfilename;
     end
 
     curpbVal = curpbVal + 1;
@@ -1109,6 +1124,8 @@ for ii = 1:length(selfiles)
 
     if ~isfield(EEG.chaninfo, 'badchans') || sum(EEG.chaninfo.badchans)==0
         fprintf('No bad channels found for subject #%i\n', ii)
+        reportData{ii,1} = 0;
+        reportData{ii,2} = 'none';
    
     else
         bchans = EEG.chaninfo.badchans;
@@ -1116,8 +1133,9 @@ for ii = 1:length(selfiles)
         fprintf('Removing channels\n%s.\n', ch_names{1});
 
         EEG = pop_select(EEG, 'rmchannel', find(bchans));
-        %EEG = eeg_interp(EEG, find(bchans));
         EEG.chaninfo.badchans(:) = 0;
+        reportData{ii,1} = sum(bchans);
+        reportData{ii,2} = ch_names{1};
     end
     curpbVal = curpbVal + 1;
     pb.Message = 'saving data...';
@@ -1125,6 +1143,11 @@ for ii = 1:length(selfiles)
     fprintf('saving data file with %i channels to %s\n', EEG.nbchan, outfilename);
     wwu_SaveEEGFile(EEG, outfilename);
 end
+parameters.duration = {'Duration (seconds)', toc};
+
+wwu_UpdateProcessLog(study,'SheetName', 'rem chans', ...
+    'ColumnNames',{'# removed', 'Channels removed', 'Ouput File'},...
+    'RowNames',selfiles, 'Values', reportData, 'Parameters',parameters)
 study_AddHistory(study, 'start', stime, 'finish', clock, 'event', 'Removed bad channels', 'paramstring', selfiles);
 populate_filelist(study, h);
  

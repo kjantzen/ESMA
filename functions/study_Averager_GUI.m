@@ -142,6 +142,12 @@ exclude_badsubjs = h.check_excludebadsubjs.Value;
 interpolate_channels = h.check_interpolate.Value;
 outfilename = h.edit_outfilename.Value;
 
+parameters.operation = {'Operation', 'Time Average'};
+parameters.date = {'Date and time', datetime("now")};
+parameters.exclude_trial = {'Exclude Bad Trials', exclude_badtrials};
+parameters.exclude_comps = {'Exclude Bad Components', exclude_badcomps};
+parameters.exclude_subjs = {'Exclude Bad Subjects', exclude_badsubjs};
+parameters.interp = {'Interpolate Missing Channels', interpolate_channels};
 
 %set and create (if necessary) the output directory;
 study_path = study_GetEEGPath;
@@ -165,13 +171,16 @@ if isempty(p.filenames)
     return
 end
 
-
 pb = uiprogressdlg(h.figure);
 
 %create a temporary version of each file in the across subject directory so
 %that I can remove trials and or components in necessary
 
 %if more than one set of files is selected, the outfile name will be incremented
+reportColumnNames = {'Included in average', 'Trials Removed', 'Components Removed','Number of channels', 'Average File'};
+reportRows = cell(length(p.filenames),1);
+reportData = cell(length(p.filenames), 5);
+loopCount = 0;
 for ii = 1:size(p.filenames,1)
     
     %if the file exists already append a number to the end
@@ -193,6 +202,7 @@ for ii = 1:size(p.filenames,1)
     fcount = 0;
     flist = [];
     for jj = 1:size(p.filenames,2)
+        loopCount = loopCount + 1;
         
         pb.Value = jj/size(p.filenames,2);
         pb.Message = 'Loading EEG Data';
@@ -210,13 +220,25 @@ for ii = 1:size(p.filenames,1)
             exclude_badsubjs = false;
         else
             if strcmp(study.subject(snum).status, 'bad') && exclude_badsubjs
+                reportRows(loopCount) = p.filenames(ii,jj);
+                reportData{jj, 1} = 'No';
                 continue
             end
         end
         
+        %load the data
         EEG = wwu_LoadEEGFile(p.filenames{ii,jj});
         EEG.subject = study.subject(snum).ID;
         
+        %initialize cell data for reporting averaging results to the process
+        %log
+        reportRows(loopCount) = p.filenames(ii,jj);
+        reportData{loopCount,1} = 'Yes';
+        reportData{loopCount,2} = 0;
+        reportData{loopCount,3} = 0;
+        reportData{loopCount,4} = EEG.nbchan;
+        reportData{loopCount, end} = outfilename;
+
         if exclude_badtrials
             pb.Message = 'Removing bad trials';
             btrials = study_GetBadTrials(EEG);
@@ -224,16 +246,23 @@ for ii = 1:size(p.filenames,1)
             %for some reason removing the epochs scrambles the order of the
             %events so now I have to go in and make sure they are correct.
             EEG = wwu_fix_eventmarkers(EEG);
+            reportData{loopCount, 2} = length(find(btrials));
         end
         if exclude_badcomps && isfield(EEG, 'icasphere')
             pb.Message = 'Removing bad components';
             bcomps = find(EEG.reject.gcompreject);
-            EEG = pop_subcomp(EEG, [], 0, 0);
+            EEG = pop_subcomp(EEG, [],0, 0);
+            if isempty(bcomps)
+                reportData{loopCount,3} = 0;
+            else
+                reportData{loopCount,3} = join(num2str(bcomps));
+            end
         end
         if interpolate_channels
             %interpolate any channels that are missing from the main
             %channel locations structure.
             EEG = eeg_interp(EEG, study.chanlocs);
+            reportData{loopCount,4} = EEG.nbchan;
         end
 
         %save to a temp file and store the filename
@@ -249,6 +278,10 @@ sets2GND(flist,'out_fname', fullfile(outdir, [outfilename, '.GND']),'verblevel',
 delete(fullfile(outdir, [filesep, '*.tmp']));
 
 end
+parameters.duration = {'Duration (seconds)', toc};
+wwu_UpdateProcessLog(study, 'SheetName','average', ...
+    'ColumnNames',reportColumnNames, 'RowNames', reportRows,...
+    'Values',reportData, 'Parameters',parameters);
 
 close(pb);
 delete(h.figure)
