@@ -16,30 +16,33 @@
 %                       from https://github.com/ericcfields/FMUT.
 %            
 
-% Update 6/15/20 KJ Jantzen
 function hcnd_eeg()
 
-fprintf('Starting hcnd_eeg ....\n');
+VersionNumber = 1.0;
+fprintf('Starting hcnd_eeg V%i....\n', VersionNumber);
 
 EEGPath = study_GetEEGPath;
-
-p = plot_params;
-
-W = 420; H = 500;
-FIGPOS = [0,(p.screenheight-H), W, H];
+addSubFolderPaths
 
 %checking for eeglab installation and path
 eeglabpath = which('eeglab.m');
 if isempty(eeglabpath)
     error('Could not find eeglab installation.  Please make sure eeglab is installed on this computer.')
 end
-eeglabpath = eeglabpath(1:end-length('eeglab.m'));
+eeglabpath = fileparts(eeglabpath(1:end-length('eeglab.m')));
 addpath(eeglabpath);
 
 fprintf('...building GUI\n');
 
+scheme = eeg_LoadScheme;
 
-existingFigure = findall(groot,'Type', 'Figure', 'Tag', 'hcndV1.0');
+%size of the figure
+W = 400; H = 500;
+FIGPOS = [0,(scheme.ScreenWidth-H), W, H];
+VERSION = 'hcndV2.0';
+
+%restart the display if it is already loaded
+existingFigure = findall(groot,'Type', 'Figure', 'Tag', VERSION);
 if ~isempty(existingFigure)
     handles.figure = existingFigure;
     clf(handles.figure);
@@ -48,52 +51,51 @@ else
     %setup the main figure window
     handles.figure = uifigure;
 end
-handles.p = p;
 
 set(handles.figure,...
-    'Color', p.backcolor, ...
-    'name', 'HCND EEG Study Management and Analysis',...
+    'Color', scheme.Window.BackgroundColor.Value, ...
+    'name', 'EEG Study Management and Analysis',...
     'NumberTitle', 'off',...
     'Position', FIGPOS,...
     'Resize', 'off',...
     'menubar', 'none',...
-    'Tag', 'hcndV1.0');
+    'Tag', VERSION);
+
 msg = uiprogressdlg(handles.figure, 'Message', 'Building GUI', 'Cancelable',false);
 drawnow
 
 handles.dropdown_study = uidropdown(...
     'Parent', handles.figure,...
-    'Position', [10,H-20,400,20],...
+    'Position', [10,H-30,W-20,scheme.Dropdown.Height.Value],...
     'Editable', 'off',...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
+    'BackgroundColor', scheme.Dropdown.BackgroundColor.Value,...
+    'FontColor', scheme.Dropdown.FontColor.Value,...
+    'FontName', scheme.Dropdown.Font.Value,...
+    'FontSize', scheme.Dropdown.FontSize.Value);
 
 handles.tree_filetree = uitree(...
     'Parent', handles.figure,...
     'Multiselect', 'on',...
-    'Editable', 'on',...
-    'Position', [10,H-250,400,225],...
-    'BackgroundColor', p.textfieldbackcolor,...
-    'FontColor', p.textfieldfontcolor);
+    'Editable', 'off',...
+    'Position', [10,H-260,W-20,225],...
+    'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
+    'FontColor', scheme.Edit.FontColor.Value,...
+    'FontName', scheme.Edit.Font.Value,...
+    'FontSize', scheme.Edit.FontSize.Value);
 
 handles.panel_info = uipanel(...
     'Parent', handles.figure,...
     'Title','Study Information', ...
-    'BackgroundColor', p.backcolor,...
-    'Position',[10,H-490, 400,225]);
+    'BackgroundColor', scheme.Panel.BackgroundColor.Value,...
+    'FontName', scheme.Panel.Font.Value,...
+    'FontSize', scheme.Panel.FontSize.Value,...
+    'ForegroundColor', scheme.Panel.FontColor.Value,...
+    'HighlightColor', scheme.Panel.BorderColor.Value,...
+    'BorderType', 'line',...
+    'Position',[10,H-490, W-20,225]);
 
 handles.label_info = uihtml(handles.panel_info,...
-    'Position', [10,10,380,190]);
-
-
-% handles.label_info = uitextarea(...
-%     'Parent', handles.panel_info,...
-%     'Position', [20,20,360,185],...
-%     'FontSize', 12,...
-%     'FontName', p.monospaced,...
-%     'WordWrap','on',...
-%     'Editable','off',...
-%     'BackgroundColor',p.backcolor);
+    'Position', [10,10,W-40,190]);
 
 msg.Message = 'Creating menus';
 drawnow
@@ -110,6 +112,7 @@ handles.menu_exit = uimenu(handles.menu_study, 'Label', 'Exit', 'Separator', 'on
 %
 %files menu
 handles.menu_file = uimenu('Parent', handles.figure,'Label', '&File', 'Accelerator', 'f');
+handles.menu_renamefiles = uimenu(handles.menu_file, 'Label', '&Rename');
 handles.menu_deletefiles = uimenu(handles.menu_file, 'Label', '&Delete','Accelerator', 'd');
 handles.menu_exportfiles = uimenu(handles.menu_file, 'Label', 'Export to eeglab', 'Separator', 'on');
 
@@ -121,11 +124,11 @@ handles.menu_trialplot = uimenu(handles.menu_plot, 'Label', 'Plot and Review Dat
 handles.menu_preprocess = uimenu('Parent', handles.figure, 'Label', 'Preprocess');
 handles.menu_resample = uimenu('Parent', handles.menu_preprocess, 'Label', 'Resample');
 handles.menu_filter = uimenu('Parent', handles.menu_preprocess, 'Label', 'Filter');
-handles.menu_rbadchans = uimenu('Parent', handles.menu_preprocess, 'Label', 'Remove and interpolate bad channels');
+handles.menu_rbadchans = uimenu('Parent', handles.menu_preprocess, 'Label', 'Remove bad channels');
 handles.menu_reref = uimenu('Parent', handles.menu_preprocess, 'Label', 'Average reference');
 handles.menu_cleanline = uimenu('Parent', handles.menu_preprocess, 'Label', 'Reduce line noise');
 handles.menu_extractepochs = uimenu('Parent', handles.menu_preprocess, 'Label', 'Create epoched files', 'Separator', 'on');
-handles.menu_markbadtrials = uimenu('Parent', handles.menu_preprocess, 'Label', 'Automatic trial rejection');
+handles.menu_markbadtrials = uimenu('Parent', handles.menu_preprocess, 'Label', 'Automatically mark bad tials');
 handles.menu_computetf = uimenu('Parent', handles.menu_preprocess, 'Label', 'Compute ERSP', 'Separator', 'on');
 
 
@@ -147,11 +150,9 @@ handles.menu_script = uimenu(handles.menu_utils, 'Label', 'Run Custom Script');
 handles.menu_evtsummary = uimenu(handles.menu_utils, 'Label', 'Event Summary');
 handles.menu_trimraw = uimenu(handles.menu_utils, 'Label', 'Trim Continuous (CNT) EEG File');
 
-
-
 %assign all the callbacks
-set(handles.dropdown_study, 'ValueChangedFcn', {@callback_loadstudy, handles})
-
+set(handles.dropdown_study, 'ValueChangedFcn', {@callback_loadstudy, handles});
+set(handles.tree_filetree, 'NodeTextChanged', {@callback_changeFilenames, handles});
 set(handles.menu_new, 'Callback', {@callback_newstudy, handles, false});
 set(handles.menu_edit, 'Callback', {@callback_newstudy, handles, true});
 set(handles.menu_refresh, 'Callback', {@callback_refresh, handles});
@@ -164,6 +165,7 @@ set(handles.menu_evtsummary, 'Callback', {@callback_evtsummary, handles});
 set(handles.menu_trimraw, 'Callback', {@callback_trimraw, handles});
 set(handles.menu_trialplot, 'Callback', {@callback_trialplot, handles});
 set(handles.menu_deletefiles, 'Callback', {@callback_deletefiles, handles});
+set(handles.menu_renamefiles, 'Callback', {@callback_changeFilenames, handles});
 set(handles.menu_exportfiles, 'Callback', {@callback_exportfiles, handles});
 set(handles.menu_rbadchans, 'Callback', {@callback_interpchans, handles});
 set(handles.menu_resample, 'Callback', {@callback_resample, handles});
@@ -202,10 +204,9 @@ close(msg);
 %**************************************************************************
 function callback_copypastecomponents(hObject, event, h)
 
-
 study = getstudy(h);
 if study.nsubjects < 1
-    msgbox('No subjects are listed in your study','Conversion Error', 'error');
+    uialert(h.figure, 'No subjects are listed in your study','Conversion Error');
     return
 end
 
@@ -312,6 +313,61 @@ populate_studylist(h)
 callback_loadstudy(0,0,h)
 h.figure.Pointer = 'arrow';
 
+%**************************************************************************
+function callback_changeFilenames(hObject, event, h)
+
+    study = getstudy(h);
+    filestorename = getselectedfiles(study, h, true);
+    dims = size(filestorename);
+    if dims(1) > 1 && dims(2) > 1
+        uialert(h.figure, 'You cannot change more than one filename at a time.  Please select only a single file entry', 'Ooops!');
+        return
+    end
+    nFiles = length(filestorename);
+    if ~isempty(filestorename)
+        cfg.msg = 'Enter a new name for the files. Do not include the file path or extension.';
+        cfg.title = 'Rename files';
+        cfg.options = {'Accept', 'Cancel'};
+        [~,fname,~] = fileparts(filestorename{1});
+        cfg.default = fname;
+        try
+            resp = wwu_inputdlg(cfg);
+            if strcmp(resp.option, 'Accept') && ~isempty(resp.input)
+                pb = uiprogressdlg(h.figure, "Cancelable","off", "icon", "info",...
+                    'Message', 'Checking files for duplicates', 'Title', 'Rename Files', 'Value', 0);
+                % check to see if there are already files with the selected
+                % name 
+                checking = true;
+                while checking
+                    newFile{nFiles} = [];
+                    for ii = 1:nFiles
+                        pb.Value = ii/nFiles;
+                        [path, ~, ext] = fileparts(filestorename{ii});
+                        newFile{ii} = fullfile(path, [resp.input, ext]);
+                        if isfile(newFile{ii})
+                            resp.input = [resp.input, '_1'];
+                            break
+                        end
+                    end
+                    checking = false;
+                end
+                %now loop through again and change the name
+                pb.Message = sprintf('Renamining files to %s', resp.input);
+                for ii = 1:nFiles
+                    pb.Value = ii/nFiles;
+                    movefile(filestorename{ii}, newFile{ii})
+                end
+                close(pb);
+                callback_refresh(hObject, event, h)
+
+            else
+                fprintf('User pressed Cancel or the filename was empty\n');
+            end
+        catch me
+            uialert(h.figure, me.message, me.identifier);
+            return;
+        end
+    end
 %**************************************************************************
 %exports files to the eeglab set format
 function callback_exportfiles(hObject, eventdata, h, format)
@@ -454,7 +510,7 @@ else
 end
 
 
-msg = ['<body style="font-family:arial;font-size:12px"><p style="line-height:115%"><b>Study:</b>',...
+msg = ['<body style="font-family:arial;font-size:12px;color: white"><p style="line-height:115%"><b>Study:</b>',...
      '<span style=padding-left:40>',study.name,'</span></p>'];
 msg = [msg,'<p style="line-height:115%"><b>Folder:</b>',...
      '<span style=padding-left:37>',study.path,'</span></p>'];
@@ -473,12 +529,10 @@ h.label_info.HTMLSource = msg;
 %**************************************************************************
 function populate_filelist(study, h)
 
-%fprintf('populating study file list\n')
 EEGPath = study_GetEEGPath;
 flist = [];
-
 for ii = 1:study.nsubjects
-    searchpath = wwu_buildpath(EEGPath, study.path, study.subject(ii).path, '*.*');
+    searchpath = eeg_BuildPath(EEGPath, study.path, study.subject(ii).path, '*.*');
     d = dir(searchpath);
     temp = flist;
     
@@ -521,6 +575,7 @@ n.delete;
 Nodes = [];
 for ii = 1:length(FileTypes)
     Nodes(ii).Node = uitreenode(h.tree_filetree, 'Text', FileTypes{ii});
+    Nodes(ii).Node.Tag = 'uneditable';
 end
 
 for ii = 1:length(flist)
@@ -533,12 +588,13 @@ for ii = 1:length(flist)
     %figure out which category it is
     category = find(strcmp(Included_Extensions,ext));
     if isempty(category); category = length(FileTypes); end
-    node_name = sprintf('(%i)\t%s', flist(ii).count,flist(ii).name);
-    uitreenode(Nodes(category).Node,'Text', node_name, 'NodeData', flist(ii).name);
+    [~,fNameOnly,~] = fileparts(flist(ii).name);
+    node_name = sprintf('(%i)\t%s', flist(ii).count,fNameOnly);
+    uitreenode(Nodes(category).Node,'Text', node_name, 'NodeData', flist(ii).name, 'Tag', 'editable');
 end
 
 %now get the average files from the across subect folder
-searchpath = wwu_buildpath(EEGPath, study.path, 'across subject');
+searchpath = eeg_BuildPath(EEGPath, study.path, 'across subject');
 
 if ~exist(searchpath, 'dir')
     return
@@ -551,12 +607,14 @@ else
         
              category = find(strcmp(Included_Extensions,Acrosssubj_Extensions{ee}));
              if isempty(category); category = length(FileTypes); end
-             node_name = sprintf('(%i)\t%s', 1 ,flist(ii).name);
-             uitreenode(Nodes(category).Node,'Text', node_name, 'NodeData', flist(ii).name);
+             [~,fNameOnly,~] = fileparts(flist(ii).name);
+             node_name = sprintf('(%i)\t%s', 1 ,fNameOnly);
+             uitreenode(Nodes(category).Node,'Text', node_name, 'NodeData', flist(ii).name, 'Tag', 'editable');
              
         end
     end
 end
+
 
 %*************************************************************************
 function callback_newstudy(hObject, eventdata, h, editMode)
@@ -675,7 +733,6 @@ h.figure.Pointer = 'arrow';
 %returns the files selected in the main file list
 function [filelist, n_uniquefiles] = getselectedfiles(study,h, stacked)
 
-
 if nargin < 3
     stacked = 0;
 end
@@ -708,7 +765,7 @@ n_uniquefiles = 0;
 %this is an average file not stored in the subject folders
 if contains(fext,'.GND') || contains(fext, '.ersp')
     for jj = 1:length(fnames)
-        temp = wwu_buildpath(eeg_path, study.path, 'across subject', fnames{jj});
+        temp = eeg_BuildPath(eeg_path, study.path, 'across subject', fnames{jj});
         if exist(temp, 'file') > 0
             cntr = cntr + 1;
             filelist{cntr} = temp;
@@ -718,7 +775,7 @@ else
 
 for ii = 1:study.nsubjects
     for jj = 1:length(fnames)
-        temp = wwu_buildpath(eeg_path, study.path,  study.subject(ii).path, fnames{jj});
+        temp = eeg_BuildPath(eeg_path, study.path,  study.subject(ii).path, fnames{jj});
         if (exist(temp)>0)
             cntr = cntr + 1;
             if stacked
@@ -766,6 +823,8 @@ study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Conver
 study = study_SaveStudy(study);
 setstudy(study,h);
 populate_studyinfo(study, h)
+callback_refresh(hObject, eventdata, h)
+
 %**************************************************************************
 function callback_resample(hObject, eventdata, h)
 
@@ -800,19 +859,23 @@ file_id = '_ref';
 option = 0;
 study = getstudy(h);
 fnames = getselectedfiles(study, h);
-
 if isempty(fnames)
-    uialert(h.figure, 'Select files to average reference.');
     return
 end
 
+parameters.operation = {'Operation', 'Average Reference'};
+parameters.date = {'Date and time', datetime('now')};
+
+tic
 start = clock;
 %include a progress bar for this process
 pb = uiprogressdlg(h.figure, 'Title','Average reference');
 pb.Message = sprintf('Applying Average to all participants');
 
+reportColumnNames = {'Previous Reference','New Reference', 'New filename'};
+reportValues = cell(length(filenames), length(reportColumnNames));
+
 for ii = 1:length(fnames)
-    
     [path, file, ext] = fileparts(fnames{ii});
     [file_id, option, writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
     if option == 3 && ~writeflag
@@ -821,16 +884,21 @@ for ii = 1:length(fnames)
     else
         newfile = [file, file_id];
     end
- %   EEG = pop_loadset('filename', [file, ext], 'filepath', path);
     EEG = wwu_LoadEEGFile(fnames{ii});
+    reportValues{ii,1} = EEG.ref;
+    
     EEG = pop_reref(EEG, []);
+    reportValues{ii,2} = EEG.ref;
+
+    reportValues{ii,end} = [newfile,ext];
     wwu_SaveEEGFile(EEG, fullfile(path, [newfile, ext]));
- %   EEG = pop_saveset(EEG, 'filename', newfile, 'filepath', path, 'savemode', 'onefile');
- %   movefile(fullfile(path, [newfile, '.set']), fullfile(path, [newfile, ext]));
     pb.Value = ii/length(fnames);
 end
 
-
+parameters.duration = {'Duration', toc};
+wwu_UpdateProcessLog(study,"ColumnNames",reportColumnNames,...
+    'Parameters',parameters,'RowNames',fnames,'SheetName','Rereference',...
+    'Values',reportValues);
 study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Average Reference', 'function', 'callback_reref', 'paramstring', fnames, 'fileID',file_id);
 study = study_SaveStudy(study);
 setstudy(study,h);
@@ -923,7 +991,7 @@ else
 end
 
 %create a temporary bin list file
-bin_list_file = fullfile(wwu_buildpath(study_GetEEGPath, study.path), 'bin_list_file.txt');
+bin_list_file = fullfile(eeg_BuildPath(study_GetEEGPath, study.path), 'bin_list_file.txt');
 f = fopen(bin_list_file, 'w');
 if f==-1
     uialert(h.figure, 'Error creating temporary bin file', 'Extract Epochs');
@@ -934,10 +1002,11 @@ end
 %them in a single vector.
 events = [];
 for ii = 1:length(study.bingroup(gnum).bins)
-    fprintf(f, '%i) %s=%s\n', ii, study.bingroup(gnum).bins(ii).events{1}, study.bingroup(gnum).bins(ii).name);
-    events = strcat(events,{' '}, study.bingroup(gnum).bins(ii).events);
+    for jj = 1:length(study.bingroup(gnum).bins(ii).events)
+        fprintf(f, '%i) %s=%s\n', ii, study.bingroup(gnum).bins(ii).events{jj}, study.bingroup(gnum).bins(ii).name);
+        events = strcat(events,{' '}, study.bingroup(gnum).bins(ii).events{jj});
+    end
 end
-
 fclose(f);
 
 pg = uiprogressdlg(h.figure,...
@@ -959,8 +1028,10 @@ study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Epochi
 study = study_SaveStudy(study);
 setstudy(study,h);
 
-populate_filelist(study, h)
-populate_studyinfo(study,h)
+callback_refresh(hObject, eventdata, h)
+
+%populate_filelist(study, h)
+%populate_studyinfo(study,h)
 %*************************************************************************
 function callback_reject(hObject, eventdata,h)
 study = getstudy(h);
@@ -986,8 +1057,13 @@ if isempty(study); return; end
 
 filelist = getselectedfiles(study, h);
 if isempty(filelist); return; end
-fh = study_RunScript(study, filelist);
-waitfor(fh);
+try
+    fh = study_RunScript(study, filelist);
+    waitfor(fh);
+catch me
+    uialert(h.figure, me.message, me.identifier);
+    return
+end
 callback_loadstudy(hObject, eventdata, h)
 %*************************************************************************
 function callback_evtsummary(hObject, event, h)
@@ -1002,6 +1078,9 @@ function callback_evtsummary(hObject, event, h)
     study_eventsummary_GUI(study, filelist);
 %*************************************************************************
 function callback_interpchans(hObject, eventdata, h)
+tic
+parameters.Operation = {'Operation', 'Remove bad channels'};
+parameters.date = {'Date and time', datetime("now");}
 
 study = getstudy(h);
 stime = clock;
@@ -1009,14 +1088,15 @@ option = 0;
 file_id = '_rchan';
 selfiles = getselectedfiles(study, h);
 if isempty(selfiles)
-    uialert(h.figure, 'Please select the file(s) from which to remove bad channels.', 'Remove bad channels');
     return
 end
-pb = uiprogressdlg(h.figure,'Message', 'Removing bad channels', 'Value',0,'Title','Interpolate bad channels');
+pb = uiprogressdlg(h.figure,'Message', 'Removing bad channels', 'Value',0,'Title','Remove bad channels');
 maxpbVal= length(selfiles) * 4;
 curpbVal = 0;
-for ii = 1:length(selfiles)
+nFiles = length(selfiles);
+reportData = cell(length(selfiles), 3);
 
+for ii = 1:nFiles
     curpbVal = curpbVal + 1;
     pb.Message = 'building output filename...';
     pb.Value = curpbVal/maxpbVal;
@@ -1025,9 +1105,11 @@ for ii = 1:length(selfiles)
     [file_id, option,writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
     if option == 3 && ~writeflag
         fprintf('skipping existing file...\n');
+        reportData{ii,3} = 'not saved';
         continue;
     else
         outfilename = fullfile(path,[file, file_id, ext]);
+        reportData{ii,3} = outfilename;
     end
 
     curpbVal = curpbVal + 1;
@@ -1042,19 +1124,30 @@ for ii = 1:length(selfiles)
 
     if ~isfield(EEG.chaninfo, 'badchans') || sum(EEG.chaninfo.badchans)==0
         fprintf('No bad channels found for subject #%i\n', ii)
+        reportData{ii,1} = 0;
+        reportData{ii,2} = 'none';
    
     else
         bchans = EEG.chaninfo.badchans;
         ch_names = join({EEG.chanlocs(find(bchans)).labels});
         fprintf('Removing channels\n%s.\n', ch_names{1});
-        EEG = eeg_interp(EEG, find(bchans));
+
+        EEG = pop_select(EEG, 'rmchannel', find(bchans));
         EEG.chaninfo.badchans(:) = 0;
+        reportData{ii,1} = sum(bchans);
+        reportData{ii,2} = ch_names{1};
     end
     curpbVal = curpbVal + 1;
     pb.Message = 'saving data...';
     pb.Value = curpbVal/maxpbVal;
+    fprintf('saving data file with %i channels to %s\n', EEG.nbchan, outfilename);
     wwu_SaveEEGFile(EEG, outfilename);
 end
+parameters.duration = {'Duration (seconds)', toc};
+
+wwu_UpdateProcessLog(study,'SheetName', 'rem chans', ...
+    'ColumnNames',{'# removed', 'Channels removed', 'Ouput File'},...
+    'RowNames',selfiles, 'Values', reportData, 'Parameters',parameters)
 study_AddHistory(study, 'start', stime, 'finish', clock, 'event', 'Removed bad channels', 'paramstring', selfiles);
 populate_filelist(study, h);
  
@@ -1075,14 +1168,19 @@ function callback_computeersp(hObject, event, h)
     waitfor(fh);
  
 
-% classifies ICA components for use in noice reduction
+%*************************************************************************
+% classifies ICA components using IClabel
 function callback_classifyICA(hObject, event, h)
     
     study = getstudy(h);
     filelist = getselectedfiles(study, h);
     if isempty(filelist); return; end
-    
-    study_ClassifyICA(filelist, 'WindowHandle', h.figure);
+
+    try
+        study_ClassifyICA(filelist, 'WindowHandle', h.figure);
+    catch me
+        uialert(h.figure, me.message, me.identifier)
+    end
 %**************************************************************************
 %provides an in depth GUI for reviewing ICA's and their classificaiton.
 %The focus is on identifying ICA's for removal, not for using ICA's for
@@ -1101,21 +1199,31 @@ function callback_rejectICA(hObject, event,h)
     filelist = getselectedfiles(study, h);
     if isempty(filelist); return; end
     
-    study_RejectIC(filelist,[]);
+    try
+        fh = study_RejectIC(filelist,[]);
+        waitfor(fh)
+    catch me
+        uialert(h.figure, me.message, me.identifier);
+    end
+
+
 %**************************************************************************
 function callback_ICA(hObject, eventdata,h)
 study = getstudy(h);
 if isempty(study); return; end
 
 files = getselectedfiles(study, h);
-start = clock;
-study_ICA_GUI(files);
-
-study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'ICA decomposition', 'function', 'callback_ICA', 'paramstring', files, 'fileID', '');
-study = study_SaveStudy(study);
-setstudy(study,h);
-populate_filelist(study, h)
-populate_studyinfo(study,h)
+if ~isempty(files)
+    
+    start = clock;
+    study_ICA_GUI(files);
+    
+    study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'ICA decomposition', 'function', 'callback_ICA', 'paramstring', files, 'fileID', '');
+    study = study_SaveStudy(study);
+    setstudy(study,h);
+    populate_filelist(study, h)
+    populate_studyinfo(study,h)
+end
 %**************************************************************************
 function callback_average(hObject, eventdata, h)
     study = getstudy(h);
@@ -1152,3 +1260,110 @@ if isempty(study)
     return
 end
 %*************************************************************************
+%add paths to critical subfolders
+function addSubFolderPaths()
+    cPath = fileparts(mfilename("fullpath"));
+    subfolders = {'config', 'functions', 'toolboxes', 'icons'};
+    s = pathsep;
+    pathStr = [s, path, s];
+    
+    for ii = subfolders
+        sFolderPath = fullfile(cPath, ii{1});
+        onPath  = contains(pathStr, [s, sFolderPath, s], 'IgnoreCase', ispc);
+        if ~onPath
+            addpath(sFolderPath);
+        end
+    end
+
+%*************************************************************************
+function checkForNewVersion(user, repository, downloadType, name)
+% Code to check and download a new version if it exists
+% Adapted from - Zoltan Csati's function filestr = githubFetch
+% GITHUBFETCH  Download file from GitHub.
+%   
+%   Inputs:
+%       user: name of the user or the organization
+%       repository: name of the repository
+%       downloadType: 'branch' or 'release'
+%       name (optional):
+%           if downloadType is 'branch': branch name (default: 'master')
+%           if downloadType is 'release': release version (default: 'latest')
+%   Output:
+%       filestr: path to the downloaded file
+%
+%   The downloaded file type is .zip.
+%
+%   Examples:
+%       1) githubFetch('GLVis', 'glvis', 'branch')
+%       % same as githubFetch('GLVis', 'glvis', 'branch', 'master')
+%       2) githubFetch('matlab2tikz', 'matlab2tikz', 'branch', 'develop')
+%       3) githubFetch('matlab2tikz', 'matlab2tikz', 'release', '1.1.0')
+%       4) githubFetch('matlab2tikz', 'matlab2tikz', 'release')
+%       % same as githubFetch('matlab2tikz', 'matlab2tikz', 'release', 'latest')
+%   Zoltan Csati
+%   04/02/2018
+
+narginchk(3, 4);
+website = 'https://github.com';
+% Check for download type
+branchRequested = strcmpi(downloadType, 'branch');
+releaseRequested = strcmpi(downloadType, 'release');
+assert(branchRequested | releaseRequested, ...
+    'Type must be either ''branch'' or ''release''.');
+% Check if the user exists
+try
+    urlread(fullfile(website, user));
+catch ME
+    if strcmp(ME.identifier, 'MATLAB:urlread:FileNotFound')
+        error('User does not exist.');
+    end
+end
+% Check if the repository exists for the given user
+try
+    urlread(fullfile(website, user, repository));
+catch ME
+    if strcmp(ME.identifier, 'MATLAB:urlread:FileNotFound')
+        error('Repository does not exist.');
+    end
+end
+% Process branch or release versions
+if nargin < 4 % no branch or release version provided
+    if branchRequested
+        name = 'master';
+    elseif releaseRequested
+        name = 'latest';
+    end
+end
+if releaseRequested
+    if strcmpi(name, 'latest') % extract the latest version number
+        s = urlread(fullfile(website, user, repository, 'releases', 'latest'));
+        % Search based on https://stackoverflow.com/a/23756210/4892892
+        [startIndex, endIndex] = regexp(s, '(?<=<title>).*?(?=</title>)');
+        releaseLine = s(startIndex:endIndex);
+        % Extract the release number
+        [startIndex, endIndex] = regexp(releaseLine, '([0-9](\.?))+');
+        name = releaseLine(startIndex:endIndex);
+        assert(~isempty(name), 'No release found. Try downloading a branch.');
+    end
+    versionName = ['v', name];
+elseif branchRequested
+    versionName = name;
+end
+% Download the requested branch or release
+githubLink = fullfile(website, user, repository, 'archive', [versionName, '.zip']);
+downloadName = [repository, '-', name, '.zip'];
+try
+    fprintf('Download started ...\n');
+    filestr = urlwrite(githubLink, downloadName);
+    fprintf('Repository %s successfully downloaded.\n', repository);
+catch ME
+    if strcmp(ME.identifier, 'MATLAB:urlwrite:FileNotFound')
+        if branchRequested
+            error('Branch ''%s'' does not exist.', name);
+        elseif releaseRequested
+            error('Release version %s does not exist.', name);
+        end
+    else
+        rethrow(ME);
+    end
+end
