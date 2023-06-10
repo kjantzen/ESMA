@@ -7,7 +7,7 @@
 %   filenames   -   a cell array of filenames to on which to compute ICA.
 
 % Update 5/13/20 KJ Jantzen
-function h = study_ICA_GUI(filenames)
+function h = study_ICA_GUI(study, filenames)
 
 scheme = eeg_LoadScheme;
 W = 450; H = 200;
@@ -34,7 +34,7 @@ handles.uipanel1 = uipanel(...
 %*************************************************************************
 handles.check_nobad = uicheckbox(...
     'Parent', handles.uipanel1, ...
-    'Text', 'Exclude bad trials?',...
+    'Text', 'Remove bad trials?',...
     'value', 1,....
     'Position', [20, 105, 250, 20],...
     'FontName',scheme.Checkbox.Font.Value,...
@@ -100,44 +100,63 @@ handles.button_compute = uibutton(...
     'FontSize', scheme.Button.FontSize.Value,...
     'FontName', scheme.Button.Font.Value);
 
-handles.button_compute.ButtonPushedFcn = {@callback_ComputeICA, handles, filenames};
+handles.button_cancel = uibutton(...
+    'Parent', handles.figure,...
+    'Text', 'Cancel',...
+    'Position', [W-200, 5, 80, 25],...
+    'BackgroundColor',scheme.Button.BackgroundColor.Value,...
+    'FontColor',scheme.Button.FontColor.Value,...
+    'FontSize', scheme.Button.FontSize.Value,...
+    'FontName', scheme.Button.Font.Value);
 
+handles.button_compute.ButtonPushedFcn = {@callback_ComputeICA, handles, study, filenames};
+handles.button_cancel.ButtonPushedFcn = {@callback_cancel, handles};
 
 %**********************************************
-function callback_ComputeICA  (src, eventdata, h,fnames)
+function callback_cancel(~,~, h)
+    close(h.figure)
+   
+%**********************************************
+function callback_ComputeICA  (src, eventdata, h,study, fnames)
 
-
-
+tic
 Excludebad = h.check_nobad.Value;
 FiltData = h.check_filter.Value;
 OverWrite = h.check_overwrite.Value;
 
+parameters.operation = {'Operation', 'Compute ICA'};
+parameters.date = {'Date and time', datetime("now")};
+parameters.algorithm = {'Algorith', 'acssobiro'};
+parameters.exclude = {"Exclude bad trials", Excludebad};
+parameters.filter = {'Filter first', FiltData};
 
 if FiltData
     filtlow = h.edit_filtlow.Value;
     filthigh = h.edit_filthigh.Value;
-    
     if filtlow >= filthigh && filthigh ~=0
         uialert(h.figure, 'The low edge of the filter must be less than the high edge', 'Filter error');
         return
     end
-    
+    parameters.low = {'FIlter low edge', filtlow};
+    parameters.high = {'FIlter high edge', filthigh};
 end
-
-
 pb = uiprogressdlg(h.figure, 'Message', 'computing the ICA for each particpant will take some time', 'Title', 'Compute ICA', 'ShowPercentage', 'on');
 
-
+reportValues = cell(length(fnames), 2);
+reportColumnNames = {'Written to file', 'N Trials Removed'};
 %loop through each subject in the study
 for jj = 1:length(fnames)
     
     [fpath, fname, fext] = fileparts(fnames{jj});
     Header = wwu_LoadEEGFile(fnames{jj}, {'icaweights'});
-
+     
     %check if components exist.
     if ~isempty(Header.icaweights) && ~OverWrite
         fprintf('ICA components found.  Skipping this file\n');
+        reportValues{jj,1} = false;
         continue;
+    else
+        reportValues{jj,1} = true;
     end
     
     EEG = wwu_LoadEEGFile(fnames{jj});
@@ -158,11 +177,12 @@ for jj = 1:length(fnames)
     dv = size(EEGprocessed.data);
     pcacomp = (dv(1));
     
+    %keeping this in even though there is no option to reduce ICA dimensionality
+    %when calling the sobi algorithm visa the pop_runica function
     if pcacomp==EEG.nbchan && (strcmp(EEG.ref,'averef') || strcmp(EEG.ref, 'average'))
         pcacomp = pcacomp - 1;
         fprintf('Matlab computed full rank so reducing by 1 for the average reference\n');
     end
-    
     if  isfield(EEGprocessed, 'chaninfo') && isfield(EEGprocessed.chaninfo, 'removedchans')
         if ~isempty(EEGprocessed.chaninfo.removedchans)
             pcacomp = pcacomp - length(EEGprocessed.chaninfo.removedchans);
@@ -172,6 +192,9 @@ for jj = 1:length(fnames)
     if Excludebad
         bad_trials = study_GetBadTrials(EEGprocessed);
         EEGprocessed = pop_rejepoch(EEGprocessed, bad_trials, 0);
+        reportValues{jj,2} = sum(bad_trials);
+    else
+        reportValues{jj,2} = 0;
     end 
   
    fprintf('hcnd_eeg says the rank of this data is %i\n', pcacomp);
@@ -180,24 +203,17 @@ for jj = 1:length(fnames)
   %      EEGOut = pop_runica(EEGprocessed, 'icatype', 'sobi', 'concatenate', 'off', 'n', pcacomp);
   % else
   %      fprintf('Detected epoched data so running the acsobiro algorithm for epoched data'\n);
-        EEGOut = pop_runica(EEGprocessed, 'icatype', 'acsobiro', 'concatenate', 'off');
+    fprintf('calling the sobi algorithm which uses the data full rank')
+    EEG = pop_runica(EEGprocessed, 'icatype', 'acsobiro', 'concatenate', 'off');
  %  end
-%now restore the original data before filtering and epoch removal
-   EEG = EEGOut;
-  %[EEG.icaact, EEG.icawinv,EEG.icasphere,EEG.icaweights,EEG.icachansind] = deal(EEGOut.icaact, EEGOut.icawinv,EEGOut.icasphere,EEGOut.icaweights,EEGOut.icachansind );
-   
-  %I retain all trials and use bad trial markers to keep track of the bad ones so I need to 
-  %recompute the ica activations since bad trials were
-  %removed for the purpose of ICA calculation.
-  %if size(EEG.icaact, 3) < EEG.trials
-  %    tempact = icaact(EEG.data, EEG.icaweights * EEG.icasphere);
-  %    EEG.icaact = reshape(tempact, size(EEG.icaweights, 1), EEG.pnts, EEG.trials); 
-  %end
+
   wwu_SaveEEGFile(EEG, fnames{jj});
-  clear EEGIn EEGOut
+  clear EEGIn EEGOut EEGProcessed
   pb.Value = jj/length(fnames);
   
 end
-
+parameters.duration = {'Duration', toc};
+wwu_UpdateProcessLog(study,"RowNames",fnames, "ColumnNames",reportColumnNames, ...
+    "Parameters",parameters,"SheetName","ICA", "Values",reportValues);
 close(pb);
 close(h.figure);

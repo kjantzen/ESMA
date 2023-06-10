@@ -21,8 +21,8 @@ function hcnd_eeg()
 VersionNumber = 1.0;
 fprintf('Starting hcnd_eeg V%i....\n', VersionNumber);
 
-EEGPath = study_GetEEGPath;
 addSubFolderPaths
+EEGPath = study_GetEEGPath;
 
 %checking for eeglab installation and path
 eeglabpath = which('eeglab.m');
@@ -152,7 +152,6 @@ handles.menu_trimraw = uimenu(handles.menu_utils, 'Label', 'Trim Continuous (CNT
 
 %assign all the callbacks
 set(handles.dropdown_study, 'ValueChangedFcn', {@callback_loadstudy, handles});
-set(handles.tree_filetree, 'NodeTextChanged', {@callback_changeFilenames, handles});
 set(handles.menu_new, 'Callback', {@callback_newstudy, handles, false});
 set(handles.menu_edit, 'Callback', {@callback_newstudy, handles, true});
 set(handles.menu_refresh, 'Callback', {@callback_refresh, handles});
@@ -318,12 +317,23 @@ function callback_changeFilenames(hObject, event, h)
 
     study = getstudy(h);
     filestorename = getselectedfiles(study, h, true);
+    if isempty(filestorename)
+        return
+    end
+    
+    tic
+    parameters.operation = {'Operation', 'Rename files'};
+    parameters.date = datetime('now');
+
     dims = size(filestorename);
     if dims(1) > 1 && dims(2) > 1
         uialert(h.figure, 'You cannot change more than one filename at a time.  Please select only a single file entry', 'Ooops!');
         return
     end
     nFiles = length(filestorename);
+    columnName = {'New Filename'};
+    reportValues = cell(nFiles, 1);
+
     if ~isempty(filestorename)
         cfg.msg = 'Enter a new name for the files. Do not include the file path or extension.';
         cfg.title = 'Rename files';
@@ -356,7 +366,12 @@ function callback_changeFilenames(hObject, event, h)
                 for ii = 1:nFiles
                     pb.Value = ii/nFiles;
                     movefile(filestorename{ii}, newFile{ii})
+                    reportValues{ii} = newFile{ii};
                 end
+                parameters.duration = {'Duration', toc};
+                wwu_UpdateProcessLog(study, "ColumnNames",columnName, ...
+                    'RowNames',filestorename, 'Parameters',parameters,...
+                    'Values',reportValues, 'SheetName','rename');
                 close(pb);
                 callback_refresh(hObject, event, h)
 
@@ -800,14 +815,12 @@ eeg_path = study_GetEEGPath;
 study = getstudy(h);
 
 if study.nsubjects < 1
-    msgbox('No subjects are listed in your study','Conversion Error', 'error');
+    uialtert(h.figure, 'No subjects are listed in your study','Conversion Error');
     return
 end
 
 fnames = getselectedfiles(study,h);
-
 if isempty(fnames)
-    msgbox('No valid files to convert','Conversion Error', 'error');
     return
 end
 %check to make sure the file type appears to be correct
@@ -816,8 +829,19 @@ if ~strcmp(fext, '.bdf')
     uialert(h.figure, 'The selected files don not appear to be in Biosemi bdf format','Convert from Biosemi');
     return;
 end
+tic
+parameters.operation = {'Operation', 'Convert from biosemi format'};
+parameters.date = {'Date and time', datetime('now')};
+columnNames = {'Save output?', 'Output filename'};
 start = clock;
-wwu_Biosemi2EEGLab(fnames,'Chanlocs', study.chanlocs, 'AvgRef', 0, 'ApplyFilt', 0, 'Lpass', 0, 'Hpass', 0, 'OWrite', 2, 'FileExt', '.cnt', 'FigHandle', h.figure);
+reportValues = wwu_Biosemi2EEGLab(fnames,'Chanlocs', study.chanlocs, ...
+    'AvgRef', 0, 'ApplyFilt', 0, 'Lpass', 0, 'Hpass', 0, 'OWrite', 2, ...
+    'FileExt', '.cnt', 'FigHandle', h.figure);
+
+
+parameters.duration = {'Duration', toc};
+wwu_UpdateProcessLog(study, 'ColumnNames',columnNames, 'RowNames', fnames,...
+    'SheetName','biosemi convert', 'Parameters',parameters, 'Values',reportValues);
 
 study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Conversion to EEGLAB format', 'function', 'wwu_Biosemi2EEGLab', 'paramstring', fnames, 'fileID', '.cnt');
 study = study_SaveStudy(study);
@@ -873,7 +897,7 @@ pb = uiprogressdlg(h.figure, 'Title','Average reference');
 pb.Message = sprintf('Applying Average to all participants');
 
 reportColumnNames = {'Previous Reference','New Reference', 'New filename'};
-reportValues = cell(length(filenames), length(reportColumnNames));
+reportValues = cell(length(fnames), length(reportColumnNames));
 
 for ii = 1:length(fnames)
     [path, file, ext] = fileparts(fnames{ii});
@@ -1216,7 +1240,7 @@ files = getselectedfiles(study, h);
 if ~isempty(files)
     
     start = clock;
-    study_ICA_GUI(files);
+    study_ICA_GUI(study, files);
     
     study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'ICA decomposition', 'function', 'callback_ICA', 'paramstring', files, 'fileID', '');
     study = study_SaveStudy(study);

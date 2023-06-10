@@ -40,6 +40,17 @@ else
     d.SheetName = sprintf('(%i) %s', 1, d.SheetName);
 end
 
+%add user and system information to the parameter list
+d.Parameters.version = {'MATLAB Version', version};
+if ismac
+    d.Parameters.plafform = {'Platform', 'Mac'};
+    [~,user] = system('id -F');
+    d.Parameters.user = {'User', strip(user)};
+elseif ispc
+    d.Parameters.platform = {'Platorm', 'PC'};
+    d.Parameters.user = {'User', getenv('USER')};
+end
+
 %write data to the new data sheet
 %first write the paramters
 fields = fieldnames(d.Parameters);
