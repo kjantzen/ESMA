@@ -22,7 +22,7 @@ if ~isfile(filename)
 end
 if ~isempty(field)
     if strcmp(field, 'header')
-        EEG = load(filename, '-mat', '-regexp', '^(?!data$).');
+        EEG = load(filename, '-mat', '-regexp', '^(?!data$|icaact$).');
     else
         cmd = sprintf('load(''%s'', ''-mat''', filename);
         if iscell(field)

@@ -19,10 +19,17 @@
 function hcnd_eeg()
 
 VersionNumber = 1.0;
-fprintf('Starting hcnd_eeg V%i....\n', VersionNumber);
+fprintf('Starting hcnd_eeg V%3.1f....\n', VersionNumber);
 
 addSubFolderPaths
 EEGPath = study_GetEEGPath;
+if isempty(EEGPath)
+    cfg.Message = sprintf('No valid experiment path was identified.\nPlease restart hcnd_eeg and identify a your experiment folder when prompted');
+    cfg.Title = 'Missing path file';
+    cfg.options = "OK";
+    wwu_msgdlg(cfg);
+    return
+end
 
 %checking for eeglab installation and path
 eeglabpath = which('eeglab.m');
@@ -147,6 +154,7 @@ handles.menu_erpave = uimenu(handles.menu_erp, 'Label', 'Compute Averaged ERPs')
 handles.menu_utils = uimenu('Parent', handles.figure,'Label', '&Tools', 'Accelerator', 't');
 handles.menu_convert = uimenu(handles.menu_utils, 'Label', 'Convert Biosemi File');
 handles.menu_script = uimenu(handles.menu_utils, 'Label', 'Run Custom Script');
+handles.menu_filesummary = uimenu(handles.menu_utils, 'Label', 'Show File Information');
 handles.menu_evtsummary = uimenu(handles.menu_utils, 'Label', 'Event Summary');
 handles.menu_trimraw = uimenu(handles.menu_utils, 'Label', 'Trim Continuous (CNT) EEG File');
 
@@ -160,6 +168,7 @@ set(handles.menu_archivestudy, 'Callback', {@callback_archivestudy, handles, fal
 
 set(handles.menu_exit, 'Callback', {@callback_exit, handles});
 set(handles.menu_script, 'Callback', {@callback_runscript, handles});
+set(handles.menu_filesummary, 'Callback', {@callback_filesummary, handles})
 set(handles.menu_evtsummary, 'Callback', {@callback_evtsummary, handles});
 set(handles.menu_trimraw, 'Callback', {@callback_trimraw, handles});
 set(handles.menu_trialplot, 'Callback', {@callback_trialplot, handles});
@@ -1089,6 +1098,12 @@ catch me
     return
 end
 callback_loadstudy(hObject, eventdata, h)
+%*************************************************************************
+function callback_filesummary(~, ~, h)
+    study = getstudy(h);
+    filelist = getselectedfiles(study, h);
+    study_DisplayFileInformation(study, filelist);
+
 %*************************************************************************
 function callback_evtsummary(hObject, event, h)
     study = getstudy(h);

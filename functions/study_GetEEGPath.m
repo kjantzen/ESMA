@@ -14,14 +14,21 @@ function EEGPath = study_GetEEGPath
        end
     end
     if nopath
-        msg = sprintf('Could not the find path file %s\nClick OK and specify the path where EEG data can be found.', EEGPATHFILE);
-        f = msgbox(msg,'Missing Path File', 'modal');
-        waitfor(f);
-        EEGPath = uigetdir('','Specify the EEG Data Path');
-        if isempty(EEGPath)
-           return
-        else
-            save(EEGPATHFILE, 'EEGPath');
+        cfg. msg = sprintf('No valid path file exists. \n\nClick "Select path" to identify the folder where your experiments can be found.', EEGPATHFILE);
+        cfg.options = {'Cancel', 'Select path'};
+        cfg.title = 'Missing path file';
+        result = wwu_msgdlg(cfg);
+        if strcmp(result, 'Cancel')
+            fprintf('User clicked cancel')
+            return
+        elseif strcmp(result, 'Select path')
+
+            EEGPath = uigetdir('','Specify the EEG Data Path');
+            if isempty(EEGPath)
+                return
+            else
+                save(EEGPATHFILE, 'EEGPath');
+            end
         end
     end
 end
