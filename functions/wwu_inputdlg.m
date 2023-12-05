@@ -28,7 +28,7 @@ assert(isfield(p, 'options'), 'wwu_inputdlg:noOptionsInput',...
     'The input parameter must contain an options field.');
 
 if ~isfield(p, 'default')
-    p,default = '';
+    p.default = '';
 end
 
 nButtons = length(p.options);

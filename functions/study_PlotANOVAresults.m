@@ -1,19 +1,20 @@
 %study_PlotANOVAresults(r)
-%   plots the results of an ANOVA based on the informationin the structure
-%   r
+%   plots the results of an GLM test based on the information in the 
+%   structure r
 function study_PlotANOVAresults(r)
 
-%for now the philosophy will be to open an new figure each time the user
-%requests a plot.
+if nargin < 1
+    msg = 'A statistics structure must be passed in the call to study_PlotANOVAresults'
+    msg = sprintf('%s\nThis function should not be called directy.')
+    error(msg);
+end
 
-p = plot_params;
 scheme = eeg_LoadScheme;
-
 W = 600; H = 1080;
 L = (scheme.ScreenWidth - W) /2;
 B = (scheme.ScreenHeight - H)/2;
 h.figure = uifigure('Position', [L, B, W, H],...
-    'Color', p.backcolor);
+    'Color', scheme.Window.BackgroundColor.Value);
 
 h.grid = uigridlayout('Parent', h.figure,...
     'RowHeight', {'1x', 20,'1x', '2x',20, '1.5x'}, ...
@@ -64,42 +65,71 @@ h.tabgroup.Layout.Row = 4;
 h.tabgroup.Layout.Column = 2;
 
 h.bar_tab = uitab('Parent', h.tabgroup,...
-    'Title', 'Scatter Plot');
+    'Title', 'Scatter Plot',...
+    'BackgroundColor',scheme.Panel.BackgroundColor.Value,...
+    'ForegroundColor',scheme.Panel.FontColor.Value);
 h.box_tab = uitab('Parent', h.tabgroup,...
-    'Title', 'Box Plot');
+    'Title', 'Box Plot',...
+    'BackgroundColor',scheme.Panel.BackgroundColor.Value,...
+    'ForegroundColor',scheme.Panel.FontColor.Value);
+
 h.ungroupedbox_tab = uitab('Parent', h.tabgroup,...
-    'Title', 'Ungrouped Box Plot');
+    'Title', 'Ungrouped Box Plot',...
+    'BackgroundColor',scheme.Panel.BackgroundColor.Value,...
+    'ForegroundColor',scheme.Panel.FontColor.Value);    
 drawnow
-pause(2);
+pause(1);
 
-h.axis_bar = uiaxes('Parent', h.bar_tab, 'Position', [0,0, h.tabgroup.InnerPosition(3), h.tabgroup.InnerPosition(4)-40]);
-h.axis_box = uiaxes('Parent', h.box_tab, 'Position', [0,0, h.tabgroup.InnerPosition(3), h.tabgroup.InnerPosition(4)-40]);
-h.axis_ungroupedbox = uiaxes('Parent', h.ungroupedbox_tab, 'Position', [0,0, h.tabgroup.InnerPosition(3), h.tabgroup.InnerPosition(4)-40]);
+h.axis_bar = uiaxes('Parent', h.bar_tab, 'Position', [0,0, h.tabgroup.InnerPosition(3), h.tabgroup.InnerPosition(4)-40],...
+    'Color', scheme.Axis.BackgroundColor.Value,...
+    'XColor', scheme.Axis.AxisColor.Value,...
+    'YColor', scheme.Axis.AxisColor.Value,...
+    'FontName', scheme.Axis.Font.Value);
 
+h.axis_box = uiaxes('Parent', h.box_tab, 'Position', [0,0, h.tabgroup.InnerPosition(3), h.tabgroup.InnerPosition(4)-40],...
+    'Color', scheme.Axis.BackgroundColor.Value,...
+    'XColor', scheme.Axis.AxisColor.Value,...
+    'YColor', scheme.Axis.AxisColor.Value,...
+    'FontName', scheme.Axis.Font.Value);
 
-h.panel = uipanel('Parent', h.grid, 'Title', 'Legend');
+h.axis_ungroupedbox = uiaxes('Parent', h.ungroupedbox_tab, 'Position', [0,0, h.tabgroup.InnerPosition(3), h.tabgroup.InnerPosition(4)-40],...
+    'Color', scheme.Axis.BackgroundColor.Value,...
+    'XColor', scheme.Axis.AxisColor.Value,...
+    'YColor', scheme.Axis.AxisColor.Value,...
+    'FontName', scheme.Axis.Font.Value);
+
+h.panel = uipanel('Parent', h.grid, 'Title', 'Legend',...
+    'BackgroundColor',scheme.Panel.BackgroundColor.Value,...
+    'BorderType','none',...
+    'FontName',scheme.Panel.Font.Value,...
+    'FontSize', scheme.Panel.FontSize.Value,...
+    'ForegroundColor',scheme.Panel.FontColor.Value);
 h.panel.Layout.Row = 4;
 h.panel.Layout.Column = 1;
 
 uilabel('Parent', h.panel,...
     'Position', [10, 300, 130, 20],...
     'Text', 'Factor on x-axis',...
-    'FontColor', p.labelfontcolor);
+    'FontColor',scheme.Label.FontColor.Value);
 
 h.dropdown_xaxis = uidropdown('Parent', h.panel,...
     'Position', [10, 280, 130, 20], ...
-    'Items', r.factors, 'ItemsData', 1:length(r.factors));
+    'Items', r.factors, 'ItemsData', 1:length(r.factors),...
+    'BackgroundColor',scheme.Dropdown.BackgroundColor.Value,...
+    'FontName',scheme.Dropdown.Font.Value,...
+    'FontColor', scheme.Dropdown.FontColor.Value,...
+    'FontSize', scheme.Dropdown.FontSize.Value);
 
 h.axis_legend = uiaxes('Parent', h.panel,...
     'Position', [0,0,150,280],...
-    'Color', p.backcolor,...
+    'Color', scheme.Axis.BackgroundColor.Value,...
     'XTick', [],...
     'YTick', [],...
     'Box', 'off',...
-    'XColor', p.backcolor,...
-    'YColor', p.backcolor);
+    'XColor',scheme.Axis.AxisColor.Value,...
+    'YColor', scheme.Axis.AxisColor.Value,...
+    'Interactions',[]);
 h.axis_legend.Toolbar.Visible = 'off';
-
 
 %populate the tree object with information about the test
 uitreenode('Parent', h.tree_info,...
@@ -129,9 +159,7 @@ end
 
 
 %display means and standard deviations
-
 d = r.within;
-
 if contains(r.factors{end}, 'Channel')
     r.has_chans = true;
     r.nchan = str2double(r.levels{end});
@@ -152,7 +180,6 @@ d.StdDev = num2cell(std(r.data.Variables)');
 h.desctable.Data = d{:,:};
 h.desctable.ColumnName = d.Properties.VariableNames;
 h.desctable.RowName = d.Properties.RowNames;
-
 
 s = r.source_table;
 d = cellfun(@(x) num2str(x,3), num2cell(s.Variables), 'UniformOutput', false);
@@ -178,11 +205,9 @@ h.sourcetable.RowName = s.Properties.RowNames;
      'Notch', 'on', 'symbol', 'x', 'Labels', label_names,...
      'ColorGroup', r.within{:,end-1}, 'LabelVerbosity', 'minor');
 %*************************************************************************
-
+h.scheme = scheme;
 h.dropdown_xaxis.ValueChangedFcn = {@callback_createplots, r, h};
 h.copy_button.ButtonPushedFcn = {@callback_copyDescriptives, h};
-
-
 callback_createplots([],[],r,h)
 
 %**********************************************************************
@@ -209,9 +234,11 @@ MAX_FACTORS = 4;
 SPREAD_WIDTH = .25;
 
 %use these to cycle through different plot types
-plot_fillcolor = {'#0072BD', '#D95319','#EDB120','#7E2F8E','#77AC30','#4DBEEE', '#A2142F'};
+plot_fillcolor = prism;
 plot_symbol = {'o', 'd', 's', 'p', 'h', '+', '*', 'x'};
-plot_linecolor = {'k', 'r', 'g', 'b', 'y', 'm', 'c'};
+plot_linecolor = {'w', 'w', 'w', 'w', 'w', 'w', 'w'};
+
+%plot_linecolor = {'k', 'r', 'g', 'b', 'y', 'm', 'c'};
 plot_symbol_size = {80, 100, 120, 140, 160, 180};
 
 avedata = mean(r.data{:,:})';
@@ -240,7 +267,6 @@ if r.nfactors < MAX_FACTORS
     rlm = [rlm, a];
 end
 
-
 cla(h.axis_bar)
 xcount = zeros(str2double(r.levels{xaxis_var}),1);
 
@@ -250,15 +276,15 @@ for ii = 1:length(xaxis_values)
             xpos = xcount(xaxis_values(ii)) * offset - (SPREAD_WIDTH/2) + xaxis_values(ii);
             s = scatter(xpos, avedata(ii), 'Parent',h.axis_bar,...
                 'Marker', plot_symbol{rlm(ii,2)},...
-                'MarkerFaceColor', plot_fillcolor{rlm(ii,1)},...
+                'MarkerFaceColor', plot_fillcolor(rlm(ii,1),:),...
                 'MarkerEdgeColor', plot_linecolor{rlm(ii,3)},...
                 'SizeData', plot_symbol_size{rlm(ii,4)},...
                 'LineWidth', 1.5,...
-                'MarkerFaceAlpha', 0.5);
+                'MarkerFaceAlpha', 1);
             
             line(h.axis_bar, [xpos,xpos],...
                 [avedata(ii) - stderr(ii), avedata(ii) + stderr(ii)], ...
-                'linewidth', .5, 'color', 'k')
+                'linewidth', .5, 'color', 'w')
             
                 hold(h.axis_bar,  'on');
 end
@@ -286,7 +312,7 @@ hold(h.axis_legend, 'on');
   ypos = 100;
 for ii = 1:length(rf)
   
-    text(h.axis_legend, 1, ypos, rf{ii});
+    text(h.axis_legend, 1, ypos, rf{ii}, 'Color', 'w');
     [~,ia, ~] = unique(rcm(:,ii));
     lnames = rcm(sort(ia),ii);
    
@@ -300,7 +326,7 @@ for ii = 1:length(rf)
     
     for jj = 1:rl(ii)
         if ii == 1
-            fc = plot_fillcolor{jj};
+            fc = plot_fillcolor(jj,:);
         elseif ii ==2
             ps = plot_symbol{jj};
         elseif ii ==3
@@ -311,7 +337,7 @@ for ii = 1:length(rf)
             break
         end       
         scatter(h.axis_legend, 1,ypos, 'Marker', ps,'MarkerFaceColor', fc,'MarkerEdgeColor', lc, 'SizeData', ss, 'LineWidth', 1.5);
-        text(h.axis_legend, 2, ypos,  lnames{jj,1});
+        text(h.axis_legend, 2, ypos,  lnames{jj,1}, 'Color', h.scheme.Axis.AxisColor.Value);
         ypos  = ypos - 5;
         
     end

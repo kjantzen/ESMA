@@ -130,9 +130,10 @@ function callback_exit(hObject, eventdata, h)
     
 %**************************************************************************
 function callback_DoAverage(hObject, eventdata, h)
-    p = h.figure.UserData;
-    study = p.study;
+p = h.figure.UserData;
+study = p.study;
 
+tic
 %for now I think I will just do the average here rather than farm it out to the non-gui routine.
 %This may change as things get more complex.
 

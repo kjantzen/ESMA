@@ -371,8 +371,8 @@ if nargs > 2
 %                colormap(Value)
             case 'axishandle'
                 AXISHANDLE = Value;
-            case 'gridscale'
-                GRID_SCALE = Value;
+   %         case 'gridscale'
+   %             GRID_SCALE = Value;
             case 'plotdisk'
                 PLOTDISK = lower(Value);
                 if ~strcmp(PLOTDISK,'on') && ~strcmp(PLOTDISK,'off')

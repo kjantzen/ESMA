@@ -21,7 +21,16 @@ function hcnd_eeg()
 VersionNumber = 1.0;
 fprintf('Starting hcnd_eeg V%3.1f....\n', VersionNumber);
 
-addSubFolderPaths
+try
+    addSubFolderPaths
+catch me
+    cfg.msg = me.message;
+    cfg.title = "Fatal Error";
+    cfg.options = "OK";
+    wwu_msgdlg(cfg);
+    return
+end
+
 EEGPath = study_GetEEGPath;
 if isempty(EEGPath)
     cfg.Message = sprintf('No valid experiment path was identified.\nPlease restart hcnd_eeg and identify a your experiment folder when prompted');
@@ -30,14 +39,6 @@ if isempty(EEGPath)
     wwu_msgdlg(cfg);
     return
 end
-
-%checking for eeglab installation and path
-eeglabpath = which('eeglab.m');
-if isempty(eeglabpath)
-    error('Could not find eeglab installation.  Please make sure eeglab is installed on this computer.')
-end
-eeglabpath = fileparts(eeglabpath(1:end-length('eeglab.m')));
-addpath(eeglabpath);
 
 fprintf('...building GUI\n');
 
@@ -1301,6 +1302,35 @@ end
 %*************************************************************************
 %add paths to critical subfolders
 function addSubFolderPaths()
+
+    %checking for eeglab installation and path
+    eeglabpath = which('eeglab.m');
+    if isempty(eeglabpath)
+        error('Could not find eeglab installation.  Please make sure eeglab is installed on this computer and is on the MATLAB path.');
+    end
+    %check for FMUT installation
+    if isempty(which('FclustGND.m'))
+        error('Could not find FMUT installation.  Please make sure the FMUT toolbox is installed on this comuputer and is on the MATLAB path');
+    end
+    %check for fieldtrip installation
+    eeglabpath = fileparts(eeglabpath);
+    ftripPath = fullfile(eeglabpath, 'plugins', 'Fieldtrip*');
+    ft = dir(ftripPath);
+    if isempty(ft)
+        error('Could not find Fieltrip plugin for eeglab.  Please make sure it is installed before proceeding');
+    else
+        isFolder = [ft.isdir];
+        ft = ft(isFolder==1);
+        if isempty(ft)
+            error('Could not find Fieltrip plugin for eeglab.  Please make sure it is installed before proceeding');
+        end
+        fDates = [ft.datenum];
+        [~, indx] = max(fDates);
+        ft = ft(indx);
+        addpath(fullfile(ft.folder, ft.name));
+    end
+
+    %add the hcnd_eeg local folders
     cPath = fileparts(mfilename("fullpath"));
     subfolders = {'config', 'functions', 'toolboxes', 'icons'};
     s = pathsep;
