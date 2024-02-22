@@ -350,7 +350,7 @@ stats.alpha = h.edit_massunivalpha.Value;
 stats.ave_channels = false;
 stats.eegchans = [];
 
-%an GLM without correction can be run on the channel groups
+%a GLM without correction can be run on the channel groups
 if contains(stats.test, 'ANOVA')
     d = h.list_channels.Value;
     s = cell2mat(d');

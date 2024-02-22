@@ -263,11 +263,9 @@ for ii = 1:size(p.filenames,1)
             %interpolate any channels that are missing from the main
             %channel locations structure.
             %will have to reference again after interpolating
-            rtype = EEG.chanlocs(1).ref;
+            rtype = EEG.chanlocs(1).ref
             EEG = eeg_interp(EEG, study.chanlocs);
-            if strcmp(rtype, 'average')
-                EEG = pop_reref(EEG, []);
-            end
+            EEG = pop_reref(EEG);
             reportData{loopCount,4} = EEG.nbchan;
         end
 

@@ -1,3 +1,4 @@
+%this function is under revision and does not work perfectly.
 function study_PlotERSP(study, filename)
 
 fprintf('Opening ERSP plotting and analysis tool...\n');
@@ -2056,11 +2057,6 @@ handles.menu_refresh = uimenu('Parent', handles.menu_file, 'Label', 'Refresh Stu
 handles.menu_conditions = uimenu('Parent', handles.menu_file, 'Label', '&Delete selected condition', 'Separator', 'on', 'Tag', 'bin', 'Accelerator', 'D');
 handles.menu_stats = uimenu('Parent', handles.menu_file, 'Label', 'Delete selected Mass &Univ Test', 'Tag', 'MU', 'Accelerator', 'U');
 handles.menu_ANOVA = uimenu('Parent', handles.menu_file, 'Label', 'Delete selected &GLM Test', 'Tag', 'ANOVA', 'Accelerator', 'G');
-
-handles.menu_cursor = uimenu('Parent', handles.figure,'Label', 'Cursor');
-handles.menu_cursoradd = uimenu('Parent', handles.menu_cursor,'Label', 'Add Cursor', 'Tag', 'add', 'Accelerator', 'A');
-handles.menu_cursorsub = uimenu('Parent', handles.menu_cursor,'Label', 'Remove Cursor', 'Tag', 'subtract', 'Accelerator', 'X');
-handles.menu_cursormean = uimenu('Parent', handles.menu_cursor, 'Label', 'Average between cursors', 'Checked', 'off');
 
 handles.menu_map = uimenu('Parent', handles.figure, 'Label', 'Scalp maps');
 handles.menu_mapquality = uimenu('Parent', handles.menu_map, 'Label', 'Print Quality', 'Checked', 'off');

@@ -22,7 +22,9 @@ not_saved = 0;
 EEGPath = study_GetEEGPath;
 
 STUDYPATH = fullfile(EEGPath, 'STUDIES');
-
+if isempty(dir(STUDYPATH))
+    mkdir(EEGPath, 'STUDIES');
+end
 
 if isempty(study.filename) || p.saveas==1
     

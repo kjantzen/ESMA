@@ -644,11 +644,15 @@ end
 %*************************************************************************
 function callback_newstudy(hObject, eventdata, h, editMode)
 
-
-    
+   
     study = getstudy(h);
-    currentStudy = study.name;
-    oldStudies = h.dropdown_study.Items;
+    
+    if isempty(study)
+        editMode = false;
+    else
+        currentStudy = study.name;
+        oldStudies = h.dropdown_study.Items;
+    end
     
     if editMode
         fh = study_EditStudy(study);
@@ -1296,7 +1300,7 @@ set(h.figure, 'UserData', study);
 function study = getstudy(h)
 study = get(h.figure, 'UserData');
 if isempty(study)
-    msgbox('Error.  No study information is available');
+    warning('No study information is available');
     return
 end
 %*************************************************************************
