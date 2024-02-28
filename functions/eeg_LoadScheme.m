@@ -50,5 +50,9 @@ end
 sz = get(0, "ScreenSize");
 scheme.ScreenWidth = sz(3);
 scheme.ScreenHeight = sz(4);
+%very hacky work around for the windows task bar
+if ispc
+    scheme.ScreenHeight = scheme.ScreenHeight - 50;
+end
 scheme.GoodSubjectColor = [.2, .8, .2];
 scheme.BadSubjectColor = [.8, .2, .2];

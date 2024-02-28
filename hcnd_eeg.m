@@ -18,7 +18,7 @@
 
 function hcnd_eeg()
 
-VersionNumber = 1.0;
+VersionNumber = 1.1;
 fprintf('Starting hcnd_eeg V%3.1f....\n', VersionNumber);
 
 try
