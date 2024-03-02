@@ -552,7 +552,7 @@ h.figure.Pointer = 'arrow';
 function callback_rejectic(hObject, event, h)
 
 p = h.figure.UserData;
-save_changes(p.EEG);
+save_changes(p.EEG, h);
 
 fnames = h.dropdown_selsubject.UserData;
 threshold = h.spinner_threshold.Value/100;
@@ -575,7 +575,7 @@ delete(h.figure)
 function save_changes(EEG, h)
 
 if strcmp(EEG.saved, 'no')
-    pb = uiprogressdlg(h.figure, 'Message', 'Saving changes before changing windows status ...','Indeterminate','on');
+    pb = uiprogressdlg(h.figure, 'Message', 'Saving changes before changing windows status ...','Title', 'Saving changes', 'Indeterminate','on');
     snum = h.dropdown_selsubject.Value;
     fnames = h.dropdown_selsubject.UserData;
     filename = fnames{snum};

@@ -18,6 +18,10 @@
 
 function hcnd_eeg()
 
+%version number is major.minor
+%major revision indicates the addition of a new major function or a change
+%that may impact people using previous version.
+%Minor revisions indicate a bug fix or addition/expansion of a minor feature.
 VersionNumber = 1.1;
 fprintf('Starting hcnd_eeg V%3.1f....\n', VersionNumber);
 
@@ -132,6 +136,7 @@ handles.menu_trialplot = uimenu(handles.menu_plot, 'Label', 'Plot and Review Dat
 handles.menu_preprocess = uimenu('Parent', handles.figure, 'Label', 'Preprocess');
 handles.menu_resample = uimenu('Parent', handles.menu_preprocess, 'Label', 'Resample');
 handles.menu_filter = uimenu('Parent', handles.menu_preprocess, 'Label', 'Filter');
+handles.menu_rbadtimes = uimenu('Parent', handles.menu_preprocess, 'Label', 'Remove bad time segments');
 handles.menu_rbadchans = uimenu('Parent', handles.menu_preprocess, 'Label', 'Remove bad channels');
 handles.menu_reref = uimenu('Parent', handles.menu_preprocess, 'Label', 'Average reference');
 handles.menu_cleanline = uimenu('Parent', handles.menu_preprocess, 'Label', 'Reduce line noise');
@@ -176,6 +181,7 @@ set(handles.menu_trialplot, 'Callback', {@callback_trialplot, handles});
 set(handles.menu_deletefiles, 'Callback', {@callback_deletefiles, handles});
 set(handles.menu_renamefiles, 'Callback', {@callback_changeFilenames, handles});
 set(handles.menu_exportfiles, 'Callback', {@callback_exportfiles, handles});
+set(handles.menu_rbadtimes, 'Callback', {@callback_removeDataSegments, handles});
 set(handles.menu_rbadchans, 'Callback', {@callback_interpchans, handles});
 set(handles.menu_resample, 'Callback', {@callback_resample, handles});
 set(handles.menu_filter, 'Callback', {@callback_filter, handles});
@@ -292,11 +298,7 @@ switch hObject.Tag
         %now finally do the copying
         for ii = 1:length(flist)
             destEEG = wwu_LoadEEGFile(flist{ii});
-        %    t = load(flist{ii}, '-mat');
-        %    destEEG = t.EEG;
             sourceEEG = wwu_LoadEEGFile(copy_info.flist{ii});
-           % t = load(copy_info.flist{ii}, '-mat');
-           % sourceEEG = t.EEG;
             
             destEEG.icasphere = sourceEEG.icasphere;
             destEEG.icaweights = sourceEEG.icaweights;
@@ -1124,7 +1126,7 @@ function callback_evtsummary(hObject, event, h)
 function callback_interpchans(hObject, eventdata, h)
 tic
 parameters.Operation = {'Operation', 'Remove bad channels'};
-parameters.date = {'Date and time', datetime("now");}
+parameters.date = {'Date and time', datetime("now");};
 
 study = getstudy(h);
 stime = clock;
@@ -1194,7 +1196,97 @@ wwu_UpdateProcessLog(study,'SheetName', 'rem chans', ...
     'RowNames',selfiles, 'Values', reportData, 'Parameters',parameters)
 study_AddHistory(study, 'start', stime, 'finish', clock, 'event', 'Removed bad channels', 'paramstring', selfiles);
 populate_filelist(study, h);
- 
+msgbox("Note - removing channels may result in unequal channel numbers.  You should select interpolate missing channels when computing ERPs");
+
+%*************************************************************************
+function callback_removeDataSegments(~, ~, h)
+    
+tic
+parameters.Operation = {'Operation', 'Remove continuous segments'};
+parameters.date = {'Date and time', datetime("now");};
+stime = datetime("now", "Format","HH:MM:SS");
+study = getstudy(h);
+option = 0;
+file_id = '_rtime';
+selfiles = getselectedfiles(study, h);
+if isempty(selfiles)
+    return
+end
+pb = uiprogressdlg(h.figure,'Message', 'Removing highlights time segments', 'Value',0,'Title','Remove segments');
+maxpbVal= length(selfiles) * 4;
+curpbVal = 0;
+nFiles = length(selfiles);
+reportData = cell(length(selfiles), 3);
+
+%loop through each of the selected files
+for ii = 1:nFiles
+    curpbVal = curpbVal + 1;
+    pb.Message = 'building output filename...';
+    pb.Value = curpbVal/maxpbVal;
+
+    [path, file, ext] = fileparts(selfiles{ii});
+    [file_id, option,writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
+    if option == 3 && ~writeflag
+        fprintf('skipping existing file...\n');
+        reportData{ii,3} = 'not saved';
+        continue;
+    else
+        outfilename = fullfile(path,[file, file_id, ext]);
+        reportData{ii,3} = outfilename;
+    end
+
+    curpbVal = curpbVal + 1;
+    pb.Message = 'loading subject data...';
+    pb.Value = curpbVal/maxpbVal;
+
+    EEG = wwu_LoadEEGFile(selfiles{ii});
+
+    curpbVal = curpbVal + 1;
+    pb.Message = 'finding and removing highlights time segments...';
+    pb.Value = curpbVal/maxpbVal;
+
+    %assume there is something to renmove
+    segmentRemoved = true;
+    if isfield(EEG, 'SelectedRects')
+        if isfield(EEG.SelectedRects, 'XData') && ~isempty(EEG.SelectedRects(1).XData)
+            rmTimes = [EEG.SelectedRects.XData];
+            rmTimes = sort(rmTimes(1:2,:))';        
+            EEG = pop_select(EEG,'rmtime',rmTimes);
+            EEG.save = 'no';
+            EEG.SelectedRects = [];
+            reportData{ii,1} = size(rmTimes,1);
+            reportData{ii,2} = join(cellstr(num2str(rmTimes)),';');
+
+        else
+            segmentRemoved = false;
+        end
+    else
+        segmentRemoved = false;
+    end
+
+    if segmentRemoved == false
+        fprintf("There were no selected segments to remove for subject %i.\n", ii);
+        reportData{ii,1} = 0;
+        reportData{ii,2} = 'none';
+    end
+
+    curpbVal = curpbVal + 1;
+    pb.Message = 'saving data...';
+    pb.Value = curpbVal/maxpbVal;
+    fprintf('saving data file to %s\n', outfilename);
+    wwu_SaveEEGFile(EEG, outfilename);
+end
+parameters.duration = {'Duration (seconds)', toc};
+
+wwu_UpdateProcessLog(study,'SheetName', 'rem time', ...
+    'ColumnNames',{'# removed', 'Time boundary', 'Ouput File'},...
+    'RowNames',selfiles, 'Values', reportData, 'Parameters',parameters)
+%study_AddHistory(study, 'start', stime, 'finish', clock, 'event', 'Removed time segments', 'paramstring', selfiles);
+populate_filelist(study, h);
+
+
+
+        
 %*************************************************************************
 function callback_computeersp(hObject, event, h)
     study = getstudy(h);
@@ -1316,6 +1408,14 @@ function addSubFolderPaths()
     if isempty(which('FclustGND.m'))
         error('Could not find FMUT installation.  Please make sure the FMUT toolbox is installed on this comuputer and is on the MATLAB path');
     end
+    %check for MASS UNIVARIATE installation
+    if isempty(which('clustGND.m'))
+        msg = "Could not find Mass Univariate installation!";
+        msg = sprintf("%s\nPlease make sure the Mass Univariate ERP toolbox is installed on this comuputer and is on the MATLAB path", msg);
+        msg = sprintf("%s\nThe toolbox can be downloaded from https://github.com/dmgroppe/Mass_Univariate_ERP_Toolbox", msg);
+        error(msg);
+    end
+
     %check for fieldtrip installation
     eeglabpath = fileparts(eeglabpath);
     ftripPath = fullfile(eeglabpath, 'plugins', 'Fieldtrip*');

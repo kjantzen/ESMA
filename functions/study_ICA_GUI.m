@@ -160,13 +160,15 @@ for jj = 1:length(fnames)
     end
     
     EEG = wwu_LoadEEGFile(fnames{jj});
+    
+    %filter the data just for the purpose of PCA, then apply the components
+    %to the unfiltered data at the end
     if FiltData
         fprintf('Pre filtering the data\n');
         EEGprocessed = pop_eegfiltnew(EEG, 'locutoff', filtlow, 'hicutoff', filthigh, 'revfilt', 0);
     else
         EEGprocessed = EEG;
     end
-    
     
     %compute the IC's
     fprintf('computing Independent components\n\n');
@@ -178,7 +180,7 @@ for jj = 1:length(fnames)
     pcacomp = (dv(1));
     
     %keeping this in even though there is no option to reduce ICA dimensionality
-    %when calling the sobi algorithm visa the pop_runica function
+    %when calling the sobi algorithm via the pop_runica function
     if pcacomp==EEG.nbchan && (strcmp(EEG.ref,'averef') || strcmp(EEG.ref, 'average'))
         pcacomp = pcacomp - 1;
         fprintf('Matlab computed full rank so reducing by 1 for the average reference\n');
@@ -204,7 +206,12 @@ for jj = 1:length(fnames)
   % else
   %      fprintf('Detected epoched data so running the acsobiro algorithm for epoched data'\n);
     fprintf('calling the sobi algorithm which uses the data full rank')
-    EEG = pop_runica(EEGprocessed, 'icatype', 'acsobiro', 'concatenate', 'off');
+    
+    EEGprocessed = pop_runica(EEGprocessed, 'icatype', 'acsobiro', 'concatenate', 'off');
+    EEG.icaweights = EEGprocessed.icaweights;
+    EEG.icasphere = EEGprocessed.icasphere;
+    EEG.icaact = EEGprocessed.icaact;
+    EEG.icachansind = EEGprocessed.icachansind;
  %  end
 
   wwu_SaveEEGFile(EEG, fnames{jj});

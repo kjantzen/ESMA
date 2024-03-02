@@ -315,14 +315,9 @@ if isfield(p.EEG, 'SelectedRects')
                     'FaceAlpha', .25,...
                     'Tag', p.EEG.SelectedRects(ii).Tag);
                 po.ButtonDownFcn = {@removeSelectedPatch, h};
-                if mn < xlims(1)
-                    lp = xlims(1);
-                else
-                    lp = mn;
-                end
-                text('Parent', h.axis_main,'Position',[lp, ylims(2)],...
-                    'VerticalAlignment', 'top', 'HorizontalAlignment','left', 'String', sprintf('#%i (%3.2f - %3.2f sec)', ii, mn, mx),...
-                    'Color', [1,0,0], 'FontSize',10, 'BackgroundColor',[1,1,1]);
+                text('Parent', h.axis_main,'Position',[min(p.EEG.SelectedRects(ii).XData), ylims(2)],...
+                    'VerticalAlignment', 'top', 'HorizontalAlignment','left', 'String', sprintf('Segment %i', ii),...
+                    'Color', [1,0,0], 'FontSize',14, 'BackgroundColor',[1,1,1]);
             end
         end
     else
@@ -423,8 +418,6 @@ function callback_mouseeventhandler(hObject, event, h)
                     p.SelectedRect = str2double(r.Tag);
                     h.figure.UserData = p;
                     h.button_reject.Enable = 'on';
-                    callback_drawdata([],[],h);
-
                 end
 
             case 'WindowMouseMotion'
