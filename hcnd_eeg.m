@@ -50,7 +50,7 @@ scheme = eeg_LoadScheme;
 
 %size of the figure
 W = 400; H = 500;
-FIGPOS = [0,(scheme.ScreenWidth-H), W, H];
+FIGPOS = [0,(scheme.ScreenHeight-H), W, H];
 VERSION = 'hcndV2.0';
 
 %restart the display if it is already loaded
