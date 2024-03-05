@@ -1403,10 +1403,29 @@ function addSubFolderPaths()
     eeglabpath = which('eeglab.m');
     if isempty(eeglabpath)
         error('Could not find eeglab installation.  Please make sure eeglab is installed on this computer and is on the MATLAB path.');
+    else
+        [eeglabpath,~,~] = fileparts(eeglabpath);
+        pluginsDir = fullfile(eeglabpath, 'plugins');
+        d = dir(pluginsDir);
+        d = [d.name];
+        if ~contains(d, 'Biosig')
+            error('Please make sure the Biosig plugin is installed via eeglab before continuing');
+        end
+        if ~contains(d, 'ICLabel')
+            error('Please make sure the ICLabel plugin is installed via eeglab before continuing');
+        end
+      
+        %check to make sure the plugin and functions folders have been put
+        %on the path
+        cPath = path;
+        path(cPath,genpath(pluginsDir));
+        cPath = path;
+        path(cPath, genpath(fullfile(eeglabpath, 'functions')))
+
     end
     %check for FMUT installation
     if isempty(which('FclustGND.m'))
-        error('Could not find FMUT installation.  Please make sure the FMUT toolbox is installed on this comuputer and is on the MATLAB path');
+        error('Could not find FMUT installation.  Please make sure the FMUT toolbox is installed on this computer and is on the MATLAB path');
     end
     %check for MASS UNIVARIATE installation
     if isempty(which('clustGND.m'))
@@ -1417,7 +1436,6 @@ function addSubFolderPaths()
     end
 
     %check for fieldtrip installation
-    eeglabpath = fileparts(eeglabpath);
     ftripPath = fullfile(eeglabpath, 'plugins', 'Fieldtrip*');
     ft = dir(ftripPath);
     if isempty(ft)
