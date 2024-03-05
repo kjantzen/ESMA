@@ -211,8 +211,14 @@ for jj = 1:length(fnames)
     EEG.icaweights = EEGprocessed.icaweights;
     EEG.icasphere = EEGprocessed.icasphere;
     EEG.icaact = EEGprocessed.icaact;
+    EEG.icawinv = EEGprocessed.icawinv;
     EEG.icachansind = EEGprocessed.icachansind;
- %  end
+
+    %erase any existing ICA classifications
+    if isfield(EEG, 'etc') && isfield(EEG.etc, 'ic_classification')
+        EEG.etc.ic_classification = [];
+    end
+
 
   wwu_SaveEEGFile(EEG, fnames{jj});
   clear EEGIn EEGOut EEGProcessed
