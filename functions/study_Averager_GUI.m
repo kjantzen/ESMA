@@ -202,6 +202,7 @@ for ii = 1:size(p.filenames,1)
     
     fcount = 0;
     flist = [];
+    conditions = {};
     for jj = 1:size(p.filenames,2)
         loopCount = loopCount + 1;
         
@@ -225,6 +226,8 @@ for ii = 1:size(p.filenames,1)
                 reportData{jj, 1} = 'No';
                 continue
             end
+            %get any between subject condition information 
+            conditions{end+1} = study.subject(snum).conditions;
         end
         
         %load the data
@@ -280,9 +283,17 @@ for ii = 1:size(p.filenames,1)
     end
     
 pb.Message = 'creating average';
-sets2GND(flist,'out_fname', fullfile(outdir, [outfilename, '.GND']),'verblevel', 3);
+GNDFile = fullfile(outdir, [outfilename, '.GND']);
+sets2GND(flist,'out_fname', GNDFile,'verblevel', 3);
 delete(fullfile(outdir, [filesep, '*.tmp']));
 
+%now load the GND file and assign the between subject condition information
+GND = load(GNDFile, '-mat');
+if isfield(GND, 'GND')
+    GND = GND.GND;
+end
+GND.indiv_conditions = conditions;
+save(GNDFile, 'GND', '-mat')
 end
 parameters.duration = {'Duration (seconds)', toc};
 wwu_UpdateProcessLog(study, 'SheetName','average', ...

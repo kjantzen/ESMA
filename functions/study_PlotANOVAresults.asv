@@ -30,12 +30,12 @@ h.tree_info = uitree('Parent', h.grid,...
 h.tree_info.Layout.Row = 1;
 h.tree_info.Layout.Column = 1;
 
-h.label_desc = uilabel('Parent', h.grid,'Text', 'Descriptives',...
-    'FontColor', scheme.Label.FontColor.Value,...
-    'FontName', scheme.Label.Font.Value,...
-    'FontSize', scheme.Label.FontSize.Value);
-h.label_desc.Layout.Row = 2;
-h.label_desc.Layout.Column = 1;
+%h.label_desc = uilabel('Parent', h.grid,'Text', 'Descriptives',...
+%    'FontColor', scheme.Label.FontColor.Value,...
+%    'FontName', scheme.Label.Font.Value,...
+%    'FontSize', scheme.Label.FontSize.Value);
+%h.label_desc.Layout.Row = 2;
+%h.label_desc.Layout.Column = 1;
 
 h.label_source = uilabel('Parent', h.grid,'Text', 'Source Table',...
     'FontColor', scheme.Label.FontColor.Value,...
@@ -45,7 +45,7 @@ h.label_source.Layout.Row = 4;
 h.label_source.Layout.Column = 1;
 
 h.desctable = uitable('Parent', h.grid);
-h.desctable.Layout.Row = 3;
+h.desctable.Layout.Row = 2;
 h.desctable.Layout.Column = 1;
 
 h.sourcetable = uitable('Parent', h.grid);
@@ -121,6 +121,7 @@ chans_used = unique(r.chans_used);
 for ii = 1:length(chans_used)
     uitreenode('Parent', n, 'Text', chans_used{ii});
 end
+
 
 %display means and standard deviations
 d = r.within;
@@ -303,7 +304,7 @@ function rNew = arrangeData(r)
     rNew = r;
     if r.hasBetween
         %find out how many between variables there are
-        nBetween = size(r.betweenVars,2);
+        nBetween = size(r.beweenVars,2);
 
         %strip off the between columns that were necessary for running the
         %stats. The betweencondition data still in the r.betweenVars

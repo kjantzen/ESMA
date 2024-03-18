@@ -46,7 +46,7 @@ handles.check_overwrite = uicheckbox(...
     'Text', 'Overwrite Existing Components?',...
     'value', 1,....
     'Position', [20, 75, 250, 20],...
-        'FontName',scheme.Checkbox.Font.Value,...
+    'FontName',scheme.Checkbox.Font.Value,...
     'FontColor',scheme.Checkbox.FontColor.Value,...
     'FontSize', scheme.Checkbox.FontSize.Value);
 
@@ -114,8 +114,8 @@ handles.button_cancel.ButtonPushedFcn = {@callback_cancel, handles};
 
 %**********************************************
 function callback_cancel(~,~, h)
-    close(h.figure)
-   
+close(h.figure)
+
 %**********************************************
 function callback_ComputeICA  (src, eventdata, h,study, fnames)
 
@@ -146,10 +146,10 @@ reportValues = cell(length(fnames), 2);
 reportColumnNames = {'Written to file', 'N Trials Removed'};
 %loop through each subject in the study
 for jj = 1:length(fnames)
-    
+
     [fpath, fname, fext] = fileparts(fnames{jj});
     Header = wwu_LoadEEGFile(fnames{jj}, {'icaweights'});
-     
+
     %check if components exist.
     if ~isempty(Header.icaweights) && ~OverWrite
         fprintf('ICA components found.  Skipping this file\n');
@@ -158,9 +158,9 @@ for jj = 1:length(fnames)
     else
         reportValues{jj,1} = true;
     end
-    
+
     EEG = wwu_LoadEEGFile(fnames{jj});
-    
+
     %filter the data just for the purpose of PCA, then apply the components
     %to the unfiltered data at the end
     if FiltData
@@ -169,16 +169,16 @@ for jj = 1:length(fnames)
     else
         EEGprocessed = EEG;
     end
-    
+
     %compute the IC's
     fprintf('computing Independent components\n\n');
-    
+
     %compute the rank of the data and subtract 1 because we have computed the
     %average reference.  The rank function does not seem to detect this
     %decrease in the rank of data so we compensate manually
     dv = size(EEGprocessed.data);
     pcacomp = (dv(1));
-    
+
     %keeping this in even though there is no option to reduce ICA dimensionality
     %when calling the sobi algorithm via the pop_runica function
     if pcacomp==EEG.nbchan && (strcmp(EEG.ref,'averef') || strcmp(EEG.ref, 'average'))
@@ -197,17 +197,17 @@ for jj = 1:length(fnames)
         reportValues{jj,2} = sum(bad_trials);
     else
         reportValues{jj,2} = 0;
-    end 
-  
-   fprintf('hcnd_eeg says the rank of this data is %i\n', pcacomp);
-  % if EEGprocessed.trials == 1
-  %     fprintf('Detected continuous data so running sobi algorithm because it is blazing fast.\n')
-  %      EEGOut = pop_runica(EEGprocessed, 'icatype', 'sobi', 'concatenate', 'off', 'n', pcacomp);
-  % else
-  %      fprintf('Detected epoched data so running the acsobiro algorithm for epoched data'\n);
-    fprintf('calling the sobi algorithm which uses the data full rank')
-    
-    EEGprocessed = pop_runica(EEGprocessed, 'icatype', 'acsobiro', 'concatenate', 'off');
+    end
+
+    fprintf('hcnd_eeg says the rank of this data is %i\n', pcacomp);
+    if EEGprocessed.trials == 1
+        fprintf('Detected continuous data so running sobi algorithm because it is blazing fast.\n')
+        EEGprocessed = pop_runica(EEGprocessed, 'icatype', 'sobi', 'concatenate', 'off', 'n', pcacomp);
+    else
+        fprintf('Detected epoched data so running the acsobiro algorithm for epoched data'\n);
+        EEGprocessed = pop_runica(EEGprocessed, 'icatype', 'acsobiro', 'concatenate', 'off');
+    end
+
     EEG.icaweights = EEGprocessed.icaweights;
     EEG.icasphere = EEGprocessed.icasphere;
     EEG.icaact = EEGprocessed.icaact;
@@ -220,10 +220,10 @@ for jj = 1:length(fnames)
     end
 
 
-  wwu_SaveEEGFile(EEG, fnames{jj});
-  clear EEGIn EEGOut EEGProcessed
-  pb.Value = jj/length(fnames);
-  
+    wwu_SaveEEGFile(EEG, fnames{jj});
+    clear EEGIn EEGOut EEGProcessed
+    pb.Value = jj/length(fnames);
+
 end
 parameters.duration = {'Duration', toc};
 wwu_UpdateProcessLog(study,"RowNames",fnames, "ColumnNames",reportColumnNames, ...

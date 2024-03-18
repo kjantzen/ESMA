@@ -98,7 +98,7 @@ function fighandle = study_RunStats(GND, stats)
 %
 
 % dumb fix because I did not harmonize across file types
-%bin information is stored differently on the ferquency files than on teh
+%bin information is stored differently on the frequency files than on the
 %time files
 if ~isfield(GND, 'bin_info') && isfield(GND, 'bindesc')
     for ii = 1:length(GND.bindesc)
@@ -170,6 +170,16 @@ if sum(cellfun(@(a) a(1)=='[',cond_info))
     return
 end
 
+stats.useBetween = h.check_usebetween.Value;
+if stats.useBetween
+    [hasError, stats] = assignBetweenVariables(stats, GND);
+    %if something goes wrong, do not use the between subject
+    if hasError 
+        warning('Continuing without between groups analysis');
+        stats.useBetween = 0;
+    end
+end
+
 pb = uiprogressdlg(h.figure, 'Title', 'Please Wait', 'Message', 'Running mass univariate statistics(FMUT) ... this could take a while.', 'Indeterminate', 'on');
 
 %convert the time window to to sample points
@@ -178,7 +188,7 @@ pb = uiprogressdlg(h.figure, 'Title', 'Please Wait', 'Message', 'Running mass un
 
 if contains(stats.test, 'ANOVA')
     pb.Message = 'Solving the GLM ... this won''t take long.';
-    GND = do_ANOVA(h,GND,stats);
+    GND = solve_GLM(h,GND,stats);
 elseif contains(stats.test, 'TF_')
     %convert the frequency window to sample points
     [~,stats.freqwinstartpt] = min(abs(stats.freqwinstart - GND.freqs));
@@ -200,7 +210,45 @@ end
 delete(pb);
 delete(h.figure);
 %*************************************************************************
+function [fail, stats] = assignBetweenVariables(stats, GND)
+
+fail = false;
+% look for a set of unique categories and make sure they are in each file
+if isfield(GND, 'indiv_conditions')
+    hasConds = cellfun(@isempty, GND.indiv_conditions);
+    %check to see if everyone has some conditions
+    if sum(hasConds > 1)
+        warning('Some participants have not been assigned a condition. Define conditions for each participant and re-calculated the average!\n');
+        fail = true;
+    else
+        %check to see that everyone has the same number of
+        %conditions
+        nconds = unique(cellfun(@length, GND.indiv_conditions));
+        if length(nconds) > 1
+            warning('Participants have different numbers of conditions. Define the same number of conditions for each participant and re-calculate the average!\n')
+            fail = true;
+        else
+            stats.btwnFactArray = vertcat(GND.indiv_conditions{:});
+            for ii = 1:nconds
+                [stats.btwnFacts{ii}, ia, cnt] = unique(stats.btwnFactArray(:,ii));
+                fprintf('Between Condition %i\n', ii)
+                %tell the user what we found in a crude way
+                for jj = 1:length(ia)
+                    fprintf('\tfound %i participants with condition %s\n', sum(cnt==jj), stats.btwnFactArray{ia(jj), ii});
+                end
+            end
+        end
+    end
+else
+    warning('No conditions have been defined.  Define conditions for each participant and re-calculated the average!\n');
+    fail = true;
+end
+   
+
+%*************************************************************************
 function callback_cancel(~,~,h)
+    %need to do more here to let the calling funciton know that we did not
+    %do anything
     delete(h)
 
 %*************************************************************************
@@ -331,12 +379,13 @@ end
  end
 
 %*************************************************************************
-function GND = do_ANOVA(h,GND,stats)
+function GND = solve_GLM(h,GND,stats)
 
 cond_info = h.list_model.ItemsData;
 
 %get the saved experiment matrix
 cond_matrix = h.figure.UserData';
+
 %popluate it with more human names
 cond_name_matrix = cellfun(@(x) sprintf('level %i', x), num2cell(cond_matrix), 'UniformOutput', false);
 %this is the order the data was assigned to the different conditions
@@ -363,6 +412,8 @@ lnums = 1:n_chans;
 
 switch stats.measure
     case 'Amplitude'
+        %will calculate within subject averages for each channel (or group)
+        %condition and subject into a channel x condition x subject array
         ANOVAdata = squeeze(mean(ANOVAdata,2)); %average over time
     case 'Positive Peak Latency'
         %get latencies and convert to time
@@ -388,6 +439,18 @@ if n_chans> 1
 end
 
 data_table = array2table(ANOVAdata');
+%add between subject variables by adding a categorical column to the data
+%table
+if stats.useBetween
+    vNames = {};
+    for ii = 1:size(stats.btwnFactArray, 2)
+        vNames(end+1) = {sprintf('between%i', ii)};
+    end
+    bTable = array2table(stats.btwnFactArray, 'VariableNames', vNames);
+    convertvars(bTable, vNames, 'categorical');
+    data_table = [bTable, data_table];
+end
+
 
 stats.factors = strtrim(stats.factors);
 if n_chans > 1
@@ -406,7 +469,12 @@ temp = [cond_name_matrix,num2cell(means)];
 mean_tble = cell2table(temp, 'VariableNames', [stats.factors, {'Mean'}]);
 
 %create the ANOVA model
-model = sprintf('Var1-Var%i~1', n_conds * n_chans);
+if stats.useBetween
+    btweenFactor = strjoin(vNames, ' + ');
+else 
+    btweenFactor = '1';
+end
+model = sprintf('Var1-Var%i~%s', n_conds * n_chans, btweenFactor);
 within = cell2table(cond_name_matrix, 'VariableNames', stats.factors);
 within = convertvars(within, stats.factors, 'categorical');
 withinmodel = join(stats.factors, '*');
@@ -430,7 +498,7 @@ statsName = wwu_inputdlg(p);
 if isempty(statsName.input)
     statsName = cond_name_matrix;
 else
-    statsName = statsName.input;
+    statsName = replace(statsName.input, ' ', '_');
 end
 GND.ANOVA(indx).name = statsName;
 GND.ANOVA(indx).type = stats.measure;
@@ -446,7 +514,12 @@ GND.ANOVA(indx).conditions = {GND.bin_info(cond_order).bindesc};
 GND.ANOVA(indx).factors  = stats.factors;
 GND.ANOVA(indx).levels  = stats.levels;
 GND.ANOVA(indx).level_matrix = cond_matrix;
-
+GND.ANOVA(indx).hasBetween = stats.useBetween;
+if stats.useBetween
+    GND.ANOVA(indx).betweenVars = stats.btwnFactArray;
+else
+    GND.ANOVA(indx).betweenVars = [];
+end
 
 %**************************************************************************
 function GND = do_MassUniv(h,GND,stats)
@@ -669,6 +742,15 @@ h.button_remove = uibutton(...
     'FontName', scheme.Button.Font.Value,...
     'FontSize', scheme.Button.FontSize.Value,...
     'Tag', 'rem');
+
+h.check_usebetween = uicheckbox(...
+    'Parent', h.figure,...
+    'Position', [20, 5, 250, 25],...
+    'Text', 'Use between variables if present', ...
+    'Value', 1,...
+    'FontColor', scheme.Button.FontColor.Value,...
+    'FontName', scheme.Button.Font.Value,...
+    'FontSize', scheme.Button.FontSize.Value);
 
 h.button_dostats = uibutton(...
     'Parent', h.figure,...

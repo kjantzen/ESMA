@@ -20,6 +20,10 @@ if ~isfile(filename)
     warning('File %s does not exist\n', filename);
     return
 end
+
+[fpath,fname,fileext] = fileparts(filename);
+
+%check to see if the user wishes to load only a subset of the data fields
 if ~isempty(field)
     if strcmp(field, 'header')
         EEG = load(filename, '-mat', '-regexp', '^(?!data$|icaact$).');
@@ -34,6 +38,7 @@ if ~isempty(field)
             cmd = [cmd, ',''', field, ''')'];
         end
         EEG = eval(cmd);
+        %if the field does not exist, revert to the default
         if ~isfield(EEG, field)
             EEG = wwu_LoadEEGFile(filename);
             return;
@@ -41,18 +46,27 @@ if ~isempty(field)
     end
 else
     EEG = load(filename, '-mat');
-end
-%handles version differences since previously files were not saved with the
-% struct option
-if isfield(EEG, 'EEG')
-    EEG = EEG.EEG;
-end
+    %handles version differences since previously files were not saved with the
+    % struct option
+    if isfield(EEG, 'EEG')
+        EEG = EEG.EEG;
+    end
 
-[fpath,fname,fileext] = fileparts(filename);
-%continuous and epoched files are faithful to the eeglab format so they can
-%be checked using eeglab tools
-if strcmp(fileext, '.cnt') || strcmp(fileext, '.epc')
-    EEG = eeg_checkset(EEG);
+    %continuous and epoched files are faithful to the eeglab format so they can
+    %be checked using eeglab tools
+    if strcmp(fileext, '.cnt') || strcmp(fileext, '.epc')
+        EEG = eeg_checkset(EEG);
+    end
+
+    %check to see if there are some ICA components in the file and if there
+    %are recompute the icaacts - this is done because depnding on version
+    %an platform, the file may or may not be saved withe the ica
+    %activations
+    if isfield(EEG, 'icaweights')  && isfield(EEG, 'icasphere') && isfield(EEG, 'icaact') && ~isempty(EEG.icaweights)
+        for ii = 1:EEG.trials
+            EEG.icaact(:,:,ii) = icaact(EEG.data(:,:,ii), EEG.icaweights * EEG.icasphere);
+        end
+    end
 end
 
 %set default file and saved values

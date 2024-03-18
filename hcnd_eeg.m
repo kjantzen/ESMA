@@ -22,7 +22,7 @@ function hcnd_eeg()
 %major revision indicates the addition of a new major function or a change
 %that may impact people using previous version.
 %Minor revisions indicate a bug fix or addition/expansion of a minor feature.
-VersionNumber = 1.1;
+VersionNumber = 1.2;
 fprintf('Starting hcnd_eeg V%3.1f....\n', VersionNumber);
 
 try
@@ -1404,26 +1404,27 @@ function addSubFolderPaths()
     if isempty(eeglabpath)
         error('Could not find eeglab installation.  Please make sure eeglab is installed on this computer and is on the MATLAB path.');
     else
-        [eeglabpath,~,~] = fileparts(eeglabpath);
-        pluginsDir = fullfile(eeglabpath, 'plugins');
-        d = dir(pluginsDir);
-        d = [d.name];
-        if ~contains(d, 'Biosig')
-            error('Please make sure the Biosig plugin is installed via eeglab before continuing');
-        end
-        if ~contains(d, 'ICLabel')
-            error('Please make sure the ICLabel plugin is installed via eeglab before continuing');
-        end
-      
-        %check to make sure the plugin and functions folders have been put
-        %on the path
-        cPath = path;
-        path(cPath,genpath(pluginsDir));
-        cPath = path;
-        path(cPath, genpath(fullfile(eeglabpath, 'functions')))
-
+         [eeglabpath,~,~] = fileparts(eeglabpath);
     end
-    %check for FMUT installation
+%          pluginsDir = fullfile(eeglabpath, 'plugins');
+%          d = dir(pluginsDir);
+%          d = [d.name];
+%          if ~contains(d, 'Biosig')
+%              error('Please make sure the Biosig plugin is installed via eeglab before continuing');
+%          end
+%          if ~contains(d, 'ICLabel')
+%              error('Please make sure the ICLabel plugin is installed via eeglab before continuing');
+%          end
+%        
+%          %check to make sure the plugin and functions folders have been put
+%          %on the path
+%          cPath = path;
+%          path(cPath,genpath(pluginsDir));
+%          cPath = path;
+%          path(cPath, genpath(fullfile(eeglabpath, 'functions')))
+%  
+%      end
+% %     %check for FMUT installation
     if isempty(which('FclustGND.m'))
         error('Could not find FMUT installation.  Please make sure the FMUT toolbox is installed on this computer and is on the MATLAB path');
     end

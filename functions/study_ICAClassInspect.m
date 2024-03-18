@@ -304,6 +304,13 @@ if ~isfield(EEG.etc, 'ic_classification')
     uialert(h.figure, 'No ICA classification has been completed','Load Error');
     return
 end    
+
+if isempty(EEG.icaact)
+    for ii = 1:EEG.trials
+        EEG.icaact(:,:,ii) = icaact(EEG.data(:,:,ii), EEG.icaweights * EEG.icasphere);
+    end
+end
+
 p.EEG = EEG;
 p.EEG.saved = 'yes';
 h.figure.UserData = p;

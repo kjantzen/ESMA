@@ -128,7 +128,7 @@ function callback_editconditions(~,~,h)
 function callback_plotANOVAresult(hObject, event,h, export)
 
 if nargin < 4
-    export = false
+    export = false;
 end
     
 p = h.figure.UserData;
@@ -168,16 +168,43 @@ end
 excelFilename = fullfile(pathname, excelFilename);
 
 %write the general information about the test
-v(:,1) = {'Name'; 'Measure'; 'Window'};
+v(:,1) = {'Name'; 'Measure'; 'Time Window'};
 v(:,2) = {r.name; r.type; sprintf('%3.2f - %3.2f ms', r.timewindow(1), r.timewindow(2))};
 writecell(v, excelFilename,'Range', 'A1', 'Sheet', 'Data');
 
+writecell({'Channels'}, excelFilename, 'Range', 'A4', 'Sheet', 'Data');
+writecell(r.chans_used, excelFilename, 'Range','B4', 'Sheet', 'Data');
+
+%make the row number variable here because the size of variables is not
+%static
+rowNum = 5;
+
 %write some headers for factor levels
-writecell(r.factors', excelFilename,'Range','A5', 'Sheet', 'Data');
-writematrix(r.level_matrix', excelFilename,'Range','B5', 'Sheet', 'Data')
+range = sprintf('A%i', rowNum);
+nFacs = length(r.factors);
+writecell(r.factors', excelFilename,'Range','A6', 'Sheet', 'Data');
+
+%default next write column is 'B' - which is ascii 66
+colNum = 66;
+
+%shift writing by the number of between variables so the rows indicating
+% condition numbers line up.
+if r.hasBetween
+    nBetween = size(r.betweenVars, 2);
+    colNum = colNum+nBetween;
+end
+range = sprintf('%s%i',char(colNum), rowNum);
+writematrix(r.level_matrix', excelFilename,'Range',range, 'Sheet', 'Data')
+
+%add the names of the condition files that map onto the data columns
+range = sprintf('%s%i',char(colNum), rowNum+nFacs);
+writecell(r.conditions, excelFilename,'Range',range, 'Sheet', 'Data')
 
 %write the raw data
-writetable(r.data, excelFilename, 'Range', 'B8','WriteMode','inplace','WriteVariableNames', false, 'WriteRowNames', false, 'Sheet', 'Data');
+range = sprintf('B%i',rowNum+nFacs+2);
+writetable(r.data, excelFilename, 'Range', range,'WriteMode','inplace','WriteVariableNames', false, 'WriteRowNames', false, 'Sheet', 'Data');
+
+%consider writing the mean and standard deviations
 
 %write the source table
 writetable(r.source_table, excelFilename, 'Sheet', 'ANOVA','Range', 'A1', 'WriteRowNames', true);
@@ -1920,7 +1947,7 @@ handles.dropdown_ANOVAtest = uidropdown(...
 handles.button_plotANOVA = uibutton(...
     'Parent', handles.tab_stats(2),...
     'Position', [185, 240, 85, 25],...
-    'Text', 'Plot Results',...
+    'Text', 'Display',...
     'BackgroundColor', scheme.Button.BackgroundColor.Value,...
     'FontColor', scheme.Button.FontColor.Value,...
     'FontName', scheme.Button.Font.Value,...
@@ -1929,7 +1956,7 @@ handles.button_plotANOVA = uibutton(...
 handles.button_exportANOVA = uibutton(...
     'Parent', handles.tab_stats(2),...
     'Position', [95, 240, 85, 25],...
-    'Text', 'Export Results',...
+    'Text', 'Export',...
     'BackgroundColor', scheme.Button.BackgroundColor.Value,...
     'FontColor', scheme.Button.FontColor.Value,...
     'FontName', scheme.Button.Font.Value,...
@@ -2183,6 +2210,4 @@ handles.menu_mapquality = uimenu('Parent', handles.menu_map, 'Label', 'Print Qua
 handles.menu_scale = uimenu('Parent', handles.menu_map, 'Label', 'Map Scale Limits');
 handles.menu_mapscale(1) = uimenu('Parent', handles.menu_scale, 'Label', 'ALl maps on the same scale', 'Checked', 'on', 'Tag', 'Auto');
 handles.menu_mapscale(2) = uimenu('Parent', handles.menu_scale, 'Label', 'Scale individually', 'Checked', 'off', 'Tag', 'Always');
-
-
 
