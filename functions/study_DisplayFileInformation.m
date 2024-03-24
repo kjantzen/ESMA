@@ -109,7 +109,11 @@ function addFields(parent, struct)
                     n.Text = sprintf('%s%s', n.Text, struct.(fields{ii}));
                 case 'cell'
                     if isscalar(struct.(fields{ii}){1})
-                        n.Text = [n.Text, struct.(fields{ii}){1}];
+                        temp = struct.(fields{ii}){1};
+                        if iscell(temp)
+                            temp = temp{1};
+                        end
+                        n.Text = [n.Text, temp];
                     else
                         n.Text = sprintf('%s[ %s %s ]', n.Text, makeSizeString(struct.(fields{ii}){1}), fieldClass);
                     end

@@ -1,10 +1,10 @@
 function scheme = eeg_LoadScheme(option)
 arguments
-    option.SchemeFile {mustBeText} = 'Scheme.mat';
+    option.SchemeFile {mustBeText} = 'Default.mat';
     option.SchemePath {mustBeText, mustBeFolder} = fileparts(mfilename("fullpath"));
 end
 
-SchemeFile = fullfile(option.SchemePath, option.SchemeFile);
+SchemeFile = fullfile(option.SchemePath, '..','config','schemes', option.SchemeFile);
 if isfile(SchemeFile)
     scheme = load(SchemeFile, '-mat');
 else
