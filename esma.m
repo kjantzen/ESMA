@@ -29,16 +29,16 @@ fprintf('Starting EEG Study Management and Analysis V%s....\n', VersionNumber);
 try
     addSubFolderPaths
 catch me
-    wwu_msgdlg(me.message, 'Fatal Error!', {"OK"}, 'isError', true);
+    wwu_msgdlg(me.message, 'Fatal Error!', {"OK"}, 'isError', true);  
     return
 end
 
 EEGPath = study_GetEEGPath;
 if isempty(EEGPath)
-    cfg.Message = sprintf('No valid experiment path was identified.\nPlease restart ESMA and identify a your experiment folder when prompted');
-    cfg.Title = 'Missing path file';
-    cfg.options = {"OK"};
-    wwu_msgdlg(cfg.Message, cfg.Title, cfg.Options, 'isError', true);
+    Message = sprintf('No valid experiment path was identified.\nPlease restart ESMA and identify a your experiment folder when prompted');
+    Title = 'Missing path file';
+    options = {"OK"}; %#ok<*STRSCALR> 
+    wwu_msgdlg(Message, Title, options, 'isError', true);
     return
 end
 
@@ -115,10 +115,14 @@ drawnow
 %ESMA menu
 list = getSchemeList();
 handles.menu_esma = uimenu('Parent', handles.figure,'Label', 'ESMA');
-handles.menu_scheme = uimenu(handles.menu_esma, 'Label', 'Theme');
+handles.menu_appearance = uimenu(handles.menu_esma, 'Label', 'Appearance');
+handles.menu_editappeanace = uimenu(handles.menu_appearance, 'Label', 'Edit appearance');
+handles.menu_scheme = uimenu(handles.menu_appearance, 'Label', 'Themes');
 for ii = 1:length(list)
     [~,themeName,~] = fileparts(list(ii).name);
-    handles.menu_selScheme(ii) = uimenu('Parent', handles.menu_scheme, 'Label',themeName);
+    handles.menu_selScheme(ii) = uimenu('Parent', handles.menu_scheme, 'Label',themeName,...
+        'UserData', fullfile(list(ii).folder, list(ii).name),...
+        'Callback', {@callback_changeScheme});
 end
 handles.menu_exit = uimenu(handles.menu_esma, 'Label', 'Quit', 'Separator', 'on', 'callback', {@callback_exit, handles});
 
@@ -172,6 +176,8 @@ handles.menu_filesummary = uimenu(handles.menu_utils, 'Label', 'Show File Inform
 handles.menu_evtsummary = uimenu(handles.menu_utils, 'Label', 'Event Summary');
 
 %assign all the callbacks
+set(handles.menu_editappeanace, 'Callback', {@callback_editscheme, handles});
+
 set(handles.dropdown_study, 'ValueChangedFcn', {@callback_loadstudy, handles});
 set(handles.menu_new, 'Callback', {@callback_newstudy, handles, false});
 set(handles.menu_edit, 'Callback', {@callback_newstudy, handles, true});
@@ -847,10 +853,10 @@ if isempty(fnames)
     return
 end
 if ~eeg_ValidateFileTypes(fnames, {'bdf'})
-    p.msg = 'This conversion can only be completed on BIOSEMI files.';
-    p.title = 'File Type Error';
-    p.options ={'OK'};
-    wwu_msgdlg(p);
+    msg = 'This conversion can only be completed on BIOSEMI files.';
+    title = 'File Type Error';
+    options ={'OK'};
+    wwu_msgdlg(msg, title,options);
     return
 end
 
@@ -882,10 +888,10 @@ fnames = getselectedfiles(study, h);
 
 if isempty(fnames); return; end
 if ~eeg_ValidateFileTypes(fnames, {'cnt', 'epc'})
-    p.msg = 'At least some of the selected files formats cannot be resampled using this function';
-    p.title = 'File Type Error';
-    p.options ={'OK'};
-    wwu_msgdlg(p);
+    msg = 'At least some of the selected files formats cannot be resampled using this function';
+    title = 'File Type Error';
+    options ={'OK'};
+    wwu_msgdlg(msg, title, options);
     return
 end
 
@@ -902,10 +908,10 @@ fnames = getselectedfiles(study, h);
 
 if isempty(fnames); return; end
 if ~eeg_ValidateFileTypes(fnames, {'cnt', 'epc'})
-    p.msg = 'At least some of the selected files formats cannot be filtered using this function';
-    p.title = 'File Type Error';
-    p.options ={'OK'};
-    wwu_msgdlg(p);
+    msg = 'At least some of the selected files formats cannot be filtered using this function';
+    title = 'File Type Error';
+    options ={'OK'};
+    wwu_msgdlg(msg, title, options);
     return
 end
 
@@ -926,10 +932,10 @@ if isempty(fnames)
     return
 end
 if ~eeg_ValidateFileTypes(fnames, {'cnt', 'epc'})
-    p.msg = 'At least some of the selected files formats cannot be rereferenced using this function';
-    p.title = 'File Type Error';
-    p.options ={'OK'};
-    wwu_msgdlg(p);
+    msg = 'At least some of the selected files formats cannot be rereferenced using this function';
+    title = 'File Type Error';
+    options ={'OK'};
+    wwu_msgdlg(msg, title, options);
     return
 end
 
@@ -1056,7 +1062,7 @@ if cnum==0 && length(study.bingroup(gnum).bins) > 0
     cnum = 1:length(study.bingroup(gnum).bins);
     fprintf('Extracting all %i conditions in %s.', length(cnum), study.bingroup(gnum).name);
 else
-    wwu_msgdlg('There is no Bin information in the Bin Group', 'Extract Error');
+    wwu_msgdlg('There is no Bin information in the Bin Group', 'Extract Error', {'OK'});
     return
 end
 
@@ -1629,6 +1635,30 @@ function list = getSchemeList()
 
     cp = mfilename('fullpath');
     [cp,~,~] = fileparts(cp);
-    f = fullfile(cp, 'config','schemes', '*.mat');
+    f = fullfile(cp, 'config','themes', '*.mat');
     list = dir(f);
 
+%**************************************************************************
+function callback_changeScheme(~, src)
+
+    p.themeFile = src.Source.UserData;
+    eeg_WriteConfig(p)
+    
+    msg = 'Do you want to restart the main interface to use the new theme? Otherwise the theme will take effect on the next restart.';
+    response = wwu_msgdlg(msg, 'Restart request', {'Yes','No'});
+    if strcmp('Yes', response)
+        esma;
+    end
+%**************************************************************************
+function callback_editscheme(~,~,h)
+
+    options = eeg_ReadConfig('themeFile');
+    %load the  editor
+    f = wwu_ThemeEditor('SchemeFile', options.themeFile);
+    waitfor(f)
+    msg = 'Do you want to restart the main interface to see the changes? Otherwise the changes will take effect on the next restart.';
+    response = wwu_msgdlg(msg, 'Restart request', {'Yes','No'});
+    if strcmp('Yes', response)
+        esma;
+    end
+%

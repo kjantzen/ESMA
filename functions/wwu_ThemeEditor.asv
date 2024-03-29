@@ -1,17 +1,22 @@
-% APPEARANCEEDITOR - provides an interface for editing the scheme of the
+% THEMEEDITOR - provides an interface for editing the scheme of the
 % plotter interface
-function wwu_AppearanceEditor(options)
+function fig = wwu_ThemeEditor(options)
 
     arguments
         options.SchemeFile = ''
     end
     
-    p = loadScheme(options.SchemeFile);
+    p = eeg_LoadScheme(options.SchemeFile);
     if isempty(p)
         return
     end
     
     h = buildGUI(p);
+    fig = h.fig; 
+    [~, f,e] = fileparts(options.SchemeFile);
+    if ~isempty(f)
+        fig.Name = ['Theme: ', [f,e]];
+    end
     h.SchemeFile = options.SchemeFile;
     setParameters(h,p);
     saveUserData(h.fig, h, p);
@@ -22,14 +27,15 @@ end
 % ************************************************************************
 function callback_selectScheme(src, ~, fig)
     [h,p] = readUserData(fig);
-    fprintf(src.UserData);
-    fig.Name = ['Scheme: ', src.Text];
+    fig.Name = ['Theme: ', src.Text];
+    p = eeg_LoadScheme(src.UserData);
 
-    p = loadScheme(src.UserData);
     drawEditPanel(h, p);
     setParameters(h,p);
     h.SchemeFile = src.UserData;
+    saveUserData(fig, h, p);
 
+    
 end
 % ************************************************************************
 function callback_ChangeColor(src, ~, fig)
@@ -58,18 +64,11 @@ function callback_ChangeFontOrSize(src, evt, fig)
   
 end
 % ************************************************************************
-function callback_Cancel(~,~,f)
+function callback_Close(~,~,f)
     close(f);
 end
 % ************************************************************************
-function callback_Defaults(~,~,f)
-    [h,p] = readUserData(f);
-    p = InitializeParameters;
-    setParameters(h,p);
-    saveUserData(f,h,p);
-    AppearanceEditor
-end
-% ************************************************************************
+
 function callback_SaveScheme(~,~,f, SaveAsFlag)
     [h,p] = readUserData(f);
 
@@ -80,15 +79,14 @@ function callback_SaveScheme(~,~,f, SaveAsFlag)
     end
 
     if SaveAsFlag
-        [saveFile, saveLoc] = uiputfile('*.mat','Enter a name for the Scheme File', fullfile(schemeFilePath, h.SchemeFile));
+        [saveFile, saveLoc] = uiputfile('*.mat','Enter a name for the theme file', fullfile(schemeFilePath, h.SchemeFile));
         if saveFile == 0
             return
         end
-        h.SchemeFile =fillfile(saveLoc, saveFile);
+        h.SchemeFile =fullfile(saveLoc, saveFile);
     end
 
-    save(h.schemeFile, '-struct','p', '-mat');
-    close(f);
+    save(h.SchemeFile, '-struct','p', '-mat');
 end
    
 %% Helper functions
@@ -106,11 +104,11 @@ function p = loadScheme(schemeFile)
     
 %if no scheme file is passed, populate with the defaults
     if isempty(schemeFile)
-        p = InitializeParameters;
+        p = eeg_DefaultScheme;
     else
         if ~isfile(schemeFile)
-            warning('Could not find the scheme file in the editor folder.  Resorting to defaults!');
-            p = InitializeParameters;
+            warning('Could not find the theme file in the editor folder.  Resorting to defaults!');
+            p = eeg_DefaultScheme;
         else
             p = load(schemeFile);
         end
@@ -135,6 +133,19 @@ function setParameters(h,p)
     h.dispAxis.Color = p.Axis.BackgroundColor.Value;
     h.dispAxis.XColor = p.Axis.AxisColor.Value;
     h.dispAxis.YColor = p.Axis.AxisColor.Value;
+
+    %the traces
+    if isfield(p, 'EEGTraces')
+        h.eegtrace_good.Color = p.EEGTraces.GoodColor.Value;
+        h.eegtrace_bad.Color = p.EEGTraces.BadColor.Value;
+        h.pcatrace_good.Color = p.PCATraces.GoodColor.Value;
+        h.pcatrace_bad.Color = p.PCATraces.BadColor.Value;
+
+        h.eegtrace_good.LineWidth = p.EEGTraces.Width.Value;
+        h.eegtrace_bad.LineWidth = p.EEGTraces.Width.Value;
+        h.pcatrace_good.LineWidth = p.PCATraces.Width.Value;
+        h.pcatrace_bad.LineWidth = p.PCATraces.Width.Value;
+    end
 
     %the panel
     h.dispPanel.BackgroundColor = p.Panel.BackgroundColor.Value;
@@ -174,6 +185,8 @@ function setParameters(h,p)
     h.dispEdit.FontColor = p.Edit.FontColor.Value;
     h.dispEdit.Position(4) = p.Edit.Height.Value;
 
+    h.legnd.TextColor = p.Axis.AxisColor.Value;
+    h.dispWindow.ForegroundColor = p.Panel.FontColor.Value;
     
 
 end
@@ -205,8 +218,10 @@ h.fig.Tag = 'Appearance Editor';
      'Text','Save &As', 'Accelerator','a',...
      'MenuSelectedFcn',{@callback_SaveScheme, h.fig, true});
 
+ h
+
  h.menu_scheme = uimenu('Parent', h.fig,...
-     'Text',' Schemes');
+     'Text',' Themes');
 
  schemeList = getSchemeList();
  for ii = 1:length(schemeList)
@@ -219,26 +234,41 @@ h.fig.Tag = 'Appearance Editor';
 
  
 grid = uigridlayout('Parent', h.fig);
-grid.RowHeight = {'1x', 25};
-grid.ColumnWidth = {240,'1x', 80,80,80};
+grid.RowHeight = {'1x'};
+grid.ColumnWidth = {240,'1x'};
+drawnow
+pause(1)
 
 h.ePanel = uipanel('Parent', grid,'Title','Edit Properites');
 h.ePanel.Scrollable = 'on';
-
 drawnow;
 pause(1)
 
 %% draw the controls for changing parameters
 h = drawEditPanel(h, p);
 
+%create some fake data to display
+x = 0:.1:2;
+y = sin(10 * x);
+
 %% draw the controls for displaying the current parameters
     h.dispWindow = uipanel('Parent',grid,'Title','WINDOW');
-    h.dispWindow.Layout.Column = [2,5];
+    h.dispWindow.Layout.Column = 2;
     h.dispWindow.Layout.Row = 1;
     drawnow;
     pause(1);
+
     pos = h.dispWindow.InnerPosition;
-    h.dispAxis = uiaxes('Parent', h.dispWindow,'Position', [0, pos(4)-230, pos(3), 220]);
+    h.dispAxis = uiaxes('Parent', h.dispWindow,'Position', [0, pos(4)-280, pos(3), 270], 'Toolbar',[]);
+    h.eegtrace_good = line(h.dispAxis, x, y+8);
+    h.eegtrace_bad = line(h.dispAxis, x, y+6);
+    h.pcatrace_good = line(h.dispAxis, x, y+4);
+    h.pcatrace_bad = line(h.dispAxis, x, y+2);
+
+    h.dispAxis.YLim = [0,10];
+    h.legnd = legend(h.dispAxis, {'eeg good', 'eeg bad', 'pca good', 'pca bad'});
+    h.legnd.Box = 'off'; h.legnd.Location = "northoutside"; h.legnd.FontSize = 10; h.legnd.NumColumns = 4; h.legnd.Color = 'none';
+    
     h.dispPanel = uipanel('Parent',h.dispWindow,'Title','PANEL',...
         'Position',[10,10,pos(3)-20,200]);
     h.dispLabel = uilabel('Parent', h.dispPanel, 'Position',[30,120, 100, 20], ...
@@ -251,19 +281,7 @@ h = drawEditPanel(h, p);
           'Text','Button Control');
     h.dispEdit = uieditfield('Parent', h.dispPanel, 'Position', [50, 10, 200, 30],...
         'Value', 'Sample edit field text.');
-    
-   %add the controls
-   h.buttonCancel = uibutton('Parent', grid, 'Text', 'Cancel', ...
-       'ButtonPushedFcn',{@callback_Cancel, h.fig});
-   h.buttonCancel.Layout.Row = 2;
-   h.buttonCancel.Layout.Column = 3;
-
-   h.buttonAccept = uibutton('Parent', grid, 'Text', 'Defaults',...
-       'ButtonPushedFcn',{@callback_Defaults, h.fig});
-   h.buttonAccept.Layout.Row = 2;
-   h.buttonAccept.Layout.Column = 4;
-   
- 
+     
 
 end
 %**************************************************************************
@@ -281,7 +299,9 @@ function h = drawEditPanel(h, p)
     bottom = 10;
     left = parent.InnerPosition(3)-100;
 for cc = length(controls):-1:1
-
+    if ~isstruct(p.(controls{cc}))
+        continue
+    end
     props = fieldnames(p.(controls{cc}));
     for pp = length(props):-1:1
         uilabel('Parent', parent,'Text', props{pp},...
@@ -301,7 +321,7 @@ for cc = length(controls):-1:1
                     'UserData', {controls{cc}, props{pp}}, ...
                     'ValueChangedFcn',{@callback_ChangeFontOrSize, h.fig});
             case 'Integer'
-                uispinner('Parent',parent, 'Step',1,'Limits',[8,100],...
+                uispinner('Parent',parent, 'Step',1,'Limits',[1,100],...
                     'Value',p.(controls{cc}).(props{pp}).Value,...
                     'Position',[left, bottom, 80,20],...
                     'RoundFractionalValues','on',...
@@ -325,51 +345,7 @@ function list = getSchemeList()
 
     cp = mfilename('fullpath');
     [cp,~,~] = fileparts(cp);
-    f = fullfile(cp, '..','config','schemes', '*.mat');
+    f = fullfile(cp, '..','config','themes', '*.mat');
     list = dir(f);
-
-end
-% ************************************************************************
-function p = InitializeParameters()
-% in case the file is not found on disk, this will provide some defaults
-
-p.Axis.AxisColor.Value = [0,0,0]; p.Axis.AxisColor.Type = 'Color';
-p.Axis.BackgroundColor.Value = [1,1,1]; p.Axis.BackgroundColor.Type = 'Color';
-p.Axis.Font.Value = 'Helvetica'; p.Axis.Font.Type = 'Font';
-p.Axis.FontSize.Value = 14; p.Axis.FontSize.Type = 'Integer';
-
-p.Dropdown.BackgroundColor.Value = [1,1,1];p.Dropdown.BackgroundColor.Type = 'Color';
-p.Dropdown.Font.Value = 'Helvetica';p.Dropdown.Font.Type = 'Font';
-p.Dropdown.FontSize.Value  = 11;p.Dropdown.FontSize.Type  = 'Integer';
-p.Dropdown.FontColor.Value = [0,0,0];p.Dropdown.FontColor.Type = 'Color';
-p.Dropdown.Height.Value = 25;p.Dropdown.Height.Type = 'Integer';
-
-p.Button.BackgroundColor.Value = [.8,.8,.8]; p.Button.BackgroundColor.Type = 'Color';
-p.Button.Font.Value = 'Helvetica'; p.Button.Font.Type = 'Font';
-p.Button.FontColor.Value = [0,0,0];p.Button.FontColor.Type = 'Color';
-p.Button.FontSize.Value = 11; p.Button.FontSize.Type = 'Integer';
-p.Button.Height.Value = 30; p.Button.Height.Type = 'Integer';
-
-p.Panel.BackgroundColor.Value = [.95,.95,.95]; p.Panel.BackgroundColor.Type = 'Color';
-p.Panel.BorderColor.Value = [0,0,0]; p.Panel.BorderColor.Type = 'Color';
-p.Panel.Font.Value = 'Helvetica'; p.Panel.Font.Type = 'Font';
-p.Panel.FontSize.Value = 11; p.Panel.FontSize.Type = 'Integer';
-p.Panel.FontColor.Value = [1,1,1]; p.Panel.FontColor.Type = 'Color';
-
-p.Edit.BackgroundColor.Value = [.95,.95,.95]; p.Edit.BackgroundColor.Type = 'Color';
-p.Edit.Font.Value = 'Helvetica'; p.Edit.Font.Type = 'Font';
-p.Edit.FontSize.Value = 11; p.Edit.FontSize.Type = 'Integer';
-p.Edit.FontColor.Value = [0,0,0]; p.Edit.FontColor.Type = 'Color';
-p.Edit.Height.Value = 30; p.Edit.Height.Type = 'Integer';
-
-p.Checkbox.FontColor.Value = [0,0,0]; p.Checkbox.FontColor.Type = 'Color';
-p.Checkbox.Font.Value = 'Helvetica'; p.Checkbox.Font.Type = 'Font';
-p.Checkbox.FontSize.Value = 11; p.Checkbox.FontSize.Type = 'Integer';
-
-p.Label.FontColor.Value = [0,0,0]; p.Label.FontColor.Type = 'Color';
-p.Label.Font.Value = 'Helvetica'; p.Label.Font.Type = 'Font';
-p.Label.FontSize.Value = 11; p.Label.FontSize.Type = 'Integer';
-
-p.Window.BackgroundColor.Value = [.95,.95,.95]; p.Window.BackgroundColor.Type = 'Color';
 
 end

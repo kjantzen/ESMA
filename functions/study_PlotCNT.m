@@ -46,7 +46,7 @@ function callback_markchannels(hObject, eventdata, h, status)
 
 p = h.figure.UserData;
 if sum(p.selchans)==0
-    uialert('No channels have been selected.', 'Mark Channels');
+    uialert(h.figure, 'No channels have been selected.', 'Mark Channels');
     return
 end
 
@@ -83,9 +83,14 @@ h.figure.UserData = p;
 callback_drawdata([], [],h)
 
 %**************************************************************************
-function callback_selectchannel(hObject, eventdata,h, ch_num)
+function callback_selectchannel(hObject, ~,h, ch_num)
+
+
+    selectedChannelColor = opponentColor(h.scheme.Axis.BackgroundColor.Value);
+
     %make sure the shift key is not pressed because that enables a
-    %different function
+    %different function used to select segments
+
     if ~any(strcmp(h.figure.CurrentModifier, 'shift'))
         p = h.figure.UserData;
         p.selchans(ch_num) = ~p.selchans(ch_num);
@@ -93,12 +98,14 @@ function callback_selectchannel(hObject, eventdata,h, ch_num)
 
         badchans = getBadChans(p.EEG);
         if p.selchans(ch_num) 
-            hObject.Color = 'c';
+            hObject.Color = selectedChannelColor;
+            hObject.LineWidth = h.scheme.EEGTraces.Width.Value + 2;
         else
-            hObject.Color = [.4, 1, .4];
+            hObject.Color = h.scheme.EEGTraces.GoodColor.Value;
+            hObject.LineWidth  = h.scheme.EEGTraces.Width.Value;
         end
         if badchans(ch_num)
-            hObject.Color = [1,.3,.3];
+            hObject.Color = h.scheme.EEGTraces.BadColor.Value;
         end
     
         if strcmp(hObject.Tag, 'FFT_Channel')
@@ -252,6 +259,8 @@ function callback_drawdata(hObject, eventdata, h)
 %get some plotting information
 p = h.figure.UserData;
 chans_to_plot = h.spinner_changechannum.Value;
+EventMarkerColor = opponentColor(h.scheme.Axis.BackgroundColor.Value);
+SelChannelColor = opponentColor(h.scheme.Axis.BackgroundColor.Value);
 
 %get the plotting position from the slider
 if ~isempty(eventdata)
@@ -287,16 +296,17 @@ scalefacarray = repmat(scalefac', 1, p.pwidth);
 d = d + scalefacarray;
 xlims = [t(1), t(end)]; ylims = [scalefac(1) - p.scale, scalefac(end) + p.scale];
 
-ph = plot(h.axis_main, t,d, 'Color', [.4,1,.4]);
+ph = plot(h.axis_main, t,d, 'Color', h.scheme.EEGTraces.GoodColor.Value, ...
+    'LineWidth',h.scheme.EEGTraces.Width.Value);
 for ii = 1:length(ph)
     chIndx = start_chan + ii-1;
     ph(ii).ButtonDownFcn = {@callback_selectchannel, h, chIndx};
-    ph(ii).LineWidth = (p.selchans(chIndx) * 2) + .5;
+    ph(ii).LineWidth = (p.selchans(chIndx) * 2) + h.scheme.EEGTraces.Width.Value;
     if p.selchans(chIndx) 
-        ph(ii).Color = 'c';
+        ph(ii).Color = SelChannelColor;
     end
     if badchans(chIndx)
-        ph(ii).Color = [1,.3,.3];
+        ph(ii).Color = h.scheme.EEGTraces.BadColor.Value;
     end
     
 end
@@ -319,11 +329,11 @@ if ~isempty(evt_indx)
         if isnumeric(evt_label)
             evt_label = num2str(evt_label);
         end
-        line(h.axis_main, [evt_time, evt_time], [ylims(1)-p.scale, ylims(2)], 'Color','c', 'LineWidth', 1.5);
+        line(h.axis_main, [evt_time, evt_time], [ylims(1)-p.scale, ylims(2)], 'Color',EventMarkerColor, 'LineWidth', 1.5);
         text(h.axis_main, evt_time, ylims(1)-p.scale, evt_label, ...
-            'Color', 'c', 'HorizontalAlignment', 'center',...
+            'Color', EventMarkerColor, 'HorizontalAlignment', 'center',...
             'Interpreter','none','Rotation',90,...
-            'VerticalAlignment','middle')
+            'VerticalAlignment','top')
     end
 end
 if isfield(p.EEG, 'SelectedRects')
@@ -336,7 +346,7 @@ if isfield(p.EEG, 'SelectedRects')
                 po = patch('Parent', h.axis_main,...
                     'XData', p.EEG.SelectedRects(ii).XData,...
                     'YData', [ylims(1), ylims(1), ylims(2), ylims(2)],...
-                    'FaceColor', [1, 1, 1], ...
+                    'FaceColor', EventMarkerColor, ...
                     'LineStyle', 'none',...
                     'FaceAlpha', .25,...
                     'Tag', p.EEG.SelectedRects(ii).Tag);
@@ -473,7 +483,7 @@ function callback_mouseeventhandler(hObject, event, h)
                         r = patch('Parent',h.axis_main,...
                             'XData', [Xstart, Xend, Xend, Xstart],...
                             'YData', [y(1), y(1), y(2), y(2)],...
-                            'FaceColor',[1, 1, 1],...
+                            'FaceColor',opponentColor(h.scheme.Axis.BackgroundColor.Value),...
                             'FaceAlpha', .2,...
                             'LineStyle', 'none');
                     else
@@ -566,7 +576,6 @@ function result = mouseIsInRegion(mousePos, region)
 %**************************************************************************
 function callback_makefreqplot(~,~,h)
 
-    scheme = eeg_LoadScheme;
     p = h.figure.UserData;
 
     pb = uiprogressdlg(h.figure, 'Message', 'Computing FFT for all channels', 'Title', 'Computing FFT', 'Indeterminate', 'on');
@@ -576,23 +585,23 @@ function callback_makefreqplot(~,~,h)
     fig.Name = p.EEG.setname;
     fig.NumberTitle = 'off';
     g = uigridlayout(fig, [1,1]);
-    g.BackgroundColor =  scheme.Window.BackgroundColor.Value;
+    g.BackgroundColor =  h.scheme.Window.BackgroundColor.Value;
     
     a = uiaxes(...
     'Parent', g,...
     'Units', 'Pixels',...
     'Interactions', [],...
-    'Color', scheme.Axis.BackgroundColor.Value,...
-    'XColor',scheme.Axis.AxisColor.Value,...        
-    'YColor',scheme.Axis.AxisColor.Value,...
-    'FontName', scheme.Axis.Font.Value,...
-    'FontSize', scheme.Axis.FontSize.Value,...
+    'Color', h.scheme.Axis.BackgroundColor.Value,...
+    'XColor',h.scheme.Axis.AxisColor.Value,...        
+    'YColor',h.scheme.Axis.AxisColor.Value,...
+    'FontName', h.scheme.Axis.Font.Value,...
+    'FontSize', h.scheme.Axis.FontSize.Value,...
     'GridLineStyle','-',...
     'XGrid','on','YGrid','on');
 
     badchans = getBadChans(p.EEG);
 
-    ph = plot(a, f,s', 'Color', [.4,1,.4]);
+    ph = plot(a, f,s', 'Color', h.scheme.EEGTraces.GoodColor.Value);
     for ii = 1:length(ph)
         ph(ii).ButtonDownFcn = {@callback_selectchannel, h, ii};
         ph(ii).Tag = 'FFT_Channel';
@@ -600,7 +609,7 @@ function callback_makefreqplot(~,~,h)
             ph(ii).Color = 'c';
         end
         if badchans(ii)
-            ph(ii).Color = [1,.3,.3];
+            ph(ii).Color = h.scheme.EEGTraces.BadColor.Value;
         end
         
     end
@@ -610,12 +619,16 @@ function callback_makefreqplot(~,~,h)
     uiwait(fig);
     close(pb)
 
-    
+%**************************************************************************    
+function rgbOut = opponentColor(rgbIn)
+    hsvIn = rgb2hsv(rgbIn);   
+    %hsvIn(1) = rem(hsvIn(1) + .5, 1);
+    hsvIn = rem(hsvIn + .5, 1);
+    rgbOut = hsv2rgb(hsvIn);
 
 %**************************************************************************
 function handles = build_gui(study)
 
-%p = plot_params;
 scheme = eeg_LoadScheme;
 W = round(scheme.ScreenWidth * .8); H = round(scheme.ScreenHeight * .6);
 figpos = [(scheme.ScreenWidth - W)/2, (scheme.ScreenHeight - H)/2, W, H];
