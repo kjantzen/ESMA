@@ -1,29 +1,33 @@
 function study_PlotEPC(study, filenames)
 
+arguments
+    study (1,1) struct
+    filenames (1,:)
+end
+
 %build the figure
 scheme = eeg_LoadScheme;
+
 p.goodtrialcolor = 'g';
 p.badtrialcolor = 'r';
 p.goodsubjectcolor = scheme.Axis.BackgroundColor.Value;
 p.badsubjectcolor = 'w';
 p.backcolor = scheme.Window.BackgroundColor.Value;
 p.goodbackgroundcolor = scheme.Window.BackgroundColor.Value;
-p.badbackgroundcolor = [.3, 0,0];
-p.goodicactcolor = 'c';
-p.badicactcolor = [1.,.5,.5];
+%set the bad trial color to red with the same saturation and value as the
+%axis background
+tc = rgb2hsv(scheme.Axis.BackgroundColor.Value); tc(1) = 0;
+p.badbackgroundcolor= hsv2rgb(tc);
+
 p.scheme = scheme;
 
-sz = get(0, 'ScreenSize');
-screenwidth = sz(3);
-screenheight = sz(4);
-
-if screenwidth < 1000 
-    W = round(screenwdith); H = round(screenheight);
-else   
-    W = round(screenwidth * .5); H = round(screenheight * .6);
+if scheme.ScreenWidth < 1000
+    W = round(scheme.ScreenWidth); H = round(scheme.ScreenHeight);
+else
+    W = round(scheme.ScreenWidth * .5); H = round(scheme.ScreenHeight * .6);
 end
 
-figpos = [(screenwidth - W)/2, (screenheight - H)/2, W, H];
+figpos = [(scheme.ScreenWidth - W)/2, (scheme.ScreenHeight - H)/2, W, H];
 
 %create the figure
 %************************************************************************
@@ -151,10 +155,10 @@ handles.axis_quickaverage = uiaxes(...
     'FontSize', scheme.Axis.FontSize.Value,...
     'XGrid','on','YGrid','on');
 
- handles.axis_quickaverage.Title.Color = scheme.Axis.AxisColor.Value;
- handles.axis_quickaverage.Layout.Column = 2;
- handles.axis_quickaverage.Layout.Row = [3 4]; 
- handles.axis_main.Toolbar.Visible = 'off';
+handles.axis_quickaverage.Title.Color = scheme.Axis.AxisColor.Value;
+handles.axis_quickaverage.Layout.Column = 2;
+handles.axis_quickaverage.Layout.Row = [3 4];
+handles.axis_main.Toolbar.Visible = 'off';
 
 %panel for holding the trial slider and the bad trial indicator
 %**************************************************************************
@@ -178,16 +182,16 @@ handles.slider_datascroll = uislider(...
     'FontName', scheme.Label.Font.Value,...
     'FontSize', 9);
 
- handles.image_trialstatus = uiaxes(...
-     'Parent', handles.slider_container,...
-     'InnerPosition', [10,20,sw-20,10], ...
-     'UserData', [10,20,sw-20,10], ...
-     'Units', 'pixels',...
-     'XLimitMethod','tight',...
-     'YLimitMethod','tight',...
-     'Color', scheme.Axis.BackgroundColor.Value,...
-     'XColor', scheme.Axis.AxisColor.Value,...
-     'YColor', scheme.Axis.AxisColor.Value);
+handles.image_trialstatus = uiaxes(...
+    'Parent', handles.slider_container,...
+    'InnerPosition', [10,20,sw-20,10], ...
+    'UserData', [10,20,sw-20,10], ...
+    'Units', 'pixels',...
+    'XLimitMethod','tight',...
+    'YLimitMethod','tight',...
+    'Color', scheme.Axis.BackgroundColor.Value,...
+    'XColor', scheme.Axis.AxisColor.Value,...
+    'YColor', scheme.Axis.AxisColor.Value);
 handles.image_trialstatus.Title.Color = scheme.Axis.AxisColor.Value;
 handles.image_trialstatus.Toolbar.Visible = 'off';
 
@@ -211,20 +215,20 @@ handles.dropdown_subjselect = uidropdown(...
     'FontSize', scheme.Dropdown.FontSize.Value);
 
 handles.label_hoverChannel = uilabel(...,
-     'Parent', handles.panel_infobar,...
-     'Position', [120, 5, 200, 25], ...
-     'FontColor', scheme.Label.FontColor.Value,...
-     'FontSize', scheme.Label.FontSize.Value,...
-     'FontName', scheme.Label.Font.Value,...
-     'HorizontalAlignment', 'center',...
-     'FontWeight','bold');
+    'Parent', handles.panel_infobar,...
+    'Position', [120, 5, 200, 25], ...
+    'FontColor', scheme.Label.FontColor.Value,...
+    'FontSize', scheme.Label.FontSize.Value,...
+    'FontName', scheme.Label.Font.Value,...
+    'HorizontalAlignment', 'center',...
+    'FontWeight','bold');
 
 handles.button_trialstatus = uibutton(...,
-   'Parent', handles.panel_infobar,...
-   'Position', [330,5,100,25], ...
-   'Text', 'Good Trial', ...
-   'BackgroundColor', p.goodtrialcolor,...
-   'FontColor', 'k');
+    'Parent', handles.panel_infobar,...
+    'Position', [330,5,100,25], ...
+    'Text', 'Good Trial', ...
+    'BackgroundColor', p.goodtrialcolor,...
+    'FontColor', 'k');
 
 handles.edit_badtrialcount = uilabel(...
     'Parent', handles.panel_infobar,...
@@ -266,10 +270,13 @@ handles.menu_project = uimenu(handles.menu_ICA, 'Label', 'IC Projection', 'Separ
 handles.menu_withsel = uimenu(handles.menu_project, 'Label', 'keep selected', 'UserData', 0, 'Checked', true, 'Separator', 'on');
 handles.menu_withoutsel = uimenu(handles.menu_project, 'Label', 'exclude selected', 'UserData', 1);
 handles.menu_plotboth = uimenu(handles.menu_project, 'Label', 'Overlay on original', 'Checked', 'on');
-handles.menu_icatobad = uimenu(handles.menu_ICA, 'Label', 'Mark components as bad');
-handles.menu_icaselbad = uimenu(handles.menu_icatobad,'Label', 'all selected', 'Separator', 'on', 'Tag', 'selected');
-handles.menu_icaunselbad = uimenu(handles.menu_icatobad,'Label', 'all unselected', 'Tag', 'unselected');
-handles.menu_icaclear = uimenu(handles.menu_icatobad,'Label', 'remove marks', 'Tag', 'remove');
+handles.menu_icastatus = uimenu(handles.menu_ICA, 'Label', 'Comnponent status');
+handles.menu_icamark = uimenu(handles.menu_icastatus,'Label', 'Mark all selected', 'Separator', 'on', 'Tag', 'selected');
+handles.menu_icatobad = uimenu(handles.menu_icamark,'Label', 'to bad', 'Separator', 'on', 'Tag', 'tobad');
+handles.menu_icatogood = uimenu(handles.menu_icamark,'Label', 'to good', 'Separator', 'on', 'Tag', 'togood');
+
+handles.menu_icaunselect = uimenu(handles.menu_icastatus,'Label', 'Set all to good', 'Tag', 'remove');
+%handles.menu_icaclear = uimenu(handles.menu_icatobad,'Label', 'remove marks', 'Tag', 'remove');
 
 %Reject options
 handles.menu_clean = uimenu(handles.figure, 'Label', 'Trial markers');
@@ -302,9 +309,10 @@ handles.menu_noise.Callback = {@callback_selectICs, handles};
 handles.menu_other.Callback = {@callback_selectICs, handles};
 handles.menu_allgood.Callback = {@callback_selectICs, handles};
 handles.menu_allbad.Callback = {@callback_selectICs, handles};
-handles.menu_icaselbad.Callback = {@callback_setcompbadstatus, handles};
-handles.menu_icaunselbad.Callback = {@callback_setcompbadstatus, handles};
-handles.menu_icaclear.Callback = {@callback_setcompbadstatus, handles};
+handles.menu_icatobad.Callback = {@callback_setcompbadstatus, handles};
+handles.menu_icatogood.Callback = {@callback_setcompbadstatus, handles};
+handles.menu_icaunselect.Callback = {@callback_setcompbadstatus, handles};
+%handles.menu_icaclear.Callback = {@callback_setcompbadstatus, handles};
 handles.menu_plotboth.Callback = {@callback_togglecheck, handles};
 
 handles.menu_withsel.Callback = {@callback_toggleprojopt, handles};
@@ -349,79 +357,78 @@ drawnow;
 callback_loadnewfile([], [], study, handles);
 
 %*************************************************************************
-function losingFocus(hObject, hEvent, h)
-
-fprintf('losing focus');
-
-
 function initialize_icmenus(h)
-    
-    p = h.figure.UserData;
-    
-    %if there is no ica information
-    if isempty(p.EEG.icasphere)
-        checked_state = false;
-        enabled_state = 'off';
-    else
-        checked_state = true;
-        enabled_state = 'on';
-        p.EEG.icaact = [];
-        if isempty(p.EEG.icaact)
-            p.EEG.icaact = (p.EEG.icaweights*p.EEG.icasphere)*p.EEG.data(p.EEG.icachansind,:); % automatically does single or double
-            p.EEG.icaact    = reshape( p.EEG.icaact, size(p.EEG.icaact,1), p.EEG.pnts, p.EEG.trials);
-        end
+
+p = h.figure.UserData;
+
+%if there is no ica information
+if isempty(p.EEG.icasphere)
+    checked_state = false;
+    enabled_state = 'off';
+else
+    checked_state = true;
+    enabled_state = 'on';
+    p.EEG.icaact = [];
+    if isempty(p.EEG.icaact)
+        p.EEG.icaact = (p.EEG.icaweights*p.EEG.icasphere)*p.EEG.data(p.EEG.icachansind,:); % automatically does single or double
+        p.EEG.icaact    = reshape( p.EEG.icaact, size(p.EEG.icaact,1), p.EEG.pnts, p.EEG.trials);
     end
-    
-    h.menu_icplot.Checked = checked_state;
-    h.menu_icplot.Enable = enabled_state;
-    h.menu_overlay.Checked = checked_state;
-    h.menu_overlay.Enable = enabled_state;
-    h.menu_ICA.Enable = enabled_state;
-    h.menu_clearcomps.Enable = enabled_state;
-    h.tool_projica.State = checked_state;
-    h.tool_projica.Enable = enabled_state;
-    h.tool_ica.Enable = enabled_state;
-    h.menu_selectIC.Enable = isfield(p.EEG.etc, 'ic_classification');
-    
-     if h.menu_allgood.Checked
-         callback_selectICs(h.menu_allgood,[],h);
-     elseif h.menu_allbad.Checked
-         callback_selectICs(h.menu_allbad,[],h);
-     else
-         if h.menu_brain.Checked
-            callback_selectICs(h.menu_brain,[],h);
-         end
-         if h.menu_muscle.Checked
-            callback_selectICs(h.menu_muscle,[],h);
-        end
-        if h.menu_eye.Checked
-            callback_selectICs(h.menu_eye,[],h);
-        end
-        if h.menu_heart.Checked
-            callback_selectICs(h.menu_heart,[],h);
-        end
-        if h.menu_line.Checked
-            callback_selectICs(h.menu_line,[],h);
-        end
-        if h.menu_noise.Checked
-            callback_selectICs(h.menu_noise,[],h);
-        end
-        if h.menu_other.Checked
-            callback_selectICs(h.menu_other,[],h);
-        end
-     end
-   
+end
+
+h.menu_icplot.Checked = checked_state;
+h.menu_icplot.Enable = enabled_state;
+h.menu_overlay.Checked = checked_state;
+h.menu_overlay.Enable = enabled_state;
+h.menu_ICA.Enable = enabled_state;
+h.menu_clearcomps.Enable = enabled_state;
+h.tool_projica.State = checked_state;
+h.tool_projica.Enable = enabled_state;
+h.tool_ica.Enable = enabled_state;
+h.menu_selectIC.Enable = isfield(p.EEG.etc, 'ic_classification');
+
+reselect_ICs(h)
+
+function reselect_ICs(h)
+
+if h.menu_allgood.Checked
+    callback_selectICs(h.menu_allgood,[],h);
+elseif h.menu_allbad.Checked
+    callback_selectICs(h.menu_allbad,[],h);
+else
+    if h.menu_brain.Checked
+        callback_selectICs(h.menu_brain,[],h);
+    end
+    if h.menu_muscle.Checked
+        callback_selectICs(h.menu_muscle,[],h);
+    end
+    if h.menu_eye.Checked
+        callback_selectICs(h.menu_eye,[],h);
+    end
+    if h.menu_heart.Checked
+        callback_selectICs(h.menu_heart,[],h);
+    end
+    if h.menu_line.Checked
+        callback_selectICs(h.menu_line,[],h);
+    end
+    if h.menu_noise.Checked
+        callback_selectICs(h.menu_noise,[],h);
+    end
+    if h.menu_other.Checked
+        callback_selectICs(h.menu_other,[],h);
+    end
+end
+
 
 %*************************************************************************
 function callback_toggletool(hObject,event,h)
-    
-    %figure out what state the toggle is in
-    indx = hObject.State + 1;
-    sd = hObject.UserData;
-    hObject.Icon = sd(indx).icon;
-    hObject.Tooltip = sd(indx).tooltip;
-  
-    callback_drawdata(hObject,event, h);
+
+%figure out what state the toggle is in
+indx = hObject.State + 1;
+sd = hObject.UserData;
+hObject.Icon = sd(indx).icon;
+hObject.Tooltip = sd(indx).tooltip;
+
+callback_drawdata(hObject,event, h);
 %************************************************************************
 function callback_handlekeyevents(hObject, event, h)
 
@@ -433,25 +440,25 @@ switch key_event
         v = h.slider_datascroll.Value;
         if v>1; h.slider_datascroll.Value = v - 1; end
         callback_drawdata([],[],h);
-        
+
     case 'rightarrow'
         v = h.slider_datascroll.Value;
         if v<h.slider_datascroll.Limits(2); h.slider_datascroll.Value = v + 1; end
         callback_drawdata([],[],h);
-        
+
     case 'uparrow'
         scale = h.spinner_changescale.Value;
         scale = scale * 1.25;
         h.spinner_changescale.Value = scale;
         callback_drawdata([],[],h);
-        
+
     case 'downarrow'
         scale = h.spinner_changescale.Value;
         scale = scale * .75;
         h.figure.UserData = p;
         h.spinner_changescale.Value = scale;
         callback_drawdata([],[],h);
-   
+
 end
 %**************************************************************************
 function callback_mouseoverplot(hObject, event, h)
@@ -459,17 +466,17 @@ function callback_mouseoverplot(hObject, event, h)
 obj = hittest(h.figure);
 otype = class(obj);
 
-if strcmp(otype, 'matlab.graphics.chart.primitive.Line') 
-     if ~isempty(obj.UserData)
-         t = h.axis_main.CurrentPoint;
-         t = t(2,1);
-         h.label_hoverChannel.Text = sprintf('%s : %3.2f ms.\n', obj.UserData,t);
-    %     h.axis_main.Title.String = sprintf('%s : %3.2f ms.\n', obj.UserData,t);
-     end
+if strcmp(otype, 'matlab.graphics.chart.primitive.Line')
+    if ~isempty(obj.UserData)
+        t = h.axis_main.CurrentPoint;
+        t = t(2,1);
+        h.label_hoverChannel.Text = sprintf('%s : %3.2f ms.\n', obj.UserData,t);
+        %     h.axis_main.Title.String = sprintf('%s : %3.2f ms.\n', obj.UserData,t);
+    end
 else
     h.label_hoverChannel.Text = '';
- %   h.axis_main.Title.String = '';
- end
+    %   h.axis_main.Title.String = '';
+end
 
 %***************************************************************************
 function callback_handlemouseevents(hObject, event, h)
@@ -485,8 +492,8 @@ switch p.scrollevent
         cscale = cscale + ch_amnt;
         h.spinner_changescale.Value = cscale;
         callback_drawdata([],[],h);
-        
-    case 'trial'       
+
+    case 'trial'
         ctrial = h.slider_datascroll.Value;
         ctrial = ctrial + scroll_dir;
         if ctrial < 1; ctrial=1; end
@@ -499,7 +506,7 @@ end
 function callback_deselectchans(hObject, eventdata, h, clear_comps)
 
 
-    p = h.figure.UserData;
+p = h.figure.UserData;
 
 if clear_comps
     p.selcomps = zeros(1, size(p.EEG.icaweights, 1));
@@ -522,41 +529,60 @@ callback_drawdata([],[],h);
 %**************************************************************************
 function callback_selectchannel(hobject, eventdata,h, ch_num)
 
-    plot_ica = h.tool_ica.State;
-    p = h.figure.UserData;
-    if plot_ica
-        p.selcomps(ch_num) = ~p.selcomps(ch_num);
-    else
-        p.selchans(ch_num) = ~p.selchans(ch_num);
-    end
-    h.figure.UserData = p;
-    
-    callback_drawdata([],[],h);
+plot_ica = h.tool_ica.State;
+p = h.figure.UserData;
+if plot_ica
+    p.selcomps(ch_num) = ~p.selcomps(ch_num);
+else
+    p.selchans(ch_num) = ~p.selchans(ch_num);
+end
+h.figure.UserData = p;
+
+callback_drawdata([],[],h);
 %************************************************************************
 function callback_setcompbadstatus(hObject, eventdata, h)
-    
-    p = h.figure.UserData;
-    
-    comps = p.selcomps;
-    
-    switch hObject.Tag
-            
-        case 'unselected'
-            comps = ~comps;
-        case 'remove'
-            comps(1:end) = 0;
+
+p = h.figure.UserData;
+
+comps = p.selcomps;
+remove = false;
+switch hObject.Tag
+    case 'togood'
+        comps = ~comps;
+    case 'remove'
+        comps(1:end) = 0;
+        remove = true;
+end
+
+p.EEG = getNewestData(h, p.EEG);
+%check to see if there are any bad components already
+if sum(p.EEG.reject.gcompreject) > 0 && ~remove
+    %as the user what they want to do
+    msg = 'There are existing bad components.';
+    msg = [msg, ' Would you like to keep the existing bad component and add the currently selected ones or overwrite the existing components?'];
+    response = wwu_msgdlg(msg, 'Existing bad components', {'Add', 'Overwrite', 'Cancel'});
+    switch response
+        case 'Cancel'
+            return
+        case 'Add'
+            p.EEG.reject.gcompreject = comps| p.EEG.reject.gcompreject;
+        case 'Overwrite'
+            p.EEG.reject.gcompreject = comps;
     end
-    
-    p.EEG = getNewestData(h, p.EEG);
+else
     p.EEG.reject.gcompreject = comps;
-    p.EEG.saved = 'no';
-    h.figure.UserData = p;
-    callback_drawdata([],[],h);
-    
-    
-%*************************************************************************    
+end
+
+p.EEG.saved = 'no';
+h.figure.UserData = p;
+callback_drawdata([],[],h);
+reselect_ICs(h)
+
+
+
+%*************************************************************************
 function callback_setscale(hObject, eventdata, h, redraw)
-    
+
 stacked = h.tool_stack.State;
 plotica = h.tool_ica.State;
 
@@ -608,14 +634,14 @@ if study_checkForUnsavedData(h.figure)
     end
 
     EEG = wwu_LoadEEGFile(filename);
-end   
+end
 %***************************************************************************
 function callback_loadnewfile(hObject, eventdata, study, h)
 
-%make sure that no other window may have modified and unsaved data 
+%make sure that no other window may have modified and unsaved data
 study_checkForUnsavedData(h.figure);
 
-%load the general data    
+%load the general data
 plot = h.figure.UserData;
 
 %get the current participant number and filename
@@ -645,7 +671,7 @@ if isfield(plot, 'EEG')
     fprintf('checking old eeg file for changes...\n')
     if contains(plot.EEG.saved, 'no')
         fprintf('changes detected, saving current file\n');
-        if ~isempty(eventdata)   
+        if ~isempty(eventdata)
             old_snum = eventdata.PreviousValue;
             pb.Message = 'Saving current subject file.';
             oldfilename = fnames{old_snum};
@@ -676,7 +702,7 @@ end
 [~, f, ] = fileparts(filename);
 if contains(study.subject(snum).status, 'good')
     h.label_subjectinfo.BackgroundColor = plot.params.goodsubjectcolor;
-else    
+else
     h.label_subjectinfo.BackgroundColor = plot.params.badsubjectcolor;
 end
 h.figure.Name =  sprintf('file: %s, sbj: %s, status: %s', upper(f), sid, upper(study.subject(snum).status));
@@ -685,8 +711,8 @@ showBadTrialCount(h,EEG)
 
 %initialize the selected channels
 %if ~isfield(plot, 'selchans') || isempty(plot.selchans)
-    plot.selchans = zeros(1, EEG.nbchan);
-    plot.selcomps = zeros(1, size(EEG.icaweights,1));
+plot.selchans = zeros(1, EEG.nbchan);
+plot.selcomps = zeros(1, size(EEG.icaweights,1));
 %end
 
 plot.EEG = EEG;
@@ -709,8 +735,8 @@ callback_drawdata([],[],h);
 
 %*************************************************************************
 function showBadTrialCount(h, EEG)
-    btrials = study_GetBadTrials(EEG);
-    h.edit_badtrialcount.Text = sprintf('%i (%i%%) bad trials', sum(btrials), round((sum(btrials)/EEG.trials)*100));
+btrials = study_GetBadTrials(EEG);
+h.edit_badtrialcount.Text = sprintf('%i (%i%%) bad trials', sum(btrials), round((sum(btrials)/EEG.trials)*100));
 %*************************************************************************
 %callback function for drawing the main data scroll plot
 function callback_drawdata(hObject, eventdata, h)
@@ -729,12 +755,12 @@ overlay = true;
 
 %get the plotting position from the slider
 if ~isempty(eventdata)
-   if contains(eventdata.EventName, 'ValueChanging')
+    if contains(eventdata.EventName, 'ValueChanging')
         trialnum = round(eventdata.Value);
-   else
+    else
         trialnum = round(h.slider_datascroll.Value);
         h.slider_datascroll.Value = trialnum;
-   end   
+    end
 else
     trialnum = round(h.slider_datascroll.Value);
     h.slider_datascroll.Value = trialnum;
@@ -755,7 +781,7 @@ else
     h.button_trialstatus.FontColor = 'k';
     h.button_trialstatus.Text = 'Good trial';
     h.axis_main.Color = p.params.goodbackgroundcolor;
-end    
+end
 
 %grab the data to plot
 %the user can decide between plotting the ICA activations of the normal
@@ -780,10 +806,10 @@ else
         end
     else
         overlay = false;
-    end    
+    end
 
 end
-    
+
 t = p.EEG.times;
 
 %scale it so that that channels are distributed vertically rather than
@@ -792,21 +818,23 @@ if ~stacked
     scalefac = (0:1:size(d,1)-1) * scale;
     scalefacarray = repmat(scalefac', 1, p.EEG.pnts);
     d = d + scalefacarray;
-    if overlay 
+    if overlay
         d2 = d2 + scalefacarray;
     end
 end
 
 %plot the data
 if overlay
-    
-    ph = plot(h.axis_main, t, d2, 'Color', 'g');
+
+    ph = plot(h.axis_main, t, d2, 'Color', p.params.scheme.ICATraces.GoodColor.Value,...
+        'LineWidth',p.params.scheme.ICATraces.Width.Value);
     hold(h.axis_main, 'on');
     if plotboth
-        ph = plot(h.axis_main, t,d, 'Color', 'c');
+        ph = plot(h.axis_main, t,d, 'Color', p.params.scheme.EEGTraces.GoodColor.Value,...
+            'LineWidth',p.params.scheme.EEGTraces.Width.Value);
     end
     hold(h.axis_main, 'off');
-else  
+else
     ph = plot(h.axis_main, t,d);
 end
 %assign a callback to each line object so it is easy to allow users to
@@ -814,17 +842,18 @@ end
 %increase its line thickness
 for ii = 1:length(ph)
     ph(ii).ButtonDownFcn = {@callback_selectchannel, h, ii};
-    ph(ii).LineWidth = (selected(ii) * 2.5) + 1;
-    if plotica 
+    ph(ii).LineWidth = (selected(ii) * 2) + p.params.scheme.EEGTraces.Width.Value;
+    if plotica
         ph(ii).UserData = sprintf('comp %i', ii);
     else
         ph(ii).UserData = p.EEG.chanlocs(ii).labels;
+        ph(ii).Color = p.params.scheme.EEGTraces.GoodColor.Value;
     end
     if plotica
         if p.EEG.reject.gcompreject(ii)
-            ph(ii).Color = p.params.badicactcolor;
+            ph(ii).Color = p.params.scheme.ICATraces.BadColor.Value;
         else
-            ph(ii).Color = p.params.goodicactcolor;
+            ph(ii).Color = p.params.scheme.ICATraces.GoodColor.Value;
 
         end
     end
@@ -847,7 +876,7 @@ else
     h.axis_main.YTickLabelMode = 'auto';
 end
 
-xlims = [t(1), t(end)]; 
+xlims = [t(1), t(end)];
 h.axis_main.XLim = xlims;
 
 text_yloc = ylims(1);
@@ -856,30 +885,30 @@ if stacked && ~invert
     text_yloc = ylims(2);
 else
     h.axis_main.YDir = 'reverse';
-end    
+end
 
 h.axis_main.XGrid = 'on';
 h.axis_main.YGrid = 'on';
 
 %get event markers that lie within the plotting range
- if ~isempty(p.EEG.epoch(trialnum).eventlatency)
-     n_events = length(p.EEG.epoch(trialnum).eventlatency);
-     indx = [p.EEG.epoch(trialnum).eventlatency{:}]==0;
-     if sum(indx) > 1 % we have two timelocking events - one is probably a bin marker
-         n_events = n_events - 1;  %the bin is the last event so this is  a simple way to ignore it
-     end
-     for ii =1:n_events
-         evt_time = p.EEG.epoch(trialnum).eventlatency{ii};
-         evt_label = p.EEG.epoch(trialnum).eventtype{ii};
-         if isnumeric(evt_label)
-             evt_label = num2str(evt_label);
-         end
-         line(h.axis_main, [evt_time, evt_time], ylims, 'Color','w', 'linewidth', 2);
-         text(h.axis_main, evt_time+10, text_yloc, evt_label, 'VerticalAlignment', 'Top',...
-             'Interpreter','none', 'Color', 'w');
-     end
- end
- 
+if ~isempty(p.EEG.epoch(trialnum).eventlatency)
+    n_events = length(p.EEG.epoch(trialnum).eventlatency);
+    indx = [p.EEG.epoch(trialnum).eventlatency{:}]==0;
+    if sum(indx) > 1 % we have two timelocking events - one is probably a bin marker
+        n_events = n_events - 1;  %the bin is the last event so this is  a simple way to ignore it
+    end
+    for ii =1:n_events
+        evt_time = p.EEG.epoch(trialnum).eventlatency{ii};
+        evt_label = p.EEG.epoch(trialnum).eventtype{ii};
+        if isnumeric(evt_label)
+            evt_label = num2str(evt_label);
+        end
+        line(h.axis_main, [evt_time, evt_time], ylims, 'Color','w', 'linewidth', 2);
+        text(h.axis_main, evt_time+10, text_yloc, evt_label, 'VerticalAlignment', 'Top',...
+            'Interpreter','none', 'Color', 'w');
+    end
+end
+
 
 %plot the ica components maps for each activation when in ica mode
 if plotica
@@ -888,7 +917,7 @@ else
     plot_erpimage(h, p)
 end
 plot_quickave(h,p);
-    
+
 if ~isempty(msg)
     text(h.axis_main, p.EEG.times(end), text_yloc, msg,'FontSize', 20,...
         'Color', [1,.8,.8],'VerticalAlignment', 'Top',...
@@ -896,7 +925,7 @@ if ~isempty(msg)
 end
 
 %draw an image of where the bad trials are located
-%the image has a tendency to rescale incorrectly, so we will get the 
+%the image has a tendency to rescale incorrectly, so we will get the
 %actual desired dimensions established up initialization
 desired_image_position = h.image_trialstatus.UserData;
 %then we will update the X position values from the scroll bar because it
@@ -923,7 +952,7 @@ p.EEG = getNewestData(h, p.EEG);
 
 trialnum = round(h.slider_datascroll.Value);
 if isempty(p.EEG.reject.rejmanual)
-    p.EEG.reject.rejmanual(trialnum) = 1;    
+    p.EEG.reject.rejmanual(trialnum) = 1;
 else
     p.EEG.reject.rejmanual(trialnum) = ~p.EEG.reject.rejmanual(trialnum);
 end
@@ -934,7 +963,7 @@ if p.EEG.reject.rejmanual(trialnum) == 0
 else
     h.button_trialstatus.Text = 'Bad trial';
     h.button_trialstatus.BackgroundColor = p.params.badtrialcolor;
-end 
+end
 
 p.EEG.saved = 'no';
 showBadTrialCount(h, p.EEG)
@@ -942,87 +971,87 @@ h.figure.UserData = p;
 callback_drawdata([],[],h);
 %**************************************************************************
 function callback_cleartrialstatus(hObject, eventdata, h)
-    
-    p = h.figure.UserData;
-  
-    p.EEG = getNewestData(h, p.EEG);
-    p.EEG.saved = 'no';
-    p.EEG.reject.rejmanual = zeros(1,p.EEG.trials);
-    h.figure.UserData = p;
-    callback_drawdata([],[],h);
-%*************************************************************************    
+
+p = h.figure.UserData;
+
+p.EEG = getNewestData(h, p.EEG);
+p.EEG.saved = 'no';
+p.EEG.reject.rejmanual = zeros(1,p.EEG.trials);
+h.figure.UserData = p;
+callback_drawdata([],[],h);
+%*************************************************************************
 function status_image = create_badtrialimage(p)
-    
+
 %initialize the image
 status_image = double(zeros(1,p.EEG.trials,3));
 
 %initialize the background to the plot color
- for ii = 1:3
-     status_image(1,1:p.EEG.trials,ii) = p.params.backcolor(ii);
- end
- 
- btrials = study_GetBadTrials(p.EEG);
- nbad = sum(btrials);
- if nbad > 0
+for ii = 1:3
+    status_image(1,1:p.EEG.trials,ii) = p.params.backcolor(ii);
+end
+
+btrials = study_GetBadTrials(p.EEG);
+nbad = sum(btrials);
+if nbad > 0
     status_image(1,btrials>0,:) = repmat([1,0,0], sum(btrials),1);
- end
-  status_image = repmat(status_image, [10,1,1]);
-%********************************************************************   
+end
+status_image = repmat(status_image, [10,1,1]);
+%********************************************************************
 function callback_removeallmarkers(~,~,h);
-    p = h.figure.UserData;
-    
-    %get the trial number
-    %should already be an integer, but we will round it to make sure
-    trialnum = round(h.slider_datascroll.Value);
+p = h.figure.UserData;
 
-    if ~isempty(p.EEG.reject.rejmanual)
-        p.EEG.reject.rejmanual(trialnum)=0;
-    end
-    if ~isempty(p.EEG.reject.rejthresh)
-        p.EEG.reject.rejthresh(trialnum)=0;
-    end
-    if ~isempty(p.EEG.reject.rejkurt)
-        p.EEG.reject.rejkurt(trialnum)=0;
-    end
-    if ~isempty(p.EEG.reject.rejconst)
-        p.EEG.reject.rejconst(trialnum)=0;
-    end
-    if ~isempty(p.EEG.reject.rejjp)
-        p.EEG.reject.rejjp(trialnum)=0; 
-    end
+%get the trial number
+%should already be an integer, but we will round it to make sure
+trialnum = round(h.slider_datascroll.Value);
 
-    h.figure.UserData = p;
-    callback_drawdata([],[],h);
+if ~isempty(p.EEG.reject.rejmanual)
+    p.EEG.reject.rejmanual(trialnum)=0;
+end
+if ~isempty(p.EEG.reject.rejthresh)
+    p.EEG.reject.rejthresh(trialnum)=0;
+end
+if ~isempty(p.EEG.reject.rejkurt)
+    p.EEG.reject.rejkurt(trialnum)=0;
+end
+if ~isempty(p.EEG.reject.rejconst)
+    p.EEG.reject.rejconst(trialnum)=0;
+end
+if ~isempty(p.EEG.reject.rejjp)
+    p.EEG.reject.rejjp(trialnum)=0;
+end
 
-%********************************************************************   
+h.figure.UserData = p;
+callback_drawdata([],[],h);
+
+%********************************************************************
 function mystr = getbadtrialstring(EEG, trialnum)
-    
-    mystr = [];
-    
-    if ~isempty(EEG.reject.rejmanual)
-        if EEG.reject.rejmanual(trialnum)==1; mystr = "Manual: "; end
-    end
-    
-    if ~isempty(EEG.reject.rejthresh)
-        if EEG.reject.rejthresh(trialnum)==1; mystr = [mystr, "Threshold: "]; end
-    end
-    
-    if ~isempty(EEG.reject.rejkurt)
-        if EEG.reject.rejkurt(trialnum)==1; mystr = [mystr, "Kurtosis: "];end
-    end
-    
-    if ~isempty(EEG.reject.rejconst)
-        if EEG.reject.rejconst(trialnum)==1; mystr = [mystr, "Trend: "];end
-    end
-    
-    if ~isempty(EEG.reject.rejjp)
-        if EEG.reject.rejjp(trialnum)==1; mystr = [mystr, "Joint Prob: "];end
-    end
-%**************************************************************************    
+
+mystr = [];
+
+if ~isempty(EEG.reject.rejmanual)
+    if EEG.reject.rejmanual(trialnum)==1; mystr = "Manual: "; end
+end
+
+if ~isempty(EEG.reject.rejthresh)
+    if EEG.reject.rejthresh(trialnum)==1; mystr = [mystr, "Threshold: "]; end
+end
+
+if ~isempty(EEG.reject.rejkurt)
+    if EEG.reject.rejkurt(trialnum)==1; mystr = [mystr, "Kurtosis: "];end
+end
+
+if ~isempty(EEG.reject.rejconst)
+    if EEG.reject.rejconst(trialnum)==1; mystr = [mystr, "Trend: "];end
+end
+
+if ~isempty(EEG.reject.rejjp)
+    if EEG.reject.rejjp(trialnum)==1; mystr = [mystr, "Joint Prob: "];end
+end
+%**************************************************************************
 %plots ica components associated with selected channels when the plot is in
 %ICA plotting mode
 function plot_icacomps(h,p)
-    
+
 plotcomp = true;
 ax = h.panel_summaryimage;
 lastplot = ax.UserData;
@@ -1031,7 +1060,7 @@ if ~isfield(lastplot, 'mapind')
 end
 
 mapind = find(p.selcomps);
-if length(mapind) > 24 
+if length(mapind) > 24
     origlength = length(mapind);
     mapind = mapind(1:24);
     truncated = true;
@@ -1049,24 +1078,24 @@ if isempty(mapind)
         if strcmp(class(children(ii)), 'matlab.graphics.layout.TiledChartLayout')
             delete(children(ii))
         end
-     end
-     pp = h.panel_summaryimage.Position;
-     h.label_summaryimagemsg.Text = 'No selected components to display';
-     h.label_summaryimagemsg.Position = [pp(3)/2-150, pp(4)/2, 300, 25];
+    end
+    pp = h.panel_summaryimage.Position;
+    h.label_summaryimagemsg.Text = 'No selected components to display';
+    h.label_summaryimagemsg.Position = [pp(3)/2-150, pp(4)/2, 300, 25];
 else
     h.label_summaryimagemsg.Text = '';
     ax.Title = 'Selected ICA components';
     wratio = ax.InnerPosition(3)/ax.InnerPosition(4);
     cols = floor(sqrt(length(mapind)) * wratio); if cols<1; cols=1;end
     rows = ceil(length(mapind)/cols); if rows < 1; rows=1;end
-    
+
     if isfield(p.EEG.etc, 'ic_classification')
         class_label = true;
         [v, i] = max(p.EEG.etc.ic_classification.ICLabel.classifications, [],2);
     else
         class_label = false;
     end
-    
+
     t = tiledlayout(ax, rows, cols);
     for ii = 1:length(mapind)
         ah = nexttile(t);
@@ -1109,7 +1138,7 @@ if ~isfield(lastplot, 'projica')
     lastplot.projica = [];
 end
 
-%get a list of channels to plot from 
+%get a list of channels to plot from
 erpind = find(p.selchans);
 %this reflects a situation where there is not change and so no need to
 %replot anything
@@ -1126,7 +1155,7 @@ if isempty(erpind)
     pp = h.panel_summaryimage.Position;
     h.label_summaryimagemsg.Text = 'No selected channels to display';
     h.label_summaryimagemsg.Position = [pp(3)/2-150, pp(4)/2, 300, 25];
-  
+
 else
     h.label_summaryimagemsg.Text = '';
     ax.Title = 'Selected EEG Channels';
@@ -1134,7 +1163,7 @@ else
     cols = floor(sqrt(length(erpind)) * wratio);
     if cols == 0; cols = 1; end
     rows = ceil(length(erpind)/cols);
-    
+
     pdata = p.EEG.data;
     ntrials= size(pdata,3);
     %for computing the fft
@@ -1159,19 +1188,19 @@ else
     t = tiledlayout(ax, rows, cols);
     for ii = 1:length(erpind)
         ah = nexttile(t);
-    
-        
+
+
         d = squeeze(pdata(erpind(ii),:,:));
         %set the bad trials to 0;
         d(:,badtrials) = 0;
-       
+
         %compute the fft here
         if plotfft
             %remove the channel mean before computing fft
             bline = mean(d,1);
             bline = repmat(bline, p.EEG.pnts, 1);
             d = d-bline;
-           
+
             %get the two sided power spectrum
             f2 = abs(fft(d,np)/np).^2;
             %get the single sided spectrum
@@ -1189,18 +1218,18 @@ else
             d = imgaussfilt(d,2);
             imagesc(ah,p.EEG.times, 1:ntrials, d');
             line(ah,[0,0], [1, max(ntrials)], 'Color', 'k', 'LineWidth', 3);
-             ah.XLabel.String = 'Time (ms)';
-             cbLabel = 'uV';
+            ah.XLabel.String = 'Time (ms)';
+            cbLabel = 'uV';
         end
         cb = colorbar(ah);
         cb.Label.String  = cbLabel;
         cb.Label.Position(1) = 2;
         cb.Color = h.axis_main.XColor;
-    
-       
+
+
         mylabel = sprintf('%i:%s', erpind(ii), p.EEG.chanlocs(erpind(ii)).labels);
         ah.Title.String =mylabel;
-       
+
         ah.YLabel.String = 'Trials';
         ah.XColor = p.params.scheme.Axis.AxisColor.Value;
         ah.YColor = p.params.scheme.Axis.AxisColor.Value;
@@ -1215,23 +1244,23 @@ lastplot.plotica = false;
 ax.UserData = lastplot;
 %***********************************************************************
 function plot_quickave(h, p)
-    
- %
- %plotica = h.check_icaact.Value;
+
+%
+%plotica = h.check_icaact.Value;
 new.projica = h.tool_projica.State;
 new.invert = ~h.tool_negup.State;
 
 %get the bad trials so that they can be exlcuded from the average
 new.btrials = ~study_GetBadTrials(p.EEG);
 
-if p.projectopt 
+if p.projectopt
     new.comps = find(~p.selcomps);
 else
     new.comps = find(p.selcomps);
 end
 
 if new.projica  && sum(p.selcomps) > 0
-   
+
     d = icaproj(p.EEG.data(:,:), p.EEG.icaweights * p.EEG.icasphere, new.comps);
     d = reshape(d, size(p.EEG.data));
     ave = mean(d(:,:,new.btrials),3);
@@ -1244,7 +1273,7 @@ end
 %remove the offset from the data.
 if p.EEG.times(1) >= 0
     bline = mean(ave, 2);
-else     
+else
     bline = mean(ave(:, p.EEG.times < 0), 2);
 end
 
@@ -1252,10 +1281,10 @@ bline = repmat(bline, [1,p.EEG.pnts]);
 ave = ave - bline;
 
 plot(h.axis_quickaverage, p.EEG.times, ave');
-if new.invert 
-    h.axis_quickaverage.YDir = 'reverse'; 
+if new.invert
+    h.axis_quickaverage.YDir = 'reverse';
 else
-    h.axis_quickaverage.YDir = 'normal'; 
+    h.axis_quickaverage.YDir = 'normal';
 end
 %h.axis_quickaverage.XGrid = 'on'; h.axis_quickaverage.YGrid = 'on';
 line(h.axis_quickaverage, [0,0], h.axis_quickaverage.YLim, 'Color', 'w', 'LineWidth', 2);
@@ -1264,85 +1293,85 @@ h.axis_quickaverage.YLabel.String = 'voltage (mV)';
 h.axis_quickaverage.Title.String = ptitle;
 h.axis_quickaverage.XLimitMethod = 'tight';
 
-%**************************************************************************    
- function callback_selectICs(hObject, event, h)
-     
-     p = h.figure.UserData;
-     classes = hObject.UserData;
-     %if there is a clicked event, toggle the status of the 
-     if ~isempty(event); hObject.Checked = ~hObject.Checked; end
-
-     %this is the case in which the user is selecting one of the 7
-     %different classificaiton types
-     if classes < 8
-         if h.menu_allgood.Checked || h.menu_allbad.Checked
-             p.selcomps(:) = 0;
-             h.menu_allgood.Checked = false;
-             h.menu_allbad.Checked = false;
-         end
-         prob_vec = sum(p.EEG.etc.ic_classification.ICLabel.classifications(:,classes),2);
-         if hObject.Checked
-             state = 1;
-         else
-             state = 0;
-         end
-         p.selcomps(find(prob_vec>.5)) = state;
-     else
-        %this is the case in which the user is selecting all good (8) or all bad (9) ICs   
-        p.selcomps(:) = 0;
-        if classes == 8
-            p.selcomps(find(~p.EEG.reject.gcompreject)) = 1;
-            h.menu_allbad.Checked = false;
-        else
-            p.selcomps(find(p.EEG.reject.gcompreject)) = 1;
-            h.menu_allgood.Checked = false;
-        end
-        h.menu_brain.Checked = false;
-        h.menu_eye.Checked = false;
-        h.menu_heart.Checked = false;
-        h.menu_muscle.Checked = false;
-        h.menu_line.Checked = false;
-        h.menu_noise.Checked = false;
-        h.menu_other.Checked = false;
- 
-     end
-     h.figure.UserData = p;
-     callback_drawdata([],[],h);
- %*************************************************************************    
-function callback_toggleprojopt(hObject, event, h)
-    
-    p = h.figure.UserData;
-    p.projectopt = hObject.UserData;
-    
-    if p.projectopt
-        h.menu_withsel.Checked = false;
-        h.menu_withoutsel.Checked = true;
-    else
-        h.menu_withsel.Checked = true;
-        h.menu_withoutsel.Checked = false;
-    end
-    
-    h.figure.UserData = p;
-    
-    callback_drawdata([],[],h);
-%**************************************************************************    
-function callback_togglecheck(hObject, event,h)
-    
-    hObject.Checked = ~hObject.Checked;
-    callback_drawdata([],[],h);
 %**************************************************************************
-function callback_removetrialmarkers(hObject, event, h)   
-    
-    p = h.figure.UserData;
-    p.EEG = getNewestData(h, p.EEG);    
-    p.EEG = study_removerejectmarkers(p.EEG, hObject.Tag);
-    p.EEG.saved = 'no';
-    h.figure.UserData = p;
-    callback_drawdata([],[],h);
-    
-%**************************************************************************     
+function callback_selectICs(hObject, event, h)
+
+p = h.figure.UserData;
+classes = hObject.UserData;
+%if there is a clicked event, toggle the status of the
+if ~isempty(event); hObject.Checked = ~hObject.Checked; end
+
+%this is the case in which the user is selecting one of the 7
+%different classificaiton types
+if classes < 8
+    if h.menu_allgood.Checked || h.menu_allbad.Checked
+        p.selcomps(:) = 0;
+        h.menu_allgood.Checked = false;
+        h.menu_allbad.Checked = false;
+    end
+    prob_vec = sum(p.EEG.etc.ic_classification.ICLabel.classifications(:,classes),2);
+    if hObject.Checked
+        state = 1;
+    else
+        state = 0;
+    end
+    p.selcomps(find(prob_vec>.5)) = state;
+else
+    %this is the case in which the user is selecting all good (8) or all bad (9) ICs
+    p.selcomps(:) = 0;
+    if classes == 8
+        p.selcomps(find(~p.EEG.reject.gcompreject)) = 1;
+        h.menu_allbad.Checked = false;
+    else
+        p.selcomps(find(p.EEG.reject.gcompreject)) = 1;
+        h.menu_allgood.Checked = false;
+    end
+    h.menu_brain.Checked = false;
+    h.menu_eye.Checked = false;
+    h.menu_heart.Checked = false;
+    h.menu_muscle.Checked = false;
+    h.menu_line.Checked = false;
+    h.menu_noise.Checked = false;
+    h.menu_other.Checked = false;
+
+end
+h.figure.UserData = p;
+callback_drawdata([],[],h);
+%*************************************************************************
+function callback_toggleprojopt(hObject, event, h)
+
+p = h.figure.UserData;
+p.projectopt = hObject.UserData;
+
+if p.projectopt
+    h.menu_withsel.Checked = false;
+    h.menu_withoutsel.Checked = true;
+else
+    h.menu_withsel.Checked = true;
+    h.menu_withoutsel.Checked = false;
+end
+
+h.figure.UserData = p;
+
+callback_drawdata([],[],h);
+%**************************************************************************
+function callback_togglecheck(hObject, event,h)
+
+hObject.Checked = ~hObject.Checked;
+callback_drawdata([],[],h);
+%**************************************************************************
+function callback_removetrialmarkers(hObject, event, h)
+
+p = h.figure.UserData;
+p.EEG = getNewestData(h, p.EEG);
+p.EEG = study_removerejectmarkers(p.EEG, hObject.Tag);
+p.EEG.saved = 'no';
+h.figure.UserData = p;
+callback_drawdata([],[],h);
+
+%**************************************************************************
 function closeplot(hObject, event, h)
-        
+
 fh = findobj('Tag', 'icamap');
 if ~isempty(fh)
     close(fh)

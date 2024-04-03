@@ -138,13 +138,13 @@ function setParameters(h,p)
     if isfield(p, 'EEGTraces')
         h.eegtrace_good.Color = p.EEGTraces.GoodColor.Value;
         h.eegtrace_bad.Color = p.EEGTraces.BadColor.Value;
-        h.pcatrace_good.Color = p.PCATraces.GoodColor.Value;
-        h.pcatrace_bad.Color = p.PCATraces.BadColor.Value;
+        h.icatrace_good.Color = p.ICATraces.GoodColor.Value;
+        h.icatrace_bad.Color = p.ICATraces.BadColor.Value;
 
         h.eegtrace_good.LineWidth = p.EEGTraces.Width.Value;
         h.eegtrace_bad.LineWidth = p.EEGTraces.Width.Value;
-        h.pcatrace_good.LineWidth = p.PCATraces.Width.Value;
-        h.pcatrace_bad.LineWidth = p.PCATraces.Width.Value;
+        h.icatrace_good.LineWidth = p.ICATraces.Width.Value;
+        h.icatrace_bad.LineWidth = p.ICATraces.Width.Value;
     end
 
     %the panel
@@ -264,8 +264,8 @@ y = sin(10 * x);
     h.dispAxis = uiaxes('Parent', h.dispWindow,'Position', [0, pos(4)-280, pos(3), 270], 'Toolbar',[]);
     h.eegtrace_good = line(h.dispAxis, x, y+8);
     h.eegtrace_bad = line(h.dispAxis, x, y+6);
-    h.pcatrace_good = line(h.dispAxis, x, y+4);
-    h.pcatrace_bad = line(h.dispAxis, x, y+2);
+    h.icatrace_good = line(h.dispAxis, x, y+4);
+    h.icatrace_bad = line(h.dispAxis, x, y+2);
 
     h.dispAxis.YLim = [0,10];
     h.legnd = legend(h.dispAxis, {'eeg good', 'eeg bad', 'pca good', 'pca bad'});
