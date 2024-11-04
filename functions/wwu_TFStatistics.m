@@ -1,12 +1,20 @@
-%function wwu_TFStatistics(data)
 function stats = wwu_TFStatistics(data, cfg)
-
+%function wwu_TFStatistics(data, 'option', argument,....)
+%  conducts statistical analysis on time/frequency data created using the
+%  ESMA interface.  Uses the FieldTrip statcondfieldtrip function to
+%  conduct the statistics
+%
+%  Required Inputs
+%   data        an array of data to complete the stats on
+%
+%  Optional Inputs
+%
 arguments
-    %    cfg.numrandomization = number of randomizations, can be 'all'
     data = []
     cfg.method = 'permutation'
     cfg.chandim (1,1) {mustBeInteger} = 0
-    cfg.numrandomization = 'all'
+    %    cfg.numrandomization = number of randomizations, can be 'all'
+    cfg.numrandomization = 10%'all'
     %     cfg.correctm         = string, apply multiple-comparison correction, 'no', 'max', cluster', 'tfce', 'bonferroni', 'holm', 'hochberg', 'fdr' (default = 'no')
     cfg.correctm {mustBeText} = 'cluster'
     %     cfg.alpha            = number, critical value for rejecting the null-hypothesis per tail (default = 0.05)
@@ -18,7 +26,8 @@ arguments
     %     cfg.uvar             = number or list with indices, unit variable(s)
     %     cfg.wvar             = number or list with indices, within-cell variable(s)
     %     cfg.cvar             = number or list with indices, control variable(s)
-    %     cfg.feedback         = string, 'gui', 'text', 'textbar' or 'no' (default = 'text')
+    %     cfg.feedback         = string, 'gui', 'text', 'textbar' or 'no' (default = 'no')
+    cfg.feedback {mustBeText} = 'gui'
     %     cfg.randomseed       = string, 'yes', 'no' or a number (default = 'yes')
     %
     %   If you use a cluster-based statistic, you can specify the following options that
@@ -38,6 +47,7 @@ end
 %make up data if none was passed
 if isempty(data)
     data = {rand(10,20,5),rand(10,20, 5),rand(10,20, 5);rand(10,20, 5)+2,rand(10,20, 5),rand(10,20, 5)}';
+    cfg.ivar = ndims(data);
 end
 
 if cfg.ivar ~= ndims(data)
@@ -83,7 +93,7 @@ end
 %build a command string
 cmd = ['statcondfieldtrip(statdata, "method", cfg.method, "naccu", cfg.numrandomization,' ...
     '"alpha", cfg.alpha, "correctm", cfg.correctm, "clustersttistic", cfg.clusterstatistic,'...
-    '"chandim", cfg.chandim, "neighbours", cfg.neighbours)'];
+    '"chandim", cfg.chandim, "neighbours", cfg.neighbours, "feedback", cfg.feedback)'];
 %run statistics
 if cfg.ivar == 1
     %full model affects using an one way ANOVA or ttest

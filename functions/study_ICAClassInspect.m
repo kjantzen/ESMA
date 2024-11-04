@@ -16,13 +16,17 @@
 %                   listed in the study structure.
 
 % Update 5/13/20 KJ Jantzen
+% Update 11/01/2024 KJ Jantzen
+%   - display is no longer rendering correctlyso I added two drawnow 
+%   statements and a delay statement to give the figure
+%   time to render before reading its properties.
 function study_ICAClassInspect(study, filenames)
 
 %build the figure
 scheme = eeg_LoadScheme;
 scheme.Axis.FontSize.Value = 10;
-W = round(scheme.ScreenWidth * .4); H = round(scheme.ScreenHeight * .5);
-figpos = [420, scheme.ScreenHeight - H, W, H];
+W = round(scheme.ScreenWidth * .8); H = round(scheme.ScreenHeight * .8);
+figpos = [(scheme.ScreenWidth - W)/2, (scheme.ScreenHeight - H)/2 W, H];
 
 fprintf('Opening ICA Class Inspector...\n');
 fprintf('...creating GUI\n');
@@ -33,11 +37,15 @@ handles.figure = uifigure(...
     'Menubar', 'none',...
     'Name', 'ICA classification inspector');
 
+drawnow
+pause(2)
+
 handles.grid = uigridlayout(handles.figure,...
     'RowHeight', {'fit','3x','1x', '2x'}, ...
     'ColumnWidth', {'1x', '1x', '1x','1x', '1x', '1x','1x', '1x', '1x'},...
     'BackgroundColor',scheme.Window.BackgroundColor.Value);
 
+drawnow
 handles.dropdown_selsubject = uidropdown('Parent', handles.grid,...
     'BackgroundColor',scheme.Dropdown.BackgroundColor.Value,...
     'FontName', scheme.Dropdown.Font.Value,...

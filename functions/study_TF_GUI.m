@@ -279,13 +279,11 @@ function callback_calculateTF(hObject, eventdata, h, filenames, study, runTest)
 
 exclude_badtrials = true;
 exclude_badcomps = true;
-exclude_badsubjs = true;
+exclude_badsubjs = false;
 
 
 p = getParameters(h);
 p.runtest = runTest;  %if true only a single channel will be calculated
-
-%TFData = struct();  %will hold the data for all subjects
 
 %output this to the  across subject folder
 study_path = study_GetEEGPath;
@@ -297,12 +295,11 @@ end
 
 outfile = h.edit_outfile.Value;
 if isempty(outfile)
-    msgbox('Please enter an output filename.')
+    wwu_msgdlg('Please enter an output filename.', 'No name provided', {'OK'});% msgbox('Please enter an output filename.')
     return
 end
 
 try
-
     pbar = uiprogressdlg(h.figure,...
         'Title', 'computing ersp',...
         'ShowPercentage', 'on');
@@ -318,7 +315,17 @@ try
         sCount = 0;  %count the # of participants included 
         for jj = 1:nfile
             EEGIn = wwu_LoadEEGFile(filenames{jj});
-            if strcmp(study.subject(jj).status, 'bad')
+
+            %interpolate any missing or removed channels
+            if ~isempty(EEGIn.chaninfo.removedchans)
+                EEGIn = eeg_interp(EEGIn, EEGIn.chaninfo.removedchans);
+            end
+            %also remove any channels that are marked as bad
+            if isfield(EEGIn.chaninfo, 'badchans') && sum(EEGIn.chaninfo.badchans) > 0
+                EEGIn = eeg_interp(EEGIn, find(EEGIn.chaninfo.badchans));
+            end
+
+            if strcmp(study.subject(jj).status, 'bad') && (exclude_badsubjs == true)
                 continue
             end
             sCount = sCount + 1;
@@ -336,12 +343,15 @@ try
                 EEGIn = pop_subcomp(EEGIn, [], 0, 0);
             end
 
+
             pbar.Message = 'Computing ERSP for all channels and conditions';
             
             %pass the data to the lower level routine that computes ersp on
             %the conditions and channels
 
             subTFData = wwu_tf(p, EEGIn);
+
+            %initialize the variables if this is the first time through
             if sCount == 1 
                 %allocate space for all the ersp data
                 TFData.indiv_ersp = zeros(nfile, subTFData.nchan, length(subTFData.freqs), length(subTFData.times), subTFData.ncond);

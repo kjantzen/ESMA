@@ -170,6 +170,7 @@ handles.slider_container = uipanel('Parent', handles.gl,...
 handles.slider_container.Layout.Column = 1;
 handles.slider_container.Layout.Row = 4;
 drawnow
+pause(2)
 
 sw = handles.slider_container.Position(3);
 handles.slider_datascroll = uislider(...

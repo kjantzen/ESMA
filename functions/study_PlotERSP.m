@@ -1,11 +1,18 @@
 %this function is under revision and does not work perfectly.
 function study_PlotERSP(study, filename)
 
-fprintf('Opening ERSP plotting and analysis tool...\n');
+if nargin < 2
+    msg = 'Not enough input arguments. This funciton requires a valid ESMA study and filename list!';
+    wwu_msgdlg(msg, 'Invalid Inputs to wwu_PlotERSP', {'OK'}, 'isError',true);
+    error('Not enough input arguments.')
+end
 
 if isempty(filename)
-    error('No valid file was found')
+    wwu_msgdlg('No valid file was found', 'Invalid Inputs to wwu_PlotERSP', {'OK'}, 'isError',true);
+    error('Invalid input arguments.')
 end
+
+fprintf('Opening ERSP plotting and analysis tool...\n');
 
 scheme = eeg_LoadScheme;
 p.study = study;
@@ -299,9 +306,17 @@ end
 callback_plotersp([],[],h);
 
 %**************************************************************************
+function callback_reloadfiles(~, ~, h, reload_flag)
 %callback_reloadfiles - reloads the erp and study files and refreshes the
 %erp display to reflect any changes.
-function callback_reloadfiles(~, ~, h, reload_flag)
+%
+%User inputs
+%   h   a structure containing the GUI handles and the user loaded data
+%   reload_flag  a boolean indicating whether to reload the data file from
+%   disk (true) before refreshing the information in the displays.  When
+%   false, controls will be repopulated with information from the existing
+%   data in memory.  Usefule for updating the display after making changes
+%   to the data set.
 
 h.figure.Pointer = 'watch';
 drawnow;
@@ -369,7 +384,7 @@ snames{1} = 'GRAND AVERAGE';
 for ii = 1:length(p.TFData.erp_file)
     [sp,~,~] = fileparts(p.TFData.erp_file(ii));
     indx = strfind(sp, filesep);
-    snames{ii+1} = sp(indx(end)+1:end);
+    snames{ii+1} = sp{1}(indx{end}+1:end);
 end
 clear sp;
 h.list_subject.Items = snames;
@@ -1464,8 +1479,6 @@ drawnow;
 
 %check box for stacking or spreading the plot
 
-drawnow;
-
 %**************************************************************************
 %Create a panel to hold the  plotting options of condition, channel and
 %subject
@@ -1709,7 +1722,7 @@ handles.check_topolayout = uicheckbox(...
 
 drawnow;
 %**************************************************************************
-%panel for the overlay
+%panel for the stats overlay
 handles.panel_statoverlay = uipanel('Parent', handles.gl,...
     'Title', 'Plots and Overlays',...
     'BackgroundColor', scheme.Panel.BackgroundColor.Value,...
@@ -1723,6 +1736,7 @@ handles.panel_statoverlay.Layout.Row = [4 5];
 %control
 drawnow;
 pause(.5)
+
 psh = handles.panel_statoverlay.InnerPosition;
 psh(1) = 0; psh(2) = 0;
 inner_panel_pos = psh; inner_panel_pos(4) = psh(4) - 30;
@@ -1730,6 +1744,15 @@ inner_panel_pos = psh; inner_panel_pos(4) = psh(4) - 30;
 handles.grp_statselect = uibuttongroup(...
     'Parent',handles.panel_statoverlay,...
     'Position',[psh(1), psh(4)-30, psh(3), 30]);
+
+handles.button_statstab(1) = uibutton(handles.grp_statselect, ...
+    'Position', [0, 0, psh(3)/3, 30],...
+    'Text', 'Stats Tests',...
+    'BackgroundColor', scheme.Panel.BackgroundColor.Value,...
+    'FontName', scheme.Panel.Font.Value,...
+    'FontColor', scheme.Panel.FontColor.Value,...
+    'FontSize', scheme.Panel.FontSize.Value,...
+    'Tag', '1');
 
 handles.button_statstab(1) = uibutton(handles.grp_statselect, ...
     'Position', [0, 0, psh(3)/3, 30],...
@@ -1763,6 +1786,17 @@ handles.tab_stats(1) = uipanel(...
 
 handles.tab_stats(2) = uipanel(...
     'Parent', handles.panel_statoverlay,...
+    'Title', 'General Linear Model',...
+    'Position', inner_panel_pos,...
+    'BackgroundColor', scheme.Panel.BackgroundColor.Value,...
+    'HighlightColor', scheme.Panel.BorderColor.Value,...
+    'FontName',scheme.Panel.Font.Value,...
+    'FontSize', scheme.Panel.FontSize.Value,...
+    'ForegroundColor', scheme.Panel.FontColor.Value,...
+    'Scrollable','on');
+
+handles.tab_stats(3) = uipanel(...
+    'Parent', handles.panel_statoverlay,...
     'Title', 'New Stats Test',...
     'Position', inner_panel_pos,...
     'BackgroundColor', scheme.Panel.BackgroundColor.Value,...
@@ -1773,8 +1807,7 @@ handles.tab_stats(2) = uipanel(...
     'Visible','off','Scrollable','on');
 
 drawnow
-%the mass univariate approach is more connected to the GLM for  time/freq
-%data
+%the mass univariate approach
 handles.check_MUoverlay = uicheckbox(...
     'Parent', handles.tab_stats(1),...
     'Position', [10,385,260,20],...

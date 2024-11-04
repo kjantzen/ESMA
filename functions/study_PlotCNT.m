@@ -348,7 +348,7 @@ if isfield(p.EEG, 'SelectedRects')
                     'YData', [ylims(1), ylims(1), ylims(2), ylims(2)],...
                     'FaceColor', EventMarkerColor, ...
                     'LineStyle', 'none',...
-                    'FaceAlpha', .25,...
+                    'FaceAlpha', .35,...
                     'Tag', p.EEG.SelectedRects(ii).Tag);
                 po.ButtonDownFcn = {@removeSelectedPatch, h};
                 if mn < xlims(1)
@@ -409,6 +409,7 @@ callback_drawdata([], [], h);
 
 %**************************************************************************
 function callback_mouseeventhandler(hObject, event, h)
+
     persistent isdragging;
     persistent Xstart Xend;
     persistent r;
@@ -421,6 +422,8 @@ function callback_mouseeventhandler(hObject, event, h)
     shiftKey = any(strcmp(hObject.CurrentModifier, 'shift'));
     if (mouseIsInRegion(mousePos, h.axis_main.Position) && shiftKey) || isdragging
         
+        h.figure.Pointer = "cross"; 
+
         tlimits = h.axis_main.XLim;
 
         switch event.EventName
@@ -438,7 +441,6 @@ function callback_mouseeventhandler(hObject, event, h)
                     %visible data
                     r.XData(r.XData < tlimits(1)) = tlimits(1);
                     r.XData(r.XData > tlimits(2)) = tlimits(2);
-                    r.XData
 
                     %add the patch to the file so we have a record of what has
                     %been marked 
@@ -460,6 +462,7 @@ function callback_mouseeventhandler(hObject, event, h)
                     p.EEG.saved = 'no';
                     p.SelectedRect = str2double(r.Tag);
                     h.figure.UserData = p;
+                    h.figure.Pointer = 'arrow';
                     h.button_reject.Enable = 'on';
                     callback_drawdata([],[],h);
 
@@ -471,10 +474,7 @@ function callback_mouseeventhandler(hObject, event, h)
                     Xend = Xend(1);
                     %need a check here to see if the patch is extending
                     %beyond the end of the visible window.
-                    
- 
-
-
+  
                     y = h.axis_main.YLim;       
                     %if there is a blank patch we should create the patch
                     %for the first time
@@ -484,8 +484,11 @@ function callback_mouseeventhandler(hObject, event, h)
                             'XData', [Xstart, Xend, Xend, Xstart],...
                             'YData', [y(1), y(1), y(2), y(2)],...
                             'FaceColor',opponentColor(h.scheme.Axis.BackgroundColor.Value),...
-                            'FaceAlpha', .2,...
+                            'FaceAlpha', .4,...
                             'LineStyle', 'none');
+                    opponentColor(h.scheme.Axis.BackgroundColor.Value)
+                    h.scheme.Axis.BackgroundColor.Value
+
                     else
                         r.XData = [Xstart, Xend, Xend, Xstart];
                     end
@@ -599,6 +602,9 @@ function callback_makefreqplot(~,~,h)
     'GridLineStyle','-',...
     'XGrid','on','YGrid','on');
 
+    a.XLabel.String = 'Frequency';
+    a.YLabel.String = 'Spectral power (dB)';
+
     badchans = getBadChans(p.EEG);
 
     ph = plot(a, f,s', 'Color', h.scheme.EEGTraces.GoodColor.Value);
@@ -622,9 +628,9 @@ function callback_makefreqplot(~,~,h)
 %**************************************************************************    
 function rgbOut = opponentColor(rgbIn)
     hsvIn = rgb2hsv(rgbIn);   
-    %hsvIn(1) = rem(hsvIn(1) + .5, 1);
-    hsvIn = rem(hsvIn + .5, 1);
-    rgbOut = hsv2rgb(hsvIn);
+    rgbOut = 1-rgbIn;
+    %hsvIn = rem(hsvIn + .5, 1);
+    %rgbOut = hsv2rgb(hsvIn);
 
 %**************************************************************************
 function handles = build_gui(study)
@@ -823,3 +829,5 @@ function handles = initializeControls(handles, study, filenames)
 handles.dropdown_subjselect.Items   = {study.subject.ID};
 handles.dropdown_subjselect.ItemsData = 1:length(study.subject);
 handles.dropdown_subjselect.UserData = filenames;
+[~, n, e] = fileparts(filenames{1});
+handles.figure.Name = [n, e];

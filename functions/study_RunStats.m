@@ -180,6 +180,7 @@ if stats.useBetween
     end
 end
 
+%show a progress bar with a default message
 pb = uiprogressdlg(h.figure, 'Title', 'Please Wait', 'Message', 'Running mass univariate statistics(FMUT) ... this could take a while.', 'Indeterminate', 'on');
 
 %convert the time window to to sample points

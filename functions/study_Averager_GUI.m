@@ -1,5 +1,5 @@
 %study_Averager_GUI() - GUI for collecting information and computing the 
-%                       average within and acrocc participants.
+%                       average within and across participants.
 %Usage:
 %>> study_Averager_GUI(study, filenames, bingroup);
 %
@@ -209,7 +209,7 @@ for ii = 1:size(p.filenames,1)
         pb.Value = jj/size(p.filenames,2);
         pb.Message = 'Loading EEG Data';
         
-        [fpath, fname, fext] = fileparts(eeg_BuildPath(p.filenames{ii,jj}));
+        [fpath, fname, ~] = fileparts(eeg_BuildPath(p.filenames{ii,jj}));
         
         %figure out what subject this is and check to see if this subject
         %is a bad subject

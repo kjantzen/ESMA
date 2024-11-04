@@ -3,13 +3,15 @@ function output = wwu_msgdlg(msg, title, button, options)
 % It presents an message to the user as well as possible button options and
 % returns a test string indicating which button was pushed.  
 %
-%Inputs - params is a structure whos fields contain the following dialog box
-% parameters
-%   .msg    the message to display to the user
-%   .title  the dialog title
-%   .options a cell array of strings with the title of button options
-%   .iserror a boolean indicating whether to show the error icon
-%   
+%Required Inputs
+%
+%   msg    the message to display to the user
+%   title  the dialog title
+%   button a cell array of strings with the title of button options
+%
+%Optional name, parameter pairs
+%   'isError', boolean -  if true the error icon will be displayed
+%
 %Outputs - result is a character vector containing the text of the button
 %   pressed
 %
