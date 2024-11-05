@@ -126,20 +126,23 @@ function callback_editconditions(~,~,h)
 
 %*************************************************************************
 function callback_plotANOVAresult(hObject, event,h, export)
+%either plot the ANOVA results or export them depending of the status of
+%the export flag.
 
+%if the export flag is not passed, assume it is false
 if nargin < 4
     export = false;
 end
     
 p = h.figure.UserData;
 
-if ~isfield(p.GND, 'ANOVA')
+if ~isfield(p.GND, 'ANOVA') || isempty(p.GND.ANOVA)
     error('No ANOVA data for this GND file');
 end
 
-if isempty(p.GND.ANOVA)
-    error('No ANOVA data for this GND file');
-end
+%if isempty(p.GND.ANOVA)
+%    error('No ANOVA data for this GND file');
+%nd
 
 ANOVAnum = h.dropdown_ANOVAtest.Value;
 r = p.GND.ANOVA(ANOVAnum);
@@ -173,7 +176,7 @@ v(:,2) = {r.name; r.type; sprintf('%3.2f - %3.2f ms', r.timewindow(1), r.timewin
 writecell(v, excelFilename,'Range', 'A1', 'Sheet', 'Data');
 
 writecell({'Channels'}, excelFilename, 'Range', 'A4', 'Sheet', 'Data');
-writecell(r.chans_used, excelFilename, 'Range','B4', 'Sheet', 'Data');
+
 
 %make the row number variable here because the size of variables is not
 %static
@@ -182,7 +185,7 @@ rowNum = 5;
 %write some headers for factor levels
 range = sprintf('A%i', rowNum);
 nFacs = length(r.factors);
-writecell(r.factors', excelFilename,'Range','A6', 'Sheet', 'Data');
+writecell(r.factors', excelFilename,'Range',range, 'Sheet', 'Data');
 
 %default next write column is 'B' - which is ascii 66
 colNum = 66;
@@ -193,6 +196,9 @@ if r.hasBetween
     nBetween = size(r.betweenVars, 2);
     colNum = colNum+nBetween;
 end
+
+range = sprintf('%s%i',char(colNum), rowNum-1);
+writecell(r.chans_used, excelFilename, 'Range',range, 'Sheet', 'Data');
 range = sprintf('%s%i',char(colNum), rowNum);
 writematrix(r.level_matrix', excelFilename,'Range',range, 'Sheet', 'Data')
 

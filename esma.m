@@ -23,7 +23,7 @@ function esma()
 %major revision indicates the addition of a new major function or a change
 %that may impact people using previous version.
 %Minor revisions indicate a bug fix or addition/expansion of a minor feature.
-VersionNumber = '1.2.0';
+VersionNumber = '1.2.1';
 fprintf('Starting EEG Study Management and Analysis V%s....\n', VersionNumber);
 
 try
@@ -37,7 +37,7 @@ EEGPath = study_GetEEGPath;
 if isempty(EEGPath)
     Message = sprintf('No valid experiment path was identified.\nPlease restart ESMA and identify a your experiment folder when prompted');
     Title = 'Missing path file';
-    options = {"OK"}; %#ok<*STRSCALR> 
+    options = {"OK"}; 
     wwu_msgdlg(Message, Title, options, 'isError', true);
     return
 end
@@ -56,7 +56,7 @@ existingFigure = findall(groot,'Type', 'Figure', 'Tag', VERSION);
 if ~isempty(existingFigure)
     handles.figure = existingFigure;
     clf(handles.figure);
-    fprintf('hcnd_eeg is already running.  Reinitialiing display');
+    fprintf('hcnd_eeg is already running.  Reinitialiing display\n');
 else    
     %setup the main figure window
     handles.figure = uifigure;
@@ -115,6 +115,7 @@ drawnow
 %ESMA menu
 list = getSchemeList();
 handles.menu_esma = uimenu('Parent', handles.figure,'Label', 'ESMA');
+handles.menu_datapath = uimenu(handles.menu_esma, 'Label', 'Change data path');
 handles.menu_appearance = uimenu(handles.menu_esma, 'Label', 'Appearance');
 handles.menu_editappeanace = uimenu(handles.menu_appearance, 'Label', 'Edit appearance');
 handles.menu_scheme = uimenu(handles.menu_appearance, 'Label', 'Themes');
@@ -176,6 +177,7 @@ handles.menu_filesummary = uimenu(handles.menu_utils, 'Label', 'Show File Inform
 handles.menu_evtsummary = uimenu(handles.menu_utils, 'Label', 'Event Summary');
 
 %assign all the callbacks
+set(handles.menu_datapath, 'Callback', @callback_editdatapath)
 set(handles.menu_editappeanace, 'Callback', {@callback_editscheme, handles});
 
 set(handles.dropdown_study, 'ValueChangedFcn', {@callback_loadstudy, handles});
@@ -214,8 +216,14 @@ set(handles.menu_icapaste, 'Callback', {@callback_copypastecomponents, handles})
 set(handles.menu_convert, 'Callback', {@callback_convert,handles});
 
 msg.Message = 'Loading studies';
-fprintf('...reading STUDY information\n');
-populate_studylist(handles)
+fprintf('...reading STUDY information');
+
+%placeholder for the number of studies
+n = 0;
+
+%keep asking for a path untill studies are found
+n = populate_studylist(handles);
+fprintf("...found %i Studies...\n", n)
 
 msg.Message = 'Loading current study and populating GUI';
 fprintf('...loading current study and populating GUI\n');
@@ -473,7 +481,7 @@ end
 %************************************************************************
 %populates the study tree with all the studies found in the "STUDIES"
 %folder
-function populate_studylist(h, selected_study)
+function nStudies = populate_studylist(h, selected_study)
 %populate_study(handles, selectedStudy) populates the drop down study list
 %with the names of the studies currently in the STUDIES folder.
 %SelectedStudy is the name of the study to select and load once the list is
@@ -491,8 +499,9 @@ d = dir([STUDYPATH, filesep,'*.study']);
 studylist = cellfun(@(x) x(1:length(x)-6), {d.name}, 'UniformOutput', false);
 studyinfo = cellfun(@(x,y) fullfile(x, y), {d.folder}, {d.name}, 'UniformOUtput', false);
 
-studyNames = cell(1,length(d));
-for ii = 1:length(d)
+nStudies = length(d);
+studyNames = cell(1,nStudies);
+for ii = 1:nStudies
     study = study_LoadStudy(studylist{ii});
     studyNames{ii} = study.name;
 end
@@ -521,6 +530,7 @@ t.delete;
 study_name = h.dropdown_study.Value;
 
 if isempty(study_name)
+    populate_studyinfo([], h);
     return;
 end
 
@@ -542,13 +552,24 @@ h.figure.Pointer = 'arrow';
 %main screen
 function populate_studyinfo(study, h)
 
+
+colorNum = rgb2hex(h.label_info.UserData);
+
+if isempty(study)
+
+    msg = ['<body style="font-family:arial;font-size:14px;color:#', num2str(colorNum),'"><p style="line-height:115%">', ...
+        '<b>NO STUDIES FOUND IN CURRENT DATA FOLDER</b></p>'];
+    msg = [msg, '<p style="line-height:115%">Please choose a different data folder or create a new study.</p>'];
+    h.label_info.HTMLSource = msg;
+    return
+end    
+
 if isempty(study.description)
     descr = {''};
 else
     descr = study.description;
 end
 
-colorNum = rgb2hex(h.label_info.UserData);
 
 msg = ['<body style="font-family:arial;font-size:12px;color:#', num2str(colorNum),'"><p style="line-height:115%"><b>Study:</b>',...
      '<span style=padding-left:40>',study.name,'</span></p>'];
@@ -1661,4 +1682,9 @@ function callback_editscheme(~,~,h)
     if strcmp('Yes', response)
         esma;
     end
+%**************************************************************************
+function callback_editdatapath(~,~)
+    
+    study_ChangeEEGPath;
+    esma;
 %

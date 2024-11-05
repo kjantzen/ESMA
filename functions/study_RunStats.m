@@ -149,8 +149,6 @@ h.list_model.Items = items;
 h.list_model.ItemsData = items;
 h.list_model.UserData = items;
 h.list_conditions.Items = {GND.bin_info.bindesc};
-%dmaybe change this to bindesc legnth since some files will not have 
-%.bin_info
 h.list_conditions.ItemsData = 1:length(GND.bin_info);
 
 modelkey = join(stats.factors,'x ');
@@ -164,11 +162,13 @@ h.button_cancel.ButtonPushedFcn = {@callback_cancel, h.figure};
 %**************************************************************************
 function callback_dostats(hObject, event, h, GND, stats, exportFlag)
 
+%get the condition list from the main list box
 cond_info = h.list_model.ItemsData;
 if sum(cellfun(@(a) a(1)=='[',cond_info))
     uialert(h.figure, 'Please define all conditions first.', 'Run Stats');
     return
 end
+
 
 stats.useBetween = h.check_usebetween.Value;
 if stats.useBetween
@@ -387,7 +387,7 @@ cond_info = h.list_model.ItemsData;
 %get the saved experiment matrix
 cond_matrix = h.figure.UserData';
 
-%popluate it with more human names
+%populate it with more human names
 cond_name_matrix = cellfun(@(x) sprintf('level %i', x), num2cell(cond_matrix), 'UniformOutput', false);
 %this is the order the data was assigned to the different conditions
 cond_order = cellfun(@str2num, cond_info);
@@ -704,7 +704,6 @@ h.list_model = uilistbox(...
     'FontSize', scheme.Dropdown.FontSize.Value,...
     'MultiSelect', 'off');
 
-
 h.label_model = uilabel('Parent', h.figure,...
     'Position', [255, 240, 185, 20],...
     'Fontsize', scheme.Label.FontSize.Value,...
@@ -749,9 +748,9 @@ h.check_usebetween = uicheckbox(...
     'Position', [20, 5, 250, 25],...
     'Text', 'Use between variables if present', ...
     'Value', 1,...
-    'FontColor', scheme.Button.FontColor.Value,...
-    'FontName', scheme.Button.Font.Value,...
-    'FontSize', scheme.Button.FontSize.Value);
+    'FontColor', scheme.Label.FontColor.Value,...
+    'FontName', scheme.Label.Font.Value,...
+    'FontSize', scheme.Label.FontSize.Value);
 
 h.button_dostats = uibutton(...
     'Parent', h.figure,...

@@ -1,12 +1,15 @@
 %study_PlotANOVAresults(r)
 %   plots the results of an GLM test based on the information in the 
 %   structure r
+%
+% r should be a statistics structure passed from an ERP bin file created
+% within the esma environment
+%
 function study_PlotANOVAresults(r)
 
 if nargin < 1
     msg = 'A statistics structure must be passed in the call to study_PlotANOVAresults';
-    msg = sprintf('%s\nThis function should not be called directy.', msg);
-    error(msg);
+    error('%s\nThis function should not be called directly.', msg);
 end
 
 r = arrangeData(r);
@@ -86,8 +89,8 @@ h.dropdown_xaxis = uidropdown('Parent', h.panel,...
     'FontSize', scheme.Dropdown.FontSize.Value);
 
 h.axis_legend = uiaxes('Parent', h.panel,...
-    'Position', [0,0,150,280],...
-    'Color', scheme.Axis.BackgroundColor.Value,...
+    'Position', [0,0,400,280],...
+    'Color', scheme.Panel.BackgroundColor.Value,...
     'XTick', [],...
     'YTick', [],...
     'Box', 'off',...
@@ -176,13 +179,7 @@ plot_fillcolor = lines;
 plot_symbol = {'o', 'd', 's', 'p', 'h', '+', '*', 'x'};
 plot_linecolor = {'w', 'w', 'w', 'w', 'w', 'w', 'w'};
 
-%plot_linecolor = {'k', 'r', 'g', 'b', 'y', 'm', 'c'};
 plot_symbol_size = {80, 100, 120, 140, 160, 180};
-
-%check to see if there are between subject conditions so I know how to
-%parse the data
-%if r.hasBetween
-%   n
 
 avedata = mean(r.data{:,:})';
 stderr = std(r.data{:,:})'./ sqrt(size(r.data,1));
@@ -194,7 +191,7 @@ names = r.within{sort(id), xaxis_var};
 
 xaxis_values = r.level_matrix(:,xaxis_var);
 
-%now get the informaiton about the other factors after removing the one to
+%now get the information about the other factors after removing the one to
 %plot on the xaxis
 a = ones(size(r.levels));
 a(xaxis_var) = 0;
@@ -239,29 +236,22 @@ h.axis_bar.YLabel.String = r.type;
 h.axis_bar.XGrid = 'on';
 h.axis_bar.YGrid = 'on';
 
-return
+%%% make the box plot%
 
-%% make the box plot
-
-boxplot(h.axis_box, r.data{:,:},r.level_matrix(:,xaxis_var),...
-    'Notch', 'off', 'symbol', 'x', 'Labels', names, 'Colors', 'k', 'BoxStyle', 'outline');%,...
-   % 'ColorGroup', 1:str2double(r.levels{xaxis_var}), 'LabelVerbosity', 'minor');
-h.axis_box.YLabel.String = r.type;
-h.axis_box.XLabel.String = r.factors{xaxis_var};
-h.axis_box.YGrid = 'on';
-
-%% plot the legend
+% plot the legend
 hold(h.axis_legend, 'off');
 cla(h.axis_legend);
 hold(h.axis_legend, 'on');
-  ypos = 100;
+
+ypos = .9;
+
 for ii = 1:length(rf)
   
-    text(h.axis_legend, 1, ypos, rf{ii}, 'Color', 'w');
+    text(h.axis_legend, .1, ypos, rf{ii}, 'Color', 'w');
     [~,ia, ~] = unique(rcm(:,ii));
     lnames = rcm(sort(ia),ii);
    
-    ypos = ypos - 5;
+    ypos = ypos - .06;
     
     ps = plot_symbol{1};
     fc = h.figure.Color;
@@ -281,17 +271,17 @@ for ii = 1:length(rf)
         else
             break
         end       
-        scatter(h.axis_legend, 1,ypos, 'Marker', ps,'MarkerFaceColor', fc,'MarkerEdgeColor', lc, 'SizeData', ss, 'LineWidth', 1.5);
-        text(h.axis_legend, 2, ypos,  lnames{jj,1}, 'Color', h.scheme.Axis.AxisColor.Value);
-        ypos  = ypos - 5;
+        scatter(h.axis_legend, .2,ypos, 'Marker', ps,'MarkerFaceColor', fc,'MarkerEdgeColor', lc, 'SizeData', ss, 'LineWidth', 1.5);
+        text(h.axis_legend, .3, ypos,  lnames{jj,1}, 'Color', h.scheme.Axis.AxisColor.Value);
+        ypos  = ypos - .06;
         
     end
-    ypos = ypos - 5;
+    ypos = ypos - .1;
 end
 
-if ypos > 50; ypos = 50; end
-h.axis_legend.XLim = [.5, 6];
-h.axis_legend.YLim = [ypos, 105];
+%if ypos > 50; ypos = 50; end
+h.axis_legend.XLim = [0, 1];
+h.axis_legend.YLim = [0, 1];
 
 %*************************************************************************
 function rNew = arrangeData(r)
