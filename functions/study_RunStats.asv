@@ -490,7 +490,7 @@ if isempty(GND.ANOVA)
 else
     indx = length(GND.ANOVA) + 1;
 end
-statsName = getTestName();
+statsName = getTestName(cond_name_matrix);
 GND.ANOVA(indx).name = statsName;
 GND.ANOVA(indx).type = stats.measure;
 GND.ANOVA(indx).source_table = ANOVAresult;
@@ -547,25 +547,19 @@ command_str = [command_str, '''time_wind'', [stats.winstart stats.winend], ''',q
 command_str = [command_str, '''include_chans'', stats.eegchans, ''mean_wind'', winmean, ''save_GND'', ''no'');'];
 
 GND = eval(command_str);
-
-cnt = length(GND.F_tests);
-GND.F_test_names{cnt} = getTestName();
+%statsName = getTestName();
 %**************************************************************************
-function statsName = getTestName()
+function statsName = getTestName(default)
 %get a name for the stats test
-
-statsName = "";
-while statsName == ""
     p.msg = 'Enter a name for this test.';
     p.title = 'Statistics';
     p.options = {'OK'};
     statsName = wwu_inputdlg(p);
     if isempty(statsName.input)
-        wwu_msgdlg("This is not a valid test name", "Ivalid Entry", {"OK"}, isError = true)
+        statsName = default;
     else
         statsName = replace(statsName.input, ' ', '_');
     end
-end
 %**************************************************************************
 function callback_assignconditions(~, event, h)
         

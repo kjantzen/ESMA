@@ -266,8 +266,10 @@ switch event.Source.Tag
         response = uiconfirm(h.figure, sprintf('Are you sure you want to delete %s?', h.dropdown_MUtest.Items{c_stat}), 'Confirm Delete');
         if contains(response, 'OK')
             GND.F_tests(c_stat) = [];
+            if isfield(GND, "F_test_names")
+                GND.F_test_name(c_stat) = [];
+            end
             outfile = fullfile(GND.filepath, GND.filename);
-            %outfile = eeg_BuildPath(GND.filepath, GND.filename);
             save(outfile,'GND', '-mat');
             callback_reloadfiles([],[],h, 1);
             
@@ -467,7 +469,6 @@ if reload_flag
        
     %update with the most recent data file and the most recent study file
     erp_filename =fullfile(p.GND.filepath, p.GND.filename);
-    %erp_filename =eeg_BuildPath(p.GND.filepath, p.GND.filename);
     load(erp_filename, '-mat');
     
     if isfield(GND, 'F_tests')
@@ -519,16 +520,20 @@ snames = horzcat('GRAND AVERAGE', p.GND.indiv_subnames);
 h.list_subject.Items = snames;
 h.list_subject.ItemsData = 0:length(snames);
 
-%  populate the informaito about the mass univariate tests
+%  populate the information about the mass univariate tests
 if isfield(p.GND,'F_tests')
-    if ~isempty(p.GND.F_tests)
+    if ~isempty(p.GND.F_tests)            
         disable = false;
-        n = arrayfun(@(x) join(x.factors), p.GND.F_tests);
-        n = cellfun(@(x) strrep(x, ' ', ' X '), n, 'UniformOutput', false);
-        t = num2cell(1:length(p.GND.F_tests));
-        tn = cellfun(@num2str, t, 'un', 0);
-        labels = strcat(tn, '. ', n);
-        
+        if ~isfield(p.GND, "F_test_names")
+            n = arrayfun(@(x) join(x.factors), p.GND.F_tests);
+            n = cellfun(@(x) strrep(x, ' ', ' X '), n, 'UniformOutput', false);
+            t = num2cell(1:length(p.GND.F_tests));
+            tn = cellfun(@num2str, t, 'un', 0);
+            labels = strcat(tn, '. ', n);
+        else
+            labels = p.GND.F_test_names;
+            
+        end
         h.dropdown_MUtest.Items = labels;
         h.dropdown_MUtest.ItemsData = 1:length(p.GND.F_tests);
         
@@ -1472,7 +1477,6 @@ function lc = line_colors
     lc(8,:) = [0, 1, 0];
     
     lc = repmat(lc,3,1);
-
 
 % ************************************************************************
 function initialize_gui(handles, GND)

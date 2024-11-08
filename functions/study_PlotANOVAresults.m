@@ -127,19 +127,31 @@ end
 
 %display means and standard deviations
 d = r.within;
+
+%add a column that holds the name of the file associated with each
+%condition
 if contains(r.factors{end}, 'Channel')
+    %if there are channels we have to do this once for each channel
     r.has_chans = true;
     r.nchan = str2double(r.levels{end});
     r.nfactors = length(r.factors) -1;
     d.Conditions = repmat(r.conditions', r.nchan,1);
     d.Channel = r.chans_used';
-    d = movevars(d, 'Channel', 'Before', d.Properties.VariableNames{1}); 
+%    d = movevars(d, 'Channel', 'Before', d.Properties.VariableNames{1}); 
 else
+    %if not, once is enough
     r.has_chans = false;
     r.nfactors = length(r.factors);
     d.Conditions = r.conditions';
 end
 
+
+%%
+%[nsubj, ncond] = size(r.data); 
+%nd = reshape(r.data.Variables, 1, nsubj * ncond)';
+%for ii = 1:length(r.factors)
+    %v = reshape(repmat(r.Within.[r.factors{ii}], 5, 1), 1, nubj * ncond)
+%end
 d = movevars(d, 'Conditions', 'Before', d.Properties.VariableNames{1});
 d.Mean = num2cell(d.Mean);
 d.StdDev = num2cell(std(r.data.Variables)');
