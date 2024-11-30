@@ -998,7 +998,7 @@ if nbad > 0
 end
 status_image = repmat(status_image, [10,1,1]);
 %********************************************************************
-function callback_removeallmarkers(~,~,h);
+function callback_removeallmarkers(~,~,h)
 p = h.figure.UserData;
 
 %get the trial number
@@ -1023,6 +1023,20 @@ end
 
 h.figure.UserData = p;
 callback_drawdata([],[],h);
+
+%********************************************************************
+function callback_clickERPPlot(hObject, eventdata, h)
+
+channel = round(eventdata.IntersectionPoint(2));
+if channel < 1
+    channel = 1;
+elseif channel > h.slider_datascroll.Limits(2)
+    channel = h.slider_datascroll.Limits(2);
+end
+h.slider_datascroll.Value = channel;
+callback_drawdata(hObject, eventdata, h);
+
+
 
 %********************************************************************
 function mystr = getbadtrialstring(EEG, trialnum)
@@ -1139,11 +1153,9 @@ if ~isfield(lastplot, 'projica')
     lastplot.projica = [];
 end
 
-%get a list of channels to plot from
+%get a list of channels to plot 
 erpind = find(p.selchans);
 %this reflects a situation where there is not change and so no need to
-%replot anything
-%if isequal(erpind, lastplot.erpind) && isequal(projica, lastplot.projica) && ~lastplot.plotica; return; end
 
 if isempty(erpind)
     children = allchild(ax);
@@ -1176,6 +1188,7 @@ else
     freqs = p.EEG.srate*(0:(np/2))/np;
     %get the bad trials
     badtrials = find(study_GetBadTrials(p.EEG));
+    nbad = size(badtrials,2);
     if projica && (sum(p.selcomps) > 0)
         if p.projectopt
             comps = find(~p.selcomps);
@@ -1192,7 +1205,8 @@ else
 
 
         d = squeeze(pdata(erpind(ii),:,:));
-        %set the bad trials to 0;
+        %instead of removing bad trials, we 
+        % will just set them to a value of 0
         d(:,badtrials) = 0;
 
         %compute the fft here
@@ -1212,16 +1226,19 @@ else
             xaxis = freqs(1:indx);
             d = imgaussfilt(d,[1,2]);
             d = log10(d);
-            imagesc(ah,xaxis, 1:ntrials,d');
+            imagesc(ah,xaxis, 1:ntrials,d', 'PickableParts', 'none');
             ah.XLabel.String = 'Frequency (Hz)';
             cbLabel = 'log uV^2';
         else
             d = imgaussfilt(d,2);
-            imagesc(ah,p.EEG.times, 1:ntrials, d');
+            imagesc(ah,p.EEG.times, 1:ntrials, d', 'PickableParts', 'none');
             line(ah,[0,0], [1, max(ntrials)], 'Color', 'k', 'LineWidth', 3);
             ah.XLabel.String = 'Time (ms)';
             cbLabel = 'uV';
         end
+        l = repmat([p.EEG.times(1), p.EEG.times(end)], size(badtrials,2), 1)';
+        line(ah, l, repmat(badtrials-1,2,1), 'Color', [.5,.5,.5], 'LineWidth', 1, 'PickableParts', 'none')
+        ah.ButtonDownFcn = {@callback_clickERPPlot,h};
         cb = colorbar(ah);
         cb.Label.String  = cbLabel;
         cb.Label.Position(1) = 2;

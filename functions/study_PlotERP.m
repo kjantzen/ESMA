@@ -1,3 +1,10 @@
+% Interface for reviewing ERP's within the ESMA envirionment
+% This interface uses the GND file type generated using the FMUT and MUT
+% matlab packages.  This is for convenience because ESMA uses these
+% toolboxes to perform mass univariate statistics.  Moreover, this format
+% retains individual participant information that allows for invetigation
+% of individual and subject level means.
+%
 function study_PlotERP(study, filename)
 
 fprintf('Opening ERP plotting and analysis tool...\n');
@@ -1081,6 +1088,7 @@ if ~isempty(ch_groups) && ~mapping_mode
         for jj = 1:length(cond_sel)
             if sbj == 0
                 ch_group_data(ii,pt,jj) = squeeze(mean(GND.grands(study.chgroups(ch_groups(ii)).chans,:,cond_sel(jj)),1));
+                se(ii,pt,jj) = squeeze(mean(GND.grands_stder(study.chgroups(ch_groups(ii)).chans,:,cond_sel(jj)),1));
                 if mass_univ_overlay && ~mapping_mode %mapping data for these channels is not valid
                     %again - initialize the array to the full size of the data
                     stat = zeros(size(GND.grands,1), size(GND.grands,2));
@@ -1311,7 +1319,7 @@ h.panel_topo.UserData = my_h;
 drawnow nocallbacks
 %***************************************************************************
 %main erp drawing function
-function callback_ploterp(hObject, event, h)
+function callback_ploterp(~, ~, h)
 
 stacked = h.menu_stack.Checked;
 userScale = ~h.menu_autoscale.Checked;
@@ -1349,7 +1357,6 @@ if ~stacked
     else
         spread_amnt = max(max(max(abs(d)))) * separation;   %get the plotting scale
     end
-    %v = 1:1:size(d,1);
     v = size(d,1):-1:1;
     spread_matrix = repmat(v' * spread_amnt, 1, size(d,2), size(d,3));
     d = d + spread_matrix;
@@ -1357,11 +1364,10 @@ end
 
 %main plotting loop - plot the time series for each condition
 cla(h.axis_erp);
+hold(h.axis_erp, 'on');
 
 for ii = 1:size(d,3)
-        hold(h.axis_erp, 'on');
     dd = squeeze(d(:,:,ii));
-    
     if ~isempty(se) && SEoverlay
         for jj = 1:size(d,1)
         e = squeeze(se(jj,:,ii));
@@ -1415,7 +1421,7 @@ if stacked
     
     h.axis_erp.YTickMode = 'auto';
     %h.axis_erp.YTickLabel = -h.axis_erp.YTick;
-    h.axis_erp.YTickLabel = h.axis_erp.YTick;
+    %h.axis_erp.YTickLabel = h.axis_erp.YTick;
     h.axis_erp.YLabel.String = 'microvolts';
     
 else    
@@ -1426,8 +1432,6 @@ else
     h.axis_erp.YLabel.String = 'microvolts x channel';
     
 end
-
-
 
 h.axis_erp.XGrid = 'on'; h.axis_erp.YGrid = 'on';
 h.axis_erp.XLim = [mnTime, mxTime];
@@ -1441,7 +1445,6 @@ time_lock_ms = min(abs(p.GND.time_pts));
 l = line(h.axis_erp, [time_lock_ms, time_lock_ms], h.axis_erp.YLim,...
     'Color', [.5,.5,.5], 'LineWidth', 1.5);
 l.Annotation.LegendInformation.IconDisplayStyle = 'off';
-
 
 if length(legend_names) > 6
     legend_columns = 6;
@@ -1550,9 +1553,13 @@ for ii = 1:3
     handles.button_statstab(ii).ButtonPushedFcn = {@callback_togglestatspanel, handles};
 end
 % *************************************************************************
+% create the user interface
 function handles = build_gui(handles)
 
+%load the display scheme for this instance
 scheme = eeg_LoadScheme;
+
+%set some default parameters for window size
 W = round(scheme.ScreenWidth * .6);
 if scheme.ScreenHeight < 1080
     H = scheme.ScreenHeight;
@@ -1583,19 +1590,37 @@ handles.panel_topo = uipanel(...
     'ForegroundColor', scheme.Panel.FontColor.Value);
 handles.panel_topo.Layout.Column = 2;
 handles.panel_topo.Layout.Row = 5;
+ 
+%try embedding teh uiaxes in a panel to deal with some strange resizing
+%issues
+
+%panel for holding the uiaxis 
+handles.panel_axes = uipanel(...
+    'Parent', handles.gl,...
+    'AutoResizeChildren', false,...
+    'BorderType', 'none',...
+    'Units', 'normalized',...
+    'BackgroundColor', scheme.Panel.BackgroundColor.Value,...
+    'HighlightColor', scheme.Panel.BorderColor.Value,...
+    'FontName',scheme.Panel.Font.Value,...
+    'FontSize', scheme.Panel.FontSize.Value,...
+    'ForegroundColor', scheme.Panel.FontColor.Value);
+handles.panel_axes.Layout.Column = 2;
+handles.panel_axes.Layout.Row = [2 4];
+
 
 handles.axis_erp = uiaxes(...
-    'Parent', handles.gl,...
+    'Parent', handles.panel_axes,...
     'Units', 'normalized',...
-    'OuterPosition', [0,0,1,1],...
     'Interactions',[],...
+    'OuterPosition',[0,0,1,1],...
     'Color', scheme.Axis.BackgroundColor.Value,...
     'XColor', scheme.Axis.AxisColor.Value,...
     'YColor',scheme.Axis.AxisColor.Value,...
     'FontName',scheme.Axis.Font.Value,...
     'FontSize', scheme.Axis.FontSize.Value);
-handles.axis_erp.Layout.Column = 2;
-handles.axis_erp.Layout.Row = [2 4];
+%handles.axis_erp.Layout.Column = 2;
+%handles.axis_erp.Layout.Row = [2 4];
 handles.axis_erp.Toolbar.Visible = 'off';
 handles.axis_erp.Title.Color = scheme.Axis.AxisColor.Value;
 handles.axis_erp.Title.BackgroundColor = 'none';
@@ -1813,7 +1838,7 @@ drawnow;
 pause(1);
 
 psh = handles.panel_statoverlay.InnerPosition;
-psh(1) = 0; psh(2) = 0;
+pshd(1) = 0; psh(2) = 0;
 inner_panel_pos = psh; inner_panel_pos(4) = psh(4) - 30;
 
 handles.grp_statselect = uibuttongroup(...

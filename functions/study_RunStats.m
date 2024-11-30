@@ -156,11 +156,16 @@ modelkey = join(stats.factors,'x ');
 h.label_model.Text = modelkey;
 h.button_add.ButtonPushedFcn = {@callback_assignconditions,h};
 h.button_remove.ButtonPushedFcn = {@callback_assignconditions,h};
-h.button_dostats.ButtonPushedFcn = {@callback_dostats, h, GND, stats, false};
+h.button_dostats.ButtonPushedFcn = {@callback_dostats, h, GND, stats};
 h.button_cancel.ButtonPushedFcn = {@callback_cancel, h.figure};
 
-%**************************************************************************
-function callback_dostats(hObject, event, h, GND, stats, exportFlag)
+%***********************************************************************
+% callback function for the run stats button on the GUI
+% collects and verifies all the necessary information and then calls the 
+% stats function depending on whether the user is running parametric or 
+% mass univariate statistics 
+%***********************************************************************
+function callback_dostats(hObject, event, h, GND, stats)
 
 %get the condition list from the main list box
 cond_info = h.list_model.ItemsData;
@@ -169,7 +174,7 @@ if sum(cellfun(@(a) a(1)=='[',cond_info))
     return
 end
 
-
+% determines if between subject information will be included in the test.
 stats.useBetween = h.check_usebetween.Value;
 if stats.useBetween
     [hasError, stats] = assignBetweenVariables(stats, GND);
@@ -513,16 +518,29 @@ else
 end
 
 %**************************************************************************
+% conducts mass univariate statistics using the FMUT toolbox from Eric
+% Fields.  https://github.com/ericcfields/FMUT/wiki/
+%**************************************************************************
 function GND = do_MassUniv(h,GND,stats)
+
+%TODO:  make compatible with between subject tests by
+%   1. checking if between subject is desired and if there are groups
+%   labeled.
+%   2. Create a GND file for each group
+%   3. Create a GRP file from the GND files
+%   4. Run the stats
 
 cond_info = h.list_model.ItemsData;
 cond_order = cellfun(@str2num, cond_info);
 
+%set some parameters for the call to the FMUT functions
 if stats.meanwindow
     winmean = 'yes';
 else
     winmean = 'no';
 end
+
+%figure out which method will be used to correct for multiple comparisons.
 if contains(stats.test, 'fdr')
     q_or_alpha = 'q';
 else
@@ -542,6 +560,7 @@ clevels = cellfun(@str2double, stats.levels);
 factors = cellfun(@strtrim, stats.factors, 'UniformOutput', false);
 factors = cellfun(@(x) replace(x,' ', '_'), factors, 'UniformOutput', false);
 
+%build the command string for a within subject design
 command_str = [stats.test, '( GND, ''bins'', cond_order, ''factor_names'', factors, ''factor_levels'', clevels,' ch_hood head_radius];
 command_str = [command_str, '''time_wind'', [stats.winstart stats.winend], ''',q_or_alpha,''', stats.alpha, ''plot_raster'', ''no'','];
 command_str = [command_str, '''include_chans'', stats.eegchans, ''mean_wind'', winmean, ''save_GND'', ''no'');'];

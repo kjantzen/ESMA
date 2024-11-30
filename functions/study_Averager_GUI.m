@@ -134,6 +134,7 @@ p = h.figure.UserData;
 study = p.study;
 
 tic
+
 %for now I think I will just do the average here rather than farm it out to the non-gui routine.
 %This may change as things get more complex.
 
@@ -276,16 +277,19 @@ for ii = 1:size(p.filenames,1)
 
         %save to a temp file and store the filename
         fcount = fcount + 1;
-        tempfilename = fullfile(outdir, sprintf('%s_%i.tmp',fname,fcount));
-        flist{fcount} = tempfilename;
-        wwu_SaveEEGFile(EEG, tempfilename);
+        [oPath, oFile, oExt] = fileparts(p.filenames{ii,jj});
+        subjOutFile = fullfile(oPath, [oFile, '_preave', oExt]);
+        %tempfilename = fullfile(outdir, sprintf('%s_%i.tmp',fname,fcount));
+        flist{fcount} = subjOutFile;
+        wwu_SaveEEGFile(EEG, subjOutFile);
+
+        %
 
     end
     
 pb.Message = 'creating average';
 GNDFile = fullfile(outdir, [outfilename, '.GND']);
 sets2GND(flist,'out_fname', GNDFile,'verblevel', 3);
-delete(fullfile(outdir, [filesep, '*.tmp']));
 
 %now load the GND file and assign the between subject condition information
 GND = load(GNDFile, '-mat');
