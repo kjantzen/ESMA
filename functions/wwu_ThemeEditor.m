@@ -46,11 +46,12 @@ function callback_ChangeColor(src, ~, fig)
     txt = sprintf('Select a new %s color for %s', fields{2}, fields{1});
     newColor = uisetcolor(currColor,txt);
 
+    if ~isempty(newColor)
     src.BackgroundColor = newColor;
     p.(fields{1}).(fields{2}).Value = newColor;
     setParameters(h,p);
     saveUserData(fig, h, p);
-  
+    end
 end
 % ************************************************************************
 function callback_ChangeFontOrSize(src, evt, fig)
@@ -288,18 +289,19 @@ y = sin(10 * x);
 end
 %**************************************************************************
 function h = drawEditPanel(h, p)
-    
-    parent = h.ePanel;
-    ch = allchild(parent);
-    if ~isempty(ch)
-        delete(ch);
-    end
 
-    fonts = listfonts;
+parent = h.ePanel;
+ch = allchild(parent);
+if ~isempty(ch)
+    delete(ch);
+end
 
-    controls = fieldnames(p);
-    bottom = 10;
-    left = parent.InnerPosition(3)-100;
+fonts = listfonts;
+
+controls = fieldnames(p);
+bottom = 10;
+left = parent.InnerPosition(3)-100;
+
 for cc = length(controls):-1:1
     if ~isstruct(p.(controls{cc}))
         continue

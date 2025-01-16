@@ -42,7 +42,7 @@ end
 pb.Message = 'Stashing data...';
 p.GND = GND;
 p.study = study;
-p.ts_colors = line_colors;
+p.ts_colors = line_colors(handles);
 clear GND;
 
 
@@ -1088,6 +1088,7 @@ if ~isempty(ch_groups) && ~mapping_mode
         for jj = 1:length(cond_sel)
             if sbj == 0
                 ch_group_data(ii,pt,jj) = squeeze(mean(GND.grands(study.chgroups(ch_groups(ii)).chans,:,cond_sel(jj)),1));
+                %get the std error averaged across the channels in the group 
                 se(ii,pt,jj) = squeeze(mean(GND.grands_stder(study.chgroups(ch_groups(ii)).chans,:,cond_sel(jj)),1));
                 if mass_univ_overlay && ~mapping_mode %mapping data for these channels is not valid
                     %again - initialize the array to the full size of the data
@@ -1469,16 +1470,38 @@ function callback_togglestatspanel(hObject, ~, h)
     h.tab_stats(currentTab).Visible = true;
 %%
 % ************************************************************************
-function lc = line_colors
-    lc(1,:) = [.5, 1, .5];
-    lc(2,:) = [.2, 1, 1];
-    lc(3,:) = [1, .4, .4];
-    lc(4,:) = [1, 1, .4];
-    lc(5,:) = [.6, .6, 1];
-    lc(6,:) = [1, .6, 1];
-    lc(7,:) = [1, 1, 0];
-    lc(8,:) = [0, 1, 0];
+function lc = line_colors(h)
+
+    %get teh background color of the plotting area
+    bcolor = h.panel_axes.BackgroundColor;
+    %default gamma level
+    y = 2.2;
+    %calculate normalized luminance
+    lum = 0.2126 * bcolor(1)^y + 0.7152 * bcolor(2)^y + 0.0722 * bcolor(3)^y;
+
+    %decide what color lines to used based on luminance of background color
+    if lum < 0.5 
+        
+        lc(1,:) = [.5, 1, .5];
+        lc(2,:) = [.2, 1, 1];
+        lc(3,:) = [1, .4, .4];
+        lc(4,:) = [1, 1, .4];
+        lc(5,:) = [.6, .6, 1];
+        lc(6,:) = [1, .6, 1];
+        lc(7,:) = [1, 1, 0];
+        lc(8,:) = [0, 1, 0];
+    else
+        lc(1,:) = [0, 1, 0];
+        lc(2,:) = [0, 0, 1];
+        lc(3,:) = [1, 0, 0];
+        lc(4,:) = [1, 0, 1];
+        lc(5,:) = [0, 1, 1];
+        lc(6,:) = [1, .6, 1];
+        lc(7,:) = [1, 1, 0];
+        lc(8,:) = [0, 1, 0];
+    end
     
+    fprintf("lum is %d", lum)    
     lc = repmat(lc,3,1);
 
 % ************************************************************************
