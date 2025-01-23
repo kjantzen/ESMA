@@ -40,3 +40,7 @@ All the files available for an experiment are displayed in the central display t
 - Biosemi files: bdf format files.
 - Continuous EEG:  These are non-epoched data files created from bdf files by EMSA.  They are recognized by their *'cnt* extension.  Because the format is identical to an EEGLAB continueous file, any EEGLAB continuous file can be read by changing its extension from *'.set'* to *'.cnt'.
 - Epoched Trial Data:  epoched time domain data created from continuous files by ESMA.  These files are recognized by the *'epc'* extension. Because these files are the same format as EEGLAB ERPLAB format, other files should be readable by changing the extension.
+- 
+### Getting Started
+To get started you should set up the file structure as described above with your files in the participant folders.  Type *esma* in the MATLAB command window.  To set up your first 
+study click on the *Study* menu option and then select *New Study*.  From there you can just fill in the specific informaiton on each of the different screens.
