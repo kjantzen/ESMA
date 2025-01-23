@@ -1,4 +1,6 @@
-# WWU_ERP
+# ESMA 
+## EEG Study Management and Analysis
+
 User interface for ERP analysis of EEG data.
 
 This toolbox provides a front end interface for ERP analysis.  It operates at a 
