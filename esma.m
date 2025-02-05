@@ -7,12 +7,13 @@
 %               ERP Toolbox and the FMUT extension for multi way ANOVA.
 %
 %Installation
-%       Download and Install thh following MATLAB toolboxes and add them to your path.
+%       Download and Install the following MATLAB toolboxes and add them to your path.
 %
 %           EEGLAB  -   https://sccn.ucsd.edu/eeglab/index.php
+%                       Must include the ICALabel, BIOSIG and FIELDTRIP plugins for EEGLAB    
 %           Mass Univariate Toolbox - written by Groppe, Urbach & Kutas can
 %                       be found at https://openwetware.org/wiki/Mass_Univariate_ERP_Toolbox
-%           FMUT    -   The factorial model extension of the Mass
+%           FMUT    -   Teh factorial model extension of the Mass
 %                       Univariate Toolbox written by Eric Fields can be downloaded
 %                       from https://github.com/ericcfields/FMUT.
 %            
@@ -35,7 +36,7 @@ end
 
 EEGPath = study_GetEEGPath;
 if isempty(EEGPath)
-    Message = sprintf('No valid experiment path was identified.\nPlease restart ESMA and identify a your experiment folder when prompted');
+    Message = sprintf('No valid experiment path was identified.\nPlease restart ESMA and identify an experiment folder when prompted');
     Title = 'Missing path file';
     options = {"OK"}; 
     wwu_msgdlg(Message, Title, options, 'isError', true);
@@ -237,7 +238,7 @@ close(msg);
 %%
 %Start of function definitions
 %**************************************************************************
-function callback_copypastecomponents(hObject, event, h)
+function callback_copypastecomponents(hObject, ~, h)
 
 study = getstudy(h);
 if study.nsubjects < 1
@@ -337,7 +338,7 @@ switch hObject.Tag
 end
 %*********************************************************************
 %refresh the display after updating information
-function callback_refresh(hObject, event, h)
+function callback_refresh(~, ~, h)
 
 h.figure.Pointer = 'watch';
 populate_studylist(h)

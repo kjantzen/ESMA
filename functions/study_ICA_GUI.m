@@ -204,7 +204,7 @@ for jj = 1:length(fnames)
         fprintf('Detected continuous data so running sobi algorithm because it is blazing fast.\n')
         EEGprocessed = pop_runica(EEGprocessed, 'icatype', 'sobi', 'concatenate', 'off', 'n', pcacomp);
     else
-        fprintf('Detected epoched data so running the acsobiro algorithm for epoched data'\n);
+        fprintf('Detected epoched data so running the acsobiro algorithm for epoched data.\n');
         EEGprocessed = pop_runica(EEGprocessed, 'icatype', 'acsobiro', 'concatenate', 'off');
     end
 
