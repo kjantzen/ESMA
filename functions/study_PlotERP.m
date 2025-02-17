@@ -192,7 +192,8 @@ rowNum = 5;
 %write some headers for factor levels
 range = sprintf('A%i', rowNum);
 nFacs = length(r.factors);
-writecell(r.factors', excelFilename,'Range',range, 'Sheet', 'Data');
+fac_names = {r.factors.Factor}';
+writecell(fac_names, excelFilename,'Range',range, 'Sheet', 'Data');
 
 %default next write column is 'B' - which is ascii 66
 colNum = 66;
@@ -207,7 +208,7 @@ end
 range = sprintf('%s%i',char(colNum), rowNum-1);
 writecell(r.chans_used, excelFilename, 'Range',range, 'Sheet', 'Data');
 range = sprintf('%s%i',char(colNum), rowNum);
-writematrix(r.level_matrix', excelFilename,'Range',range, 'Sheet', 'Data')
+writecell(r.level_matrix', excelFilename,'Range',range, 'Sheet', 'Data')
 
 %add the names of the condition files that map onto the data columns
 range = sprintf('%s%i',char(colNum), rowNum+nFacs);
@@ -324,19 +325,61 @@ save(outfile, 'GND', '-mat')
 %function to handle adding and removing factors
 function callback_changefactors(hObject, event, h)
 
+%get the experiment structure now to avoid redundency since both the add
+%and remove operations need it
+d = h.list_model.UserData;
+
+%allow for using the same function to both add and remove factors
 switch event.Source.Tag
     case 'Add'
         
+        %get information about the factor name and number of levels
         fname = h.edit_factors.Value;
         flevel = h.edit_levels.Value;
-        
+
+        %make sure the values are valid
         if isempty(fname) || isempty(flevel)
             uialert(h.figure, 'Please enter a factor name and number of levels.', 'Add factor');
             return
         end
         
-        flabel = {sprintf('%s (%i) levels', fname, flevel)};
+        %make sure fname has no spaces in it.
+
+        %get a label to associate with each level of the factor
+        prompts = arrayfun(@(x) {sprintf('%s level %i', fname,x)}, 1:flevel);
+        instr = sprintf("Please enter a label for each level of the Factor %s.", upper(fname));
+        level_labels = wwu_getMultiInput(instr, prompts);
+
+        %do not add the factor if the user pressed cancel
+        if isempty(level_labels)
+            return
+        end
+        for ii = 1:length(level_labels)
+            if isempty(level_labels(ii))
+                level_labels{ii} = sprintf('Level %i', ii);
+            end
+        end
+       
+        %once label names are available, probably store the name of the
+        %factor and associated level labels in a stucuture in the
+        %uicontrols user data.  Have to remember to move things to the end
+        %and to remove them as well if they are deleted.  The pass that
+        %structure to the statistics function so that name of the label
+        %will be included.
+
+        %do some checking to makes sure the levels arent empty
+        if isempty(d)
+            indx = 1;
+        else
+            indx = length(d) + 1;
+        end
+        d(indx).Factor = fname;
+        d(indx).Levels = level_labels;
+   
+        %make a label to display this information to the user
+        flabel = {sprintf('%s (%s)', fname, strjoin(level_labels, ","))};
         
+        %if there are no factors
         if isempty(h.list_model.ItemsData)
             h.list_model.Items = flabel;
             h.list_model.ItemsData = 1;
@@ -344,6 +387,7 @@ switch event.Source.Tag
             h.list_model.Items = horzcat(h.list_model.Items, flabel);
             h.list_model.ItemsData = 1:length(h.list_model.Items);
         end
+
         %select the last item added
         h.list_model.Value = h.list_model.ItemsData(end);
         h.button_factremove.Enable = 'on';
@@ -353,6 +397,7 @@ switch event.Source.Tag
         
         selected = h.list_model.Value;
         h.list_model.Items(selected) = [];
+        d(selected) = [];
         h.list_model.ItemsData = 1:length(h.list_model.Items);
        
         if isempty(h.list_model.ItemsData)
@@ -362,6 +407,8 @@ switch event.Source.Tag
         
 end
 
+h.list_model.UserData = d;
+
 %************************************************************************
 function callback_runstatstest(hObject, event, h)
 
@@ -369,20 +416,24 @@ function callback_runstatstest(hObject, event, h)
 p = h.figure.UserData;
 
 %collect information from the GUI
-if isempty(h.list_model.ItemsData)
-    uialert(h.figure,'Please define some conditions before running the test.','Run Stats')
-    fprintf('No factors have been defined!')
+factorInfo = h.list_model.UserData;
+if isempty(factorInfo)
+    wwu_msgdlg("'Please define some conditions before running the test.",...
+        "RunStats", {"Ok"},"isError",true);
+    fprintf("No factors have been defined");
     return
 end
 
-newStr = split(h.list_model.Items, {'(', ')'});
-if length(h.list_model.Items) ==1
-    stats.factors = newStr(1);
-    stats.levels = newStr(2);
-else
-    stats.factors = newStr(1,:,1);
-    stats.levels = newStr(1,:,2);
-end
+stats.factors = factorInfo;
+
+%newStr = split(h.list_model.Items, {'(', ')'});
+%if length(h.list_model.Items) ==1
+%    stats.factors = newStr(1);
+%    stats.levels = newStr(2);
+%else
+%    stats.factors = newStr(1,:,1);
+%   stats.levels = newStr(1,:,2);
+%end
 
 stats.test = h.dropdown_MUtype.Value;
 stats.winstart = h.edit_massunivstart.Value;
@@ -576,7 +627,7 @@ end
 if isfield(p.GND,'ANOVA')
     if ~isempty(p.GND.ANOVA)
         disable = false;
-         n = arrayfun(@(x) join(x.factors), p.GND.ANOVA);
+         n = arrayfun(@(x) join({x.factors.Factor}), p.GND.ANOVA);
          n = cellfun(@(x) strrep(x, ' ', ' X '), n, 'UniformOutput', false);
 
         if ~isfield(p.GND.ANOVA, 'name')
@@ -629,7 +680,7 @@ p = h.figure.UserData;
     
 tn = h.dropdown_ANOVAtest.Value;
 r = p.GND.ANOVA(tn);
-
+factors = {r.factors.Factor};
 
 delete(h.tree_ANOVA.Children);
 
@@ -644,9 +695,9 @@ end
 %add the number of levels after each factor name
 n = uitreenode(h.tree_ANOVA,...
     'Text', 'Factors');
-for ii = 1:length(r.factors)
+for ii = 1:length(factors)
     uitreenode('Parent',n,...
-        'Text', sprintf('%s (%s)', r.factors{ii}, r.levels{ii}));
+        'Text', sprintf('%s', factors{ii}));
 end
 
 n = uitreenode(h.tree_ANOVA,...
@@ -2058,7 +2109,8 @@ handles.edit_factors = uieditfield(...
     'BackgroundColor',scheme.Edit.BackgroundColor.Value,...
     'FontName', scheme.Edit.Font.Value,...
     'FontSize', scheme.Edit.FontSize.Value,...
-    'FontColor', scheme.Edit.FontColor.Value);
+    'FontColor', scheme.Edit.FontColor.Value,...
+    'InputType','letters');
 
 handles.edit_levels = uieditfield(...
     handles.tab_stats(3),'numeric',...

@@ -24,7 +24,7 @@ function esma()
 %major revision indicates the addition of a new major function or a change
 %that may impact people using previous version.
 %Minor revisions indicate a bug fix or addition/expansion of a minor feature.
-VersionNumber = '1.2.2';
+VersionNumber = '2.0.0';
 fprintf('Starting EEG Study Management and Analysis V%s....\n', VersionNumber);
 
 try

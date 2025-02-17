@@ -125,19 +125,41 @@ levels = zeros(1,n_factors);
 for ii = 1:n_factors
     levels(ii) = length(stats.factors(ii).Levels);
 end
-%n_conds = prod(levels);
+n_conds = prod(levels);
 
 %create a matrix with the condition name cominations
-if n_factors > 1
-    itemsTable = combinations(stats.factors.Levels);
-    cond_name_matrix = table2cell(itemsTable);
-    temp = join(cond_name_matrix,",");
-else
-    cond_name_matrix = stats.factors.Levels;
-    temp = cond_name_matrix;
-end
+itemsTable = combinations(stats.factors.Levels);
+cond_name_matrix = table2cell(itemsTable);
 
-items = strcat('[',temp,']');
+%for ii = 1:n_conds
+ temp = join(cond_name_matrix,",");
+ items = strcat('[',temp,']');
+
+% %make sure there is a record of which condition is represented in which
+% %order
+% 
+% bin2cond = zeros(n_factors, n_conds);
+% nc = 1;
+% 
+% %fill in the basic matrix for holding the factorial levels
+% for ii = 1:n_factors
+%     cond = 1;
+%     for jj = 1:n_conds          
+%         bin2cond(ii,jj) = cond;
+%         if mod(jj, nc)==0
+%             cond = cond + 1;
+%         end       
+%         if cond > levels(ii)
+%             cond = 1;
+%         end 
+%     end    
+%        nc = prod(levels(1:ii));
+% end
+% 
+% items = cell(1,n_conds);
+% for ii = 1:n_conds
+%     items{ii} = ['[',replace(num2str(bin2cond(:,ii)'), '  ',', '), ']'];
+% end
 
 h.figure.UserData = cond_name_matrix;
 
@@ -562,7 +584,7 @@ end
 flevels = length(stats.factors);
 clevels = zeros(1, flevels);
 for ii = 1:flevels
-    clevels(ii) = length(stats.factors(ii).Levels);
+    clevels(ii) = length(stats.factors.Levels);
 end
 %clevels = cellfun(@str2double, stats.levels);
 factors = {stats.factors.Factor};

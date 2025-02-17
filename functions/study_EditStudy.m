@@ -21,10 +21,10 @@ else
 end
 setstudy(h,study);
 populate_studyinfo(study, h);
-
 %**************************************************************************
 function study = checkForCompatibility(study)
-    
+% do some things to ensure backward compatibility with previous studies that
+% may not have all the same fields    
 if ~isfield(study, 'subject')
     return
 end
@@ -34,7 +34,6 @@ for ii = 1:length(study.subject)
         study.subject(ii).conditions = [];
     end
 end
-
 %**************************************************************************
 function study = callback_newStudy(hObject, hEvent, h)
 %callback function for when user pushes the new study button
@@ -133,13 +132,9 @@ end
 msg = sprintf('The new study %s has been created and saved.\n',study.name);
 msg = sprintf('%sYou can edit the study using the Study Editing tool, or close the tool to return to the main interface.', msg);
 uialert(h.figure,msg,'Study saved','Icon','info');
-
-
-
 %************************************************************************
-%helper functions
 function populate_studyinfo(study, h)
-
+% populate the study information when the GUI is first built
 h.edit_studyname.Value = study.name;
 h.edit_studypath.Value = study.path;
 if isempty(study.description)
@@ -150,7 +145,7 @@ end
 populate_SubjectDisplay(study, h)
 populate_ChanGroupDisplay(study, h)
 populate_bintree(study, h)
-
+callback_changeBinGroupButtonStatus([],[], h, false)
 %*************************************************************************
 function populate_SubjectDisplay(study, h)
 
@@ -193,179 +188,10 @@ if study.nsubjects > 0
         end
     end
 end
-%**************************************************************************
-function populate_ChanGroupDisplay(study, h)
-
-n = h.tree_changroup.Children;
-grpCount = length(n);
-n.delete;
-
-if ~isfield(study, 'chanlocs')
-    return
-end
-
-h.list_chanpicker.Items = {study.chanlocs.labels};
-h.list_chanpicker.ItemsData = 1:length(study.chanlocs);
-callback_drawchannelpositions([],[], h)
-
-%add the ones from the current study
-if isfield(study,'chgroups') && ~isempty(study.chgroups)
-    for ii = 1:length(study.chgroups)
-        n = uitreenode('Parent', h.tree_changroup,...
-            'Text', study.chgroups(ii).name, 'NodeData', ii);
-        for jj = 1:length(study.chgroups(ii).chans)
-            uitreenode('Parent', n, 'Text', study.chgroups(ii).chanlocs(jj).labels,...
-                'NodeData', ii);
-        end
-    end
-    h.tree_changroup.SelectedNodes = n;
-    expand(n);
-end
-
-toggle_changroupbuttons(h);
-
-
-%*************************************************************************
-%draw the display that shows the channel locations on a 2-d projection
-%**************************************************************************
-function callback_drawchannelpositions(~, ~, h)
-
-study = getstudy(h);
-
-selchans = h.list_chanpicker.Value;
-if isempty(selchans)
-    h.button_addchangroup.Enable = 'off';
-    h.button_clearselchans.Enable = 'off';
-    h.label_chanselectedsummary.Text = "Click or Shit+Click+Drag to select electrodes";
-else
-     h.button_addchangroup.Enable = 'on';
-     h.button_clearselchans.Enable = 'on';
-     h.label_chanselectedsummary.Text = sprintf("%i Electrodes selected", length(selchans));
-
-end   
-[mHandle, smHandle] = wwu_PlotChannelLocations(study.chanlocs,...
-    'Elec_Color', h.scheme.Button.BackgroundColor.Value,...
-    'Elec_Selcolor',[.2,.9,.9],...
-    'Elec_Size', 50,...
-    'Elec_SelSize', 150,...
-    'Labels', 'name',...
-    'LabelColor', [1,1,1],...
-    'Subset', selchans,...
-    'AxisHandle', h.axis_chanpicker);
-
-mHandle.ButtonDownFcn = {@callback_channelClick, h};
-smHandle.ButtonDownFcn = {@callback_channelClick, h};
-
-
-%************************************************************************
-function callback_channelClick(hObject, ~, h)
-
-study = getstudy(h);
-
-[yp, xp] =  wwu_ChannelProjection(study.chanlocs);
-
-mp = h.axis_chanpicker.CurrentPoint;
-x = mp(1,1); y = mp(1,2);
-%get the cartesian distance to all the electrodes
-dx = xp - x; dy = yp - y;
-d = sqrt(dx.^2 + dy.^2);
-
-%the smallest is the one that was clicked
-[~, en] = min(d);
-i = find(h.list_chanpicker.Value==en);
-if isempty(i)
-    h.list_chanpicker.Value = sort([h.list_chanpicker.Value, en]);
-else
-    h.list_chanpicker.Value(i) = [];
-end
-
-callback_drawchannelpositions(hObject, [], h)
-% *************************************************************************
-function callback_handleMouseDown(hObject, hEvent, h)
-
-if contains(hObject.SelectionType, 'extend')
-    cp = hObject.CurrentPoint;
-    ap = h.axis_chanpicker.Position;
-    pp = h.tab(4).Position;
-
-    xp = cp(1,1); yp = cp(1,2);
-    axWin(1) = ap(1) + pp(1);
-    axWin(2) = ap(2) + pp(2);
-    axWin(3) = axWin(1) + ap(3);
-    axWin(4) = axWin(2) + ap(4);
-
-    isInAxis = (xp > axWin(1)) && (yp > axWin(2)) && (xp < axWin(3)) && (yp < axWin(4));
-    if isInAxis
-        css = h.axis_chanpicker.UserData;
-        css.drawing = true;
-        %initialize drawing
-        cp = h.axis_chanpicker.CurrentPoint;
-        css.line = line(h.axis_chanpicker, cp(1,1), cp(1,2), 'Color', 'g',...
-            'LineWidth', 2);
-        h.axis_chanpicker.UserData = css;
-        fprintf('started drawing...')
-    end
-end
-
-%*************************************************************************
-function callback_handleMouseUp(hObject, hEvent, h)
-
-css = h.axis_chanpicker.UserData;
-if isempty(css) || css.drawing == false
-    return
-else
-    %delete the line object
-    %close the shape
-    css.line.XData(end+1) = css.line.XData(1);
-    css.line.YData(end+1) = css.line.YData(1);
-    drawnow
-
-    %figure out which channels are in the shape
-    study = getstudy(h);
-    [yp, xp] = wwu_ChannelProjection(study.chanlocs);
-    selected = find(inpolygon(xp, yp, css.line.XData, css.line.YData));
-    h.list_chanpicker.Value = selected;
-    callback_drawchannelpositions(hObject, hEvent, h);
-
-    %clear the drawing and stop drawing mode
-    css.drawing = false;
-    h.axis_chanpicker.UserData = css;
-    fprintf('finished drawing\n');
-    delete(css.line);
-
-
-end
-%************************************************************************
-function callback_handleMouseMove(hObject, hEvent, h)
-
-css = h.axis_chanpicker.UserData;
-if ~isempty(css) && css.drawing == true
-    %the handle may get deleted
-    if ~isvalid(css.line)
-        css.drawing = false;
-        h.axis_chanpicker.UserData  = css;
-        return
-    end
-
-    cp = h.axis_chanpicker.CurrentPoint;
-    css.line.XData(end+1) = cp(1,1);
-    css.line.YData(end+1) = cp(1,2);
-    drawnow;
-end
-
-%*************************************************************************
-%edit the description of the study in real time
-function callback_editstudydescr(hObject, event, h)
-
-study = getstudy(h);
-study.description = h.edit_studydescr.Value;
-study = study_SaveStudy(study);
-setstudy(h,study);
-%% START OF BIN EDITING FUNCTIONS
+%% BIN GROUP FUNCTIONS
 %*************************************************************************
 function callback_addbingroup(hObject, hEvent, h)
 % add a new bin group to the study
-%
 study = getstudy(h);
 
 epochgroup_name = h.edit_bingroupname.Value;
@@ -416,9 +242,9 @@ populate_bintree(study, h);
 
 %switch back to the non-editing mode now
 callback_changeBinGroupButtonStatus(hObject, hEvent, h, false)
-h.panel_bingroup.Enable = 'off';
+%toggleEpochTabState(h.tab_trialgroup, 'off');
 
-%*************************************************************************
+% ***********************************************************************
 function callback_removebingroup(hObject, eventdata, h)
 % remove an existing bin from the study
 %
@@ -457,6 +283,7 @@ function callback_editbingroup(hObject, eventdata, h, isNew)
 % edit an existing bin
 %
 study = getstudy(h);
+
 n = h.tree_bingrouplist.SelectedNodes;
 if isNew
     h.edit_bingroupname.Value = '';
@@ -474,20 +301,21 @@ else
     h.edit_epochfilename.Value = study.bingroup(gnum).filename;
     h.edit_epochstart.Value = study.bingroup(gnum).interval(1);
     h.edit_epochend.Value = study.bingroup(gnum).interval(2);
-
 end
 
 %pass the isNew flag forward to the update button so the
 %add bin function knows whether to update or add.
 h.button_bingroupupdate.UserData = isNew;
 callback_changeBinGroupButtonStatus(hObject, eventdata, h, true)
-h.panel_bingroup.Enable = 'on';
 
+%make sure the bin group tab is selected
+h.tabgroup_bins.SelectedTab = h.tab_trialgroup;
+toggleEpochTabState(h.tab_trialgroup, 'on');
 %*************************************************************************
 function callback_changeBinGroupButtonStatus(hObject, hEvent, h, editing)
 % changes the state of the editing buttons so they cannot be used when a
 % bin group is being edited
-%
+
 h.button_bingroupadd.Enable = ~editing;
 h.button_bingroupremove.Enable = ~editing;
 h.button_bingroupedit.Enable = ~editing;
@@ -497,6 +325,11 @@ if editing
     checkBinAddEnableStatus(h, 'off');
 else
     checkBinAddEnableStatus(h);
+end
+
+if editing == false
+    toggleEpochTabState(h.tab_trialgroup, 'off');
+    toggleEpochTabState(h.tab_trialdef, 'off');
 end
 %*************************************************************************
 function callback_newbintogroup(~,~,h)
@@ -509,8 +342,8 @@ if isempty(n)
     return
 end
 callback_changeBinGroupButtonStatus([],[],h,true);
-h.panel_bin.Enable = 'on';
-
+toggleEpochTabState(h.tab_trialdef, 'on');
+h.tabgroup_bins.SelectedTab = h.tab_trialdef;
 %*************************************************************************
 %adds a new condition to an Epoch group or adds edited information to an
 %existing group.
@@ -524,9 +357,7 @@ if isempty(n)
     return
 end
 
-ndata = n.NodeData;
-gnum = ndata{1}; cnum = ndata{2};
-
+gnum = n.NodeData{1};
 if ~isempty(study.bingroup(gnum).bins)
     new_cnum = length(study.bingroup(gnum).bins) + 1;
 else
@@ -562,16 +393,60 @@ setstudy(h,study);
 populate_bintree(study, h, [gnum, new_cnum]);
 callback_changeBinGroupButtonStatus([],[],h, false)
 checkBinAddEnableStatus(h)
-h.panel_bin.Enable = 'off';
 % *************************************************************************
-function  callback_canceladdbintogroup(~,~,h)
+function callback_removeBinFromGroup(~, ~, h)
+% function to delete a bin from a bin group
+
+study = getstudy(h);
+
+n = h.tree_bingrouplist.SelectedNodes;
+if isempty(n)
+    uialert(h.figure,'Please create or select a Bin to remove.', 'Remove Bin');
+    return
+end
+
+%stepped updating this function here.
+groupOfBin = n.NodeData{1};
+binToRemove = n.NodeData{2};
+
+if groupOfBin == 0 || binToRemove == 0
+    wwu_msgdlg("Please select a specific bin to remove!", "Remove Bin", {'OK'}, "isError",true);
+    return
+end
+if isempty(study.bingroup(groupOfBin).bins)
+    wwu_msgdlg("There are no bins to remove!", "Remove Bin", {'OK'}, "isError",true);
+    return
+end
+if isempty(study.bingroup(groupOfBin).bins(binToRemove))
+    wwu_msgdlg("The bin you are attempting to remvoe does not seem to exist",...
+        "Remove Bin", {"OK"}, "isError",true);
+    return
+end
+
+resp = wwu_msgdlg('Are you sure you want to remove the selected bin',...
+    "Remove Bin", {"Yes", "No"});
+if strcmp(resp, "Yes")
+    study.bingroup(groupOfBin).bins(binToRemove) = [];
+
+    study = study_SaveStudy(study);
+    setstudy(h,study);
+    populate_bintree(study, h);
+    callback_changeBinGroupButtonStatus([],[],h, false)
+    checkBinAddEnableStatus(h)
+end
+%toggleEpochTabState(h.tab_trialgroup, 'off');
+% *************************************************************************
+function callback_canceladdbintogroup(~,~,h)
+
     callback_changeBinGroupButtonStatus([],[],h, false)
     checkBinAddEnableStatus(h);
-    h.panel_bin.Enable = 'off';
-
+    %toggleEpochTabState(h.tab_trialgroup, 'off');
 % ************************************************************************
 function callback_binGroupSelected(hObject,~,h)
-    checkBinAddEnableStatus(h, 'on');
+ % checkBinAddEnableStatus(h, 'on');
+ % investigate what we can know about the passed objects
+
+  % selectAndPopulateBinEditPanels(hObject, [], h);
 % ************************************************************************    
 function checkBinAddEnableStatus(h, status)
  %checks the state of the uitree and determines if the add bin button 
@@ -581,8 +456,10 @@ function checkBinAddEnableStatus(h, status)
  else
     if isempty(h.tree_bingrouplist.SelectedNodes)
         h.button_binadd.Enable = 'off';
+        h.button_binremove.Enable = 'off';
     else
         h.button_binadd.Enable = 'on';
+        h.button_binremove.Enable = 'on';
     end
  end
 %***************************************************************************
@@ -636,9 +513,194 @@ elseif ~isempty(n)
     h.tree_bingrouplist.SelectedNodes = n;
     callback_binGroupSelected(h.tree_bingrouplist, [], h);
 end
+% *************************************************************************
+%function to call when usser selects on information in the 
+%epoch groups display.  it will populate the tabs wit appropriate
+%information and make that tab the active one.
+function selectAndPopulateBinEditPanels(hObject, eventdata, h)
 
+ %   study = getstudy(h);
+    nd = hObject.SelectedNodes.NodeData;
+  
+    %this is an indication that they node is for a bin within a hin group
+    if nd{2} > 0
+        h.tabgroup_bins.SelectedTab = h.tab_trialdef;
+        disp('you selected a bin');
+    else
+        h.tabgroup_bins.SelectedTab = h.tab_trialgroup;
+        callback_editbingroup(hObject, [], h, false)
+    end
+% ************************************************************************    
+%toggle all teh items on an epoch control tab      
+function toggleEpochTabState(tab, state)
+
+c = tab.Children;
+for i = 1:length(c)
+    c(i).Enable = state;
+end
 %*************************************************************************
-%this is the callback for the Create button on the channel group tab
+%% CHANNEL GROUP CALLBACKS and FUNCTIONS
+%**************************************************************************
+function populate_ChanGroupDisplay(study, h)
+
+n = h.tree_changroup.Children;
+grpCount = length(n);
+n.delete;
+
+if ~isfield(study, 'chanlocs')
+    return
+end
+
+h.list_chanpicker.Items = {study.chanlocs.labels};
+h.list_chanpicker.ItemsData = 1:length(study.chanlocs);
+callback_drawchannelpositions([],[], h)
+
+%add the ones from the current study
+if isfield(study,'chgroups') && ~isempty(study.chgroups)
+    for ii = 1:length(study.chgroups)
+        n = uitreenode('Parent', h.tree_changroup,...
+            'Text', study.chgroups(ii).name, 'NodeData', ii);
+        for jj = 1:length(study.chgroups(ii).chans)
+            uitreenode('Parent', n, 'Text', study.chgroups(ii).chanlocs(jj).labels,...
+                'NodeData', ii);
+        end
+    end
+    h.tree_changroup.SelectedNodes = n;
+    expand(n);
+end
+
+toggle_changroupbuttons(h);
+%*************************************************************************
+%draw the display that shows the channel locations on a 2-d projection
+%**************************************************************************
+function callback_drawchannelpositions(~, ~, h)
+
+study = getstudy(h);
+selchans = h.list_chanpicker.Value;
+if isempty(selchans)
+    h.button_addchangroup.Enable = 'off';
+    h.button_clearselchans.Enable = 'off';
+    h.label_chanselectedsummary.Text = "Click or Shift+Click+Drag to select electrodes";
+else
+     h.button_addchangroup.Enable = 'on';
+     h.button_clearselchans.Enable = 'on';
+     h.label_chanselectedsummary.Text = sprintf("%i Electrodes selected", length(selchans));
+
+end   
+[mHandle, smHandle] = wwu_PlotChannelLocations(study.chanlocs,...
+    'Elec_Color', [.25,.25,.25],...
+    'Elec_Selcolor',[.2,.9,.9],...
+    'Elec_Size', 50,...
+    'Elec_SelSize', 150,...
+    'Labels', 'name',...
+    'LabelColor', [1,1,1],...
+    'Subset', selchans,...
+    'AxisHandle', h.axis_chanpicker);
+
+mHandle.ButtonDownFcn = {@callback_channelClick, h};
+smHandle.ButtonDownFcn = {@callback_channelClick, h};
+%************************************************************************
+function callback_channelClick(hObject, ~, h)
+
+study = getstudy(h);
+
+[yp, xp] =  wwu_ChannelProjection(study.chanlocs);
+
+mp = h.axis_chanpicker.CurrentPoint;
+x = mp(1,1); y = mp(1,2);
+%get the cartesian distance to all the electrodes
+dx = xp - x; dy = yp - y;
+d = sqrt(dx.^2 + dy.^2);
+
+%the smallest is the one that was clicked
+[~, en] = min(d);
+i = find(h.list_chanpicker.Value==en);
+if isempty(i)
+    h.list_chanpicker.Value = sort([h.list_chanpicker.Value, en]);
+else
+    h.list_chanpicker.Value(i) = [];
+end
+
+callback_drawchannelpositions(hObject, [], h)
+% *************************************************************************
+function callback_handleMouseDown(hObject, hEvent, h)
+
+if contains(hObject.SelectionType, 'extend')
+    cp = hObject.CurrentPoint;
+    ap = h.axis_chanpicker.Position;
+    pp = h.tab(4).Position;
+
+    xp = cp(1,1); yp = cp(1,2);
+    axWin(1) = ap(1) + pp(1);
+    axWin(2) = ap(2) + pp(2);
+    axWin(3) = axWin(1) + ap(3);
+    axWin(4) = axWin(2) + ap(4);
+
+    isInAxis = (xp > axWin(1)) && (yp > axWin(2)) && (xp < axWin(3)) && (yp < axWin(4));
+    if isInAxis
+        css = h.axis_chanpicker.UserData;
+        css.drawing = true;
+        %initialize drawing
+        cp = h.axis_chanpicker.CurrentPoint;
+        css.line = line(h.axis_chanpicker, cp(1,1), cp(1,2), 'Color', 'g',...
+            'LineWidth', 2);
+        h.axis_chanpicker.UserData = css;
+        fprintf('started drawing...')
+    end
+end
+%*************************************************************************
+function callback_handleMouseUp(hObject, hEvent, h)
+
+css = h.axis_chanpicker.UserData;
+if isempty(css) || css.drawing == false
+    return
+else
+    %delete the line object
+    %close the shape
+    css.line.XData(end+1) = css.line.XData(1);
+    css.line.YData(end+1) = css.line.YData(1);
+    drawnow
+
+    %figure out which channels are in the shape
+    study = getstudy(h);
+    [yp, xp] = wwu_ChannelProjection(study.chanlocs);
+    selected = find(inpolygon(xp, yp, css.line.XData, css.line.YData));
+    h.list_chanpicker.Value = selected;
+    callback_drawchannelpositions(hObject, hEvent, h);
+
+    %clear the drawing and stop drawing mode
+    css.drawing = false;
+    h.axis_chanpicker.UserData = css;
+    fprintf('finished drawing\n');
+    delete(css.line);
+
+
+end
+%************************************************************************
+function callback_handleMouseMove(hObject, hEvent, h)
+
+css = h.axis_chanpicker.UserData;
+if ~isempty(css) && css.drawing == true
+    %the handle may get deleted
+    if ~isvalid(css.line)
+        css.drawing = false;
+        h.axis_chanpicker.UserData  = css;
+        return
+    end
+
+    cp = h.axis_chanpicker.CurrentPoint;
+    css.line.XData(end+1) = cp(1,1);
+    css.line.YData(end+1) = cp(1,2);
+    drawnow;
+end
+%*************************************************************************
+%edit the description of the study in real time
+function callback_editstudydescr(hObject, event, h)
+
+study = getstudy(h);
+study.description = h.edit_studydescr.Value;
+study = study_SaveStudy(study);
+setstudy(h,study);
 %*************************************************************************
 function callback_createchangroup(hObject, eventdata,h)
 
@@ -671,7 +733,6 @@ study.chgroups(gnum).chanlocs = study.chanlocs(study.chgroups(gnum).chans);
 setstudy(h, study);
 study = study_SaveStudy(study);
 populate_ChanGroupDisplay(study, h)
-
 %*************************************************************************
 function callback_updatechangroup(~, ~, h)
 study = getstudy(h);
@@ -686,7 +747,6 @@ study.chgroups(gnum).chanlocs = study.chanlocs(study.chgroups(gnum).chans);
 setstudy(h, study);
 study = study_SaveStudy(study);
 populate_ChanGroupDisplay(study, h)
-
 %*************************************************************************
 function callback_removechangroup(hObject, eventdata, h)
 
@@ -728,11 +788,11 @@ function toggle_changroupbuttons(h)
         h.button_updatechangroup.Enable = 'on';
         h.button_removechangroup.Enable = 'on';
     end
-
 %*********************************************************************
 function callback_clearselectedchans(~,~,h)
     h.list_chanpicker.Value = [];
     callback_drawchannelpositions([],[],h);
+%% SUBJECT RELATED FUNCTIONS
 %*********************************************************************
 function callback_editsubject(hObject, hEvent,h, isNew)
 
@@ -772,7 +832,6 @@ end
 %change the status of the controls so the user cannot
 %do anything until they finish editing the subject
 callback_changeSubjectEntryMode(hObject, hEvent, h, false);
-
 %**************************************************************************
 %add a subject to the current study
 function callback_addsubject(hObject, hEvent, h)
@@ -836,7 +895,6 @@ study_SaveStudy(study);
 
 %refresh the node tree
 populate_SubjectDisplay(study, h);
-
 %*************************************************************************
 function callback_changeSubjectEntryMode(hObject, hEvent, h, state)
 
@@ -850,10 +908,8 @@ if state
 else
     h.panel_sbj.Enable = 'on';
 end
-
 %*************************************************************************
 function callback_removesubject(hObject, event, h)
-
 sn = hObject.UserData;
 study = getstudy(h);
 
@@ -892,11 +948,8 @@ else
         %refresh the node tree
         populate_studyinfo(study, h);
     end
-
-
 end
 set_subjectdefaults(h);
-
 %*************************************************************************
 function callback_getsubjectpath(hObject, eventdata, h)
 
@@ -935,8 +988,6 @@ if isempty(h.edit_subjectid.Value)
     [~, autoID, ~] = fileparts(path);
     h.edit_subjectid.Value = autoID;
 end
-
-
 %*************************************************************************
 %these are the defaults for adding a new subject
 %*************************************************************************
@@ -949,7 +1000,6 @@ h.dropdown_subjecthand.Value = 'right';
 h.spinner_subjectage.Value = 20;
 h.check_subjectstatus.Value = true;
 h.edit_subjconds = '';
-
 %******************************************************************
 function callback_changeStudyName(hObject, hEvent, h)
 
@@ -1032,6 +1082,7 @@ function callback_toggletabs(hObject, hEvent, h)
     hObject.FontColor = bColor;
     hObject.Tag = 'selected';
 
+%%  GUI BUILDING FUNCTIONS    
 %**************************************************************************
 function h = assign_callbacks(h)
 %a function that assigns all of the control callback functions
@@ -1060,12 +1111,14 @@ h.button_addbin.ButtonPushedFcn = {@callback_addbintogroup, h};
 h.button_bingroupremove.ButtonPushedFcn = {@callback_removebingroup, h};
 h.button_bingroupadd.ButtonPushedFcn = {@callback_editbingroup, h, true};
 h.button_binadd.ButtonPushedFcn = {@callback_newbintogroup, h};
+h.button_binremove.ButtonPushedFcn = {@callback_removeBinFromGroup, h};
 h.button_canceladdbin.ButtonPushedFcn = {@callback_canceladdbintogroup, h};
 
 h.button_bingroupedit.ButtonPushedFcn = {@callback_editbingroup, h, false};
 h.list_binevents.ValueChangedFcn = {@callback_addtoeventlist, h};
 h.button_bingroupcancel.ButtonPushedFcn = {@callback_changeBinGroupButtonStatus, h, false};
-h.tree_bingrouplist.SelectionChangedFcn = {@callback_binGroupSelected, h};
+%h.tree_bingrouplist.SelectionChangedFcn = {@callback_binGroupSelected, h};
+h.tree_bingrouplist.DoubleClickedFcn = {@callback_binGroupSelected, h};
 
 h.button_addchangroup.ButtonPushedFcn  = {@callback_createchangroup, h};
 h.button_updatechangroup.ButtonPushedFcn = {@callback_updatechangroup, h};
@@ -1397,7 +1450,7 @@ uilabel('Parent',h.tab(2),...
 
 h.tree_subjectlist = uitree(...
     'Parent', h.tab(2),...
-    'Position', [10,40,260,255],...
+    'Position', [10,40,250,255],...
     'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
     'FontColor', scheme.Edit.FontColor.Value,...
     'FontName',scheme.Edit.Font.Value,...
@@ -1415,7 +1468,7 @@ h.button_subjectadd = uibutton(...
 h.button_subjectremove = uibutton(...
     'Parent', h.tab(2),...
     'Position', [100, 10, 80, 25],...
-    'Text', 'Remove',...
+    'Text', 'Delete',...
     'BackgroundColor', scheme.Button.BackgroundColor.Value,...
     'FontColor', scheme.Button.FontColor.Value,...
     'FontName', scheme.Button.Font.Value,...
@@ -1442,61 +1495,124 @@ h.tab(3) = uipanel(...
     'BorderType','line',...
     'Visible','off');
 
-h.panel_bingroup = uipanel(...
+%Bin group list
+h.tree_bingrouplist = uitree(...
     'Parent', h.tab(3),...
-    'Position', [10, 10, 200, 320],...
-    'Title', 'Add/Edit bin groups',...
-    'Enable', 'off', ...
-    'BackgroundColor',scheme.Panel.BackgroundColor.Value,...
-    'FontName', scheme.Panel.Font.Value,...
-    'FontSize', scheme.Panel.FontSize.Value,...
-    'ForegroundColor',scheme.Panel.FontColor.Value,...
-    'HighlightColor',scheme.Panel.BorderColor.Value);
+    'Position', [120,10,200,300],...
+    'Multiselect', 'off',...
+    'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
+    'FontColor', scheme.Edit.FontColor.Value,...
+    'FontName',scheme.Edit.Font.Value,...
+    'FontSize', scheme.Edit.FontSize.Value);
 
-h.button_bingroupupdate = uibutton(...
-    'Parent', h.panel_bingroup,...
-    'Position', [10, 10, 80, 25],...
-    'Text', 'Update',...
+uilabel('Parent',h.tab(3),...
+    'Position', [100,315,100,20],...
+    'Text','Epoch Groups',...
+    'FontColor', scheme.Label.FontColor.Value,...
+    'FontName', scheme.Label.Font.Value,...
+    'FontSize', scheme.Label.FontSize.Value);
+
+h.button_bingroupadd = uibutton(...
+    'Parent', h.tab(3),...
+    'Position', [10, 275, 100, 25],...
+    'Text', 'New Group',...
     'BackgroundColor', scheme.Button.BackgroundColor.Value,...
     'FontColor', scheme.Button.FontColor.Value,...
     'FontName', scheme.Button.Font.Value,...
     'FontSize', scheme.Button.FontSize.Value);
 
+h.button_bingroupedit = uibutton(...
+    'Parent', h.tab(3),...
+    'Position', [10, 245, 100, 25],...
+    'Text', 'Edit Group',...
+    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
+    'FontColor', scheme.Button.FontColor.Value,...
+    'FontName', scheme.Button.Font.Value,...
+    'FontSize', scheme.Button.FontSize.Value);
+
+h.button_bingroupremove = uibutton(...
+    'Parent', h.tab(3),...
+    'Position', [10, 215, 100, 25],...
+    'Text', 'Remove Group',...
+    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
+    'FontColor', scheme.Button.FontColor.Value,...
+    'FontName', scheme.Button.Font.Value,...
+    'FontSize', scheme.Button.FontSize.Value);
+
+h.button_binadd = uibutton(...
+    'Parent', h.tab(3),...
+    'Position', [10, 185, 100, 25],...
+    'Text', 'New Bin',...
+    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
+    'FontColor', scheme.Button.FontColor.Value,...
+    'FontName', scheme.Button.Font.Value,...
+    'FontSize', scheme.Button.FontSize.Value,...
+    'Enable', 'off');
+
+h.button_binremove = uibutton(...
+    'Parent', h.tab(3),...
+    'Position', [10, 155, 100, 25],...
+    'Text', 'Remove Bin',...
+    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
+    'FontColor', scheme.Button.FontColor.Value,...
+    'FontName', scheme.Button.Font.Value,...
+    'FontSize', scheme.Button.FontSize.Value,...
+    'Enable', 'off');
+
+%add a tab group for teh bin group and bin edit screens
+h.tabgroup_bins = uitabgroup("Parent",h.tab(3),...
+    "Position", [330,10,width - 36d0, 320]);
+h.tab_trialgroup = uitab(h.tabgroup_bins, "Title", "Trial Groups",...
+    'BackgroundColor', scheme.Panel.BackgroundColor.Value);
+h.tab_trialdef = uitab(h.tabgroup_bins, "Title","Trial Definition",...
+  'BackgroundColor', scheme.Panel.BackgroundColor.Value);
+
+% bin group add/edit tab
+ 
+ h.button_bingroupupdate = uibutton(...
+     'Parent', h.tab_trialgroup,...
+     'Position', [20, 10, 80, 25],...
+     'Text', 'Update Group',...
+     'BackgroundColor', scheme.Button.BackgroundColor.Value,...
+     'FontColor', scheme.Button.FontColor.Value,...
+     'FontName', scheme.Button.Font.Value,...
+     'FontSize', scheme.Button.FontSize.Value);
+% 
 h.button_bingroupcancel = uibutton(...
-    'Parent', h.panel_bingroup,...
-    'Position', [100, 10, 80, 25],...
-    'Text', 'Cancel',...
+    'Parent', h.tab_trialgroup,...
+    'Position', [110, 10, 80, 25],...
+    'Text', 'Revert',...
     'BackgroundColor', scheme.Button.BackgroundColor.Value,...
     'FontColor', scheme.Button.FontColor.Value,...
     'FontName', scheme.Button.Font.Value,...
     'FontSize', scheme.Button.FontSize.Value);
 
-uilabel('Parent', h.panel_bingroup, ...
-    'Position', [10, 270, 160, 25],...
+uilabel('Parent', h.tab_trialgroup, ...
+    'Position', [20, 270, 160, 25],...
     'Text', 'Name for the bin group',...
     'FontColor', scheme.Label.FontColor.Value,...
     'FontName', scheme.Label.Font.Value,...
     'FontSize', scheme.Label.FontSize.Value,...
     'VerticalAlignment','bottom');
 
-uilabel('Parent', h.panel_bingroup, ...
-    'Position', [10, 210, 160, 25],...
+uilabel('Parent', h.tab_trialgroup, ...
+    'Position', [20, 210, 160, 25],...
     'Text', 'Epoch filename',...
     'FontColor', scheme.Label.FontColor.Value,...
     'FontName', scheme.Label.Font.Value,...
     'FontSize', scheme.Label.FontSize.Value,...
     'VerticalAlignment','bottom');
 
-uilabel('Parent', h.panel_bingroup, ...
-    'Position', [10 150, 100, 25],...
+uilabel('Parent', h.tab_trialgroup, ...
+    'Position', [20 150, 100, 25],...
     'Text', 'Epoch start',    ...
     'FontColor', scheme.Label.FontColor.Value,...
     'FontName', scheme.Label.Font.Value,...
     'FontSize', scheme.Label.FontSize.Value,...
     'VerticalAlignment','bottom');
 
-uilabel('Parent', h.panel_bingroup, ...
-    'Position', [10 90, 100, 25],...
+uilabel('Parent', h.tab_trialgroup, ...
+    'Position', [20 90, 100, 25],...
     'Text', 'Epoch end',...    
     'FontColor', scheme.Label.FontColor.Value,...
     'FontName', scheme.Label.Font.Value,...
@@ -1504,16 +1620,16 @@ uilabel('Parent', h.panel_bingroup, ...
     'VerticalAlignment','bottom');
 
 h.edit_bingroupname = uieditfield(...,
-    'Parent', h.panel_bingroup,...
-    'Position', [10, 240, 160, 25],...
+    'Parent', h.tab_trialgroup,...
+    'Position', [20, 240, 160, 25],...
     'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
     'FontColor', scheme.Edit.FontColor.Value,...
     'FontName',scheme.Edit.Font.Value,...
     'FontSize', scheme.Edit.FontSize.Value);
 
 h.edit_epochfilename = uieditfield(...,
-    'Parent', h.panel_bingroup,...
-    'Position', [10, 180, 160, 25],...
+    'Parent', h.tab_trialgroup,...
+    'Position', [20, 180, 160, 25],...
     'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
     'FontColor', scheme.Edit.FontColor.Value,...
     'FontName',scheme.Edit.Font.Value,...
@@ -1521,8 +1637,8 @@ h.edit_epochfilename = uieditfield(...,
 
 h.edit_epochstart = uieditfield(...,
     'numeric',...
-    'Parent', h.panel_bingroup,...
-    'Position', [10, 120, 160, 25],...
+    'Parent', h.tab_trialgroup,...
+    'Position', [20, 120, 160, 25],...
     'ValueDisplayFormat', '%0.3g sec.',...
     'Value', -.1,...
     'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
@@ -1532,84 +1648,18 @@ h.edit_epochstart = uieditfield(...,
 
 h.edit_epochend = uieditfield(...,
     'numeric',...
-    'Parent', h.panel_bingroup,...
-    'Position', [10, 60, 160, 25],...
+    'Parent', h.tab_trialgroup,...
+    'Position', [20, 60, 160, 25],...
     'ValueDisplayFormat', '%0.3g sec.',...
     'Value', .5,...
     'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
     'FontColor', scheme.Edit.FontColor.Value,...
     'FontName',scheme.Edit.Font.Value,...
     'FontSize', scheme.Edit.FontSize.Value);
-
-    % bin list   
-pLeft = 230;
-h.tree_bingrouplist = uitree(...
-    'Parent', h.tab(3),...
-    'Position', [pLeft,80,260,230],...
-    'Multiselect', 'off',...
-    'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
-    'FontColor', scheme.Edit.FontColor.Value,...
-    'FontName',scheme.Edit.Font.Value,...
-    'FontSize', scheme.Edit.FontSize.Value);
-
-uilabel('Parent',h.tab(3),...
-    'Position', [pLeft,315,100,20],...
-    'Text','Epoch bin groups',...
-    'FontColor', scheme.Label.FontColor.Value,...
-    'FontName', scheme.Label.Font.Value,...
-    'FontSize', scheme.Label.FontSize.Value);
-
-h.button_bingroupadd = uibutton(...
-    'Parent', h.tab(3),...
-    'Position', [pLeft, 45, 80, 25],...
-    'Text', 'New Group',...
-    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
-    'FontColor', scheme.Button.FontColor.Value,...
-    'FontName', scheme.Button.Font.Value,...
-    'FontSize', scheme.Button.FontSize.Value);
-
-h.button_bingroupedit = uibutton(...
-    'Parent', h.tab(3),...
-    'Position', [pLeft + 90, 45, 80, 25],...
-    'Text', 'Edit',...
-    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
-    'FontColor', scheme.Button.FontColor.Value,...
-    'FontName', scheme.Button.Font.Value,...
-    'FontSize', scheme.Button.FontSize.Value);
-
-h.button_bingroupremove = uibutton(...
-    'Parent', h.tab(3),...
-    'Position', [pLeft+180, 45, 80, 25],...
-    'Text', 'Remove',...
-    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
-    'FontColor', scheme.Button.FontColor.Value,...
-    'FontName', scheme.Button.Font.Value,...
-    'FontSize', scheme.Button.FontSize.Value);
-
-h.button_binadd = uibutton(...
-    'Parent', h.tab(3),...
-    'Position', [pLeft, 10, 80, 25],...
-    'Text', 'New Bin',...
-    'BackgroundColor', scheme.Button.BackgroundColor.Value,...
-    'FontColor', scheme.Button.FontColor.Value,...
-    'FontName', scheme.Button.Font.Value,...
-    'FontSize', scheme.Button.FontSize.Value,...
-    'Enable', 'off');
-
-    % ***** indivudal bin add/edit panel
-h.panel_bin = uipanel(...
-    'Parent', h.tab(3),...
-    'Position', [510, 10, 240, 320],...
-    'Title', 'Add/Edits bins to your group',...
-    'BackgroundColor',scheme.Panel.BackgroundColor.Value,...
-    'FontName', scheme.Panel.Font.Value,...
-    'FontSize', scheme.Panel.FontSize.Value,...
-    'ForegroundColor',scheme.Panel.FontColor.Value,...
-    'HighlightColor',scheme.Panel.BorderColor.Value,...
-    'Enable', 'off');
-
-uilabel('Parent', h.panel_bin, ...
-    'Position', [10 260,220,25],...
+ 
+%     % ***** indivudal bin add/edit panel
+uilabel('Parent', h.tab_trialdef, ...
+    'Position', [20 260,220,25],...
     'Text', 'Bin Name: The mean data in the bin will appear using this name',...
     'FontColor', scheme.Label.FontColor.Value,...
     'FontName', scheme.Label.Font.Value,...
@@ -1617,9 +1667,9 @@ uilabel('Parent', h.panel_bin, ...
     'WordWrap','on',...
     'VerticalAlignment','bottom');
 
-uilabel('Parent', h.panel_bin, ...
-    'Position', [10, 188, 220, 25],...
-    'Text', 'Bin Events: Icnlude all trials with these events codes in the bin (conditions).',...
+uilabel('Parent', h.tab_trialdef, ...
+    'Position', [20, 188, 220, 25],...
+    'Text', 'Bin Events: Include all trials with these events codes in the bin (conditions).',...
     'FontColor', scheme.Label.FontColor.Value,...
     'FontName', scheme.Label.Font.Value,...
     'FontSize', scheme.Label.FontSize.Value,...
@@ -1627,24 +1677,24 @@ uilabel('Parent', h.panel_bin, ...
     'WordWrap','on');
 
 h.edit_binname = uieditfield(...,
-    'Parent', h.panel_bin,...
-    'Position', [10, 230, 220, 25],...
+    'Parent', h.tab_trialdef,...
+    'Position', [20, 230, 220, 25],...
     'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
     'FontColor', scheme.Edit.FontColor.Value,...
     'FontName',scheme.Edit.Font.Value,...
     'FontSize', scheme.Edit.FontSize.Value);
 
 h.edit_eventlist = uitextarea(...,
-    'Parent', h.panel_bin,...
-    'Position', [10, 45, 220, 125],...
+    'Parent', h.tab_trialdef,...
+    'Position', [20, 45, 220, 125],...
     'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
     'FontColor', scheme.Edit.FontColor.Value,...
     'FontName',scheme.Edit.Font.Value,...
     'FontSize', scheme.Edit.FontSize.Value);
 
 h.button_addbin = uibutton(...
-    'Parent', h.panel_bin, ...
-    'Position', [10, 10, 80, 25],...
+    'Parent', h.tab_trialdef, ...
+    'Position', [20, 10, 80, 25],...
     'Text', 'Add bin', ...
     'BackgroundColor', scheme.Button.BackgroundColor.Value,...
     'FontColor', scheme.Button.FontColor.Value,...
@@ -1653,8 +1703,8 @@ h.button_addbin = uibutton(...
     'UserData', 0);
 
 h.button_canceladdbin = uibutton(...
-    'Parent', h.panel_bin, ...
-    'Position', [100, 10, 80, 25],...
+    'Parent', h.tab_trialdef, ...
+    'Position', [110, 10, 80, 25],...
     'Text', 'Cancel', ...
     'BackgroundColor', scheme.Button.BackgroundColor.Value,...
     'FontColor', scheme.Button.FontColor.Value,...
@@ -1786,7 +1836,6 @@ h.label_chanselectedsummary = uilabel(...
     'FontColor', scheme.Label.FontColor.Value,...
     'FontName', scheme.Label.Font.Value,...
     'FontSize', scheme.Label.FontSize.Value);
-
 
 %Context menus
 h.cm_epochlist = uicontextmenu(h.figure);
