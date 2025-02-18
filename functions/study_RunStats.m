@@ -385,8 +385,13 @@ end
  end
 
 %*************************************************************************
+% perform parametric statistics on the data using both within and between
+% vatiables.
+%*************************************************************************
 function GND = solve_GLM(h,GND,stats)
 
+%This is the mapping of condition onto factor and level
+%provided by the user
 cond_info = h.list_model.ItemsData;
 
 %get the saved experiment matrix

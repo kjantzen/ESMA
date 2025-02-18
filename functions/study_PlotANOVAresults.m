@@ -12,7 +12,10 @@ if nargin < 1
     error('%s\nThis function should not be called directly.', msg);
 end
 
+%remove information about between subject variables 
+%to make plotting easier.  Inf future between plotting will be supported
 r = arrangeData(r);
+
 scheme = eeg_LoadScheme;
 [H, W, L,B] = setFigureSizeAndPosition(scheme);
 
@@ -215,6 +218,9 @@ drawnow;
 callback_createplots([],[],r,h)
 
 %**************************************************************************
+% get data from the GND file and put it in a format that makes plotting
+% easier
+%
 function data = getData(r, h)
 
 %get the factor to show on the x axis
@@ -275,25 +281,36 @@ for ii = 1:nPlots
     data(ii).XLabels = axisLabel;
     data(ii).CLabels = colorLabel;
     data(ii).Title = plotLabel{ii};
+    data(ii).RawValues = [];
     
     if nPlots > 1
-        temp_table = within(within(:,var(3))==string(plotLabel{ii}),:);
+        indx = within(:,var(3))==string(plotLabel{ii});
+        temp_table = within(indx,:);
+        temp_raw_data = r.data(:, indx);
+
     else
         temp_table = within;
+        tenp_raw_data = r.data;
     end
-    for jj = 1:nOnXAxis
+    for jj = 1:nOnXAxis  %loop over data the X-axis variable
         if nColors == 1
-            rows = temp_table(temp_table.within(:, var(1)) == string(axisLabel{jj}));
-            data(ii).Means(jj,1) = mean([rows{:, r.nfactors+1}]);
-            data(ii).StdErr(jj,1) = mean([rows{:,r.nfactors+2}]);
+            indx = temp_table(:, var(1)) == string(axisLabel{jj});
+            rows = temp_table(indx,:);
+            data(ii).Mean(jj,1) = mean([rows{:, r.nfactors+1}]);
+            data(ii).StdErr(jj,1) = mean([rows{:,r.nfactors+3}]);
+            %use rows as a column index into the raw data.
+            data(ii).RawValue(jj, 1, :) = table2array(temp_raw_data(:, indx));
+
         else
-            for kk = 1:nColors
-                rows = temp_table(temp_table(:, var(1)) == string(axisLabel{jj}) & temp_table(:, var(2)) == string(colorLabel{kk}),:);
+            for kk = 1:nColors %loop over color variable
+                indx = temp_table(:, var(1)) == string(axisLabel{jj}) & temp_table(:, var(2)) == string(colorLabel{kk});
+                rows = temp_table(indx,:);
                 %calculating the mean allows for more than one row entry
                 %to be combined.  This will take care of the fact that
                 %there may be more than 3 variables.
                 data(ii).Mean(jj,kk) = mean([rows{:, r.nfactors + 1}]);
                 data(ii).StdErr(jj,kk) = mean([rows{:, r.nfactors + 3}]);
+                data(ii).RawValue(jj, kk, :) = table2array(temp_raw_data(:, indx));
             end
         end
     end
@@ -308,8 +325,13 @@ function callback_createplots(hObject, event, r, h)
 %be plotted, but they will not have unique symbols, colors, etc.
 %this does not include the factor plotted on the xaxis
 
-
-BarPlotIsVisible = true;
+%make sure the violinplot function is available since it is new
+%in V2024b
+if exist('violinplot', 'file') == 2
+    BarPlotIsVisible = false;
+else
+    BarPlotIsVisible = true;
+end
 
 %remove any current axes
 delete(h.axis_holder.Children);
@@ -344,7 +366,7 @@ for ii = 1:nPlots
     if BarPlotIsVisible
         p = bar(a,d(ii).Mean);
         for jj = 1:length(p)
-            p(jj).FaceAlpha = .5;
+            p(jj).FaceAlpha = .25;
         end
     end
     a.OuterPosition = [0,B,W,H-20];
@@ -365,7 +387,10 @@ for ii = 1:nPlots
 %add error bars
     hold(a, "on")
 
+    %number of categories on the x axis
     ngroups = size(d(ii).Mean, 1);
+
+    %number of bars per category - this is the second dropdown variable
     nbars = size(d(ii).Mean, 2);
 
     % Calculating the width for each bar group
@@ -373,6 +398,20 @@ for ii = 1:nPlots
     colorRange = lines;
     for i = 1:nbars
         x = (1:ngroups) - groupwidth/2 + (2*i-1) * groupwidth / (2*nbars);
+        
+        %add the individual data points
+        if ~BarPlotIsVisible
+            violinplot(a, x, squeeze(d(ii).RawValue(1:ngroups,i, :))',...
+             'DensityScale','count',...
+             'FaceColor', colorRange(i,:),...
+             'EdgeColor', h.scheme.Axis.AxisColor.Value);
+        end
+        scatter(a, x, squeeze(d(ii).RawValue(1:ngroups,i, :)),...
+            'MarkerFaceColor',colorRange(i,:),...
+            'MarkerEdgeColor', h.scheme.Axis.AxisColor.Value,...
+            'SizeData', 50);
+
+        %add the error bars
         e= errorbar(a, x, d(ii).Mean(:,i), d(ii).StdErr(:,i), '.');
         e.Color = h.scheme.Axis.AxisColor.Value;
         e.LineWidth = 1;
@@ -380,11 +419,12 @@ for ii = 1:nPlots
         e.MarkerSize = 10;
         e.MarkerEdgeColor = h.scheme.Axis.AxisColor.Value;
         e.MarkerFaceColor = colorRange(i,:);
+        
     end
-    %er = errorbar(a, d(ii).Mean, d(ii).StdErr,".");
-    %er.LineStyle = ".";
+ 
     hold(a, 'off');
 
+    a.XTick = 1:nPlots;
     l = legend(a,d(ii).CLabels);
     l.Box = "off";
     l.BackgroundAlpha = 0;

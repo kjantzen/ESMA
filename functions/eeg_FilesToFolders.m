@@ -1,4 +1,36 @@
 function eeg_FilesToFolders(options)
+% EEG_FILESTOFOLDERS(options)
+%
+%   Attempts to arrange BDF files into the 1 folder per subject file
+%   structure compatible with ESMA.
+%
+%   All BDF files must be located in tbe same folder.  Attempts at
+%   automatic categorization of the files will be made in the following
+%   order.
+%       name:   categorize based on name information in the BDF header
+%       ID:     categorize based on subject ID information in the BDF
+%       header
+%       filename:   categorize based on the name of the BDF file.
+%
+%   NOTE: to categorize based on name, files must have a consistent naming
+%   convention of the format ?id.bdf where ? is a prepended set of
+%   characters (determined by  SIDPrefix below), id is an integer
+%   indicating the ID number of the subject, and .bdf is the file
+%   extension.  The preprended filename should be passed in the SIDPrefix
+%   parameter (defaults to "S", which means the first 3 participants would
+%   be named "S1.bdf", S2.bdf", and "S3.bdf").
+%
+% Usage
+%   eeg_FilesToFolders("FilePath", pathToBDF, "SIDPrefix", prefix)
+%
+% Inputs 
+% FilePath: a string variable containing teh path in which the BDF files are 
+% located.  If no filepath is provided, the user will be prompted for one.
+%
+% SIDPrefix: a string containing any characters in teh BDF filename that
+% precede the subject ID.  Defaults to "S".  Is not necessary if BDF header
+% information is being used to categorize data.
+% 
 arguments
     options.FilePath = []
     options.SIDPrefix (1,:) {mustBeText} = 'S'; 
