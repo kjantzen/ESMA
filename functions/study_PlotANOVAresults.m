@@ -118,6 +118,39 @@ h.dropdown_multiplot = uidropdown('Parent', h.panel,...
     'FontColor', scheme.Dropdown.FontColor.Value,...
     'FontSize', scheme.Dropdown.FontSize.Value);
 
+h.check_singletrials = uicheckbox('Parent', h.panel,...
+    'Position', [250, 10, 200, 25],...
+    'Value', true,...
+    'Text', 'Individual Subjects',...
+    'FontColor', scheme.Checkbox.FontColor.Value,...
+    'FontName',scheme.Checkbox.Font.Value,...
+    'FontSize', scheme.Checkbox.FontSize.Value);
+
+h.check_errorbars = uicheckbox('Parent', h.panel,...
+    'Position', [250, 45, 200, 25],...
+    'Value', true,...
+    'Text', 'Standard Error',...
+    'FontColor', scheme.Checkbox.FontColor.Value,...
+    'FontName',scheme.Checkbox.Font.Value,...
+    'FontSize', scheme.Checkbox.FontSize.Value);
+
+h.check_violin = uicheckbox('Parent', h.panel,...
+    'Position', [250, 80, 200, 25],...
+    'Value', true,...
+    'Text', 'Violin Plot',...
+    'FontColor', scheme.Checkbox.FontColor.Value,...
+    'FontName',scheme.Checkbox.Font.Value,...
+    'FontSize', scheme.Checkbox.FontSize.Value);
+
+h.check_bar = uicheckbox('Parent', h.panel,...
+    'Position', [250, 115, 200, 25],...
+    'Value', true,...
+    'Text', 'Bar Plot',...
+    'FontColor', scheme.Checkbox.FontColor.Value,...
+    'FontName',scheme.Checkbox.Font.Value,...
+    'FontSize', scheme.Checkbox.FontSize.Value);
+
+
 %populate the tree object with information about the test
 uitreenode('Parent', h.tree_info,...
     'Text', sprintf('Measurement:\t\t%s',r.type));
@@ -184,7 +217,11 @@ h.dropdown_coloraxis.Value = h.dropdown_coloraxis.ItemsData(default_select(1));
 h.dropdown_multiplot.Enable = state(2);
 h.dropdown_multiplot.Value = h.dropdown_multiplot.ItemsData(default_select(2));
 
-%%
+if exist('violinplot.m', 'file') == 2
+    h.radio_violin.Enable = false;
+    h.radio_violin.Value = false;
+end
+
 d = movevars(d, 'Conditions', 'Before', d.Properties.VariableNames{1});
 d.Mean = num2cell(d.Mean);
 d.StdDev = num2cell(d.StdDev);
@@ -212,6 +249,11 @@ h.scheme = scheme;
 h.dropdown_xaxis.ValueChangedFcn = {@callback_createplots, r, h};
 h.dropdown_coloraxis.ValueChangedFcn = {@callback_createplots, r, h};
 h.dropdown_multiplot.ValueChangedFcn = {@callback_createplots, r, h};
+h.check_bar.ValueChangedFcn = {@callback_createplots, r, h};
+h.check_violin.ValueChangedFcn = {@callback_createplots, r, h};
+h.check_errorbars.ValueChangedFcn = {@callback_createplots, r, h};
+h.check_singletrials.ValueChangedFcn = {@callback_createplots, r, h};
+
 
 drawnow;
 
@@ -290,7 +332,7 @@ for ii = 1:nPlots
 
     else
         temp_table = within;
-        tenp_raw_data = r.data;
+        temp_raw_data = r.data;
     end
     for jj = 1:nOnXAxis  %loop over data the X-axis variable
         if nColors == 1
@@ -325,13 +367,10 @@ function callback_createplots(hObject, event, r, h)
 %be plotted, but they will not have unique symbols, colors, etc.
 %this does not include the factor plotted on the xaxis
 
-%make sure the violinplot function is available since it is new
-%in V2024b
-if exist('violinplot', 'file') == 2
-    BarPlotIsVisible = false;
-else
-    BarPlotIsVisible = true;
-end
+PlotBar = h.check_bar.Value;
+PlotViolin = h.check_violin.Value;
+PlotSingleTrials = h.check_singletrials.Value;
+PlotErrorBars = h.check_errorbars.Value;
 
 %remove any current axes
 delete(h.axis_holder.Children);
@@ -363,7 +402,7 @@ end
 for ii = 1:nPlots
     B =(nPlots-ii) * H;
     a = uiaxes('Parent', h.axis_holder);
-    if BarPlotIsVisible
+    if PlotBar
         p = bar(a,d(ii).Mean);
         for jj = 1:length(p)
             p(jj).FaceAlpha = .25;
@@ -400,25 +439,28 @@ for ii = 1:nPlots
         x = (1:ngroups) - groupwidth/2 + (2*i-1) * groupwidth / (2*nbars);
         
         %add the individual data points
-        if ~BarPlotIsVisible
+        if PlotViolin
             violinplot(a, x, squeeze(d(ii).RawValue(1:ngroups,i, :))',...
              'DensityScale','count',...
              'FaceColor', colorRange(i,:),...
              'EdgeColor', h.scheme.Axis.AxisColor.Value);
         end
-        scatter(a, x, squeeze(d(ii).RawValue(1:ngroups,i, :)),...
-            'MarkerFaceColor',colorRange(i,:),...
-            'MarkerEdgeColor', h.scheme.Axis.AxisColor.Value,...
-            'SizeData', 50);
-
-        %add the error bars
-        e= errorbar(a, x, d(ii).Mean(:,i), d(ii).StdErr(:,i), '.');
-        e.Color = h.scheme.Axis.AxisColor.Value;
-        e.LineWidth = 1;
-        e.Marker = "o";
-        e.MarkerSize = 10;
-        e.MarkerEdgeColor = h.scheme.Axis.AxisColor.Value;
-        e.MarkerFaceColor = colorRange(i,:);
+        if PlotSingleTrials
+            scatter(a, x, squeeze(d(ii).RawValue(1:ngroups,i, :)),...
+                'MarkerFaceColor',colorRange(i,:),...
+                'MarkerEdgeColor', h.scheme.Axis.AxisColor.Value,...
+                'SizeData', 50);
+        end
+        if PlotErrorBars
+            %add the error bars
+            e= errorbar(a, x, d(ii).Mean(:,i), d(ii).StdErr(:,i), '.');
+            e.Color = h.scheme.Axis.AxisColor.Value;
+            e.LineWidth = 1;
+            e.Marker = "o";
+            e.MarkerSize = 10;
+            e.MarkerEdgeColor = h.scheme.Axis.AxisColor.Value;
+            e.MarkerFaceColor = colorRange(i,:);
+        end
         
     end
  
