@@ -24,7 +24,7 @@ function esma()
 %major revision indicates the addition of a new major function or a change
 %that may impact people using previous version.
 %Minor revisions indicate a bug fix or addition/expansion of a minor feature.
-VersionNumber = '2.1.0';
+VersionNumber = '2.2.0';
 fprintf('Starting EEG Study Management and Analysis V%s....\n', VersionNumber);
 
 try
@@ -545,6 +545,14 @@ else
     setstudy(study,h);
 end
 
+%set default colorpalettes if they don't exist to allow for backward
+%compatibility
+if ~isfield(study, 'ERPColorMap')
+    map = orderedcolors('gem12');
+    study.ERPColorMap = map(1:8, :);
+    study_SaveStudy(study);
+    setstudy(study, h)
+end
 populate_studyinfo(study, h);
 populate_filelist(study, h);
 h.figure.Pointer = 'arrow';

@@ -451,7 +451,7 @@ if n_chans> 1
     lnames = reshape(repmat(cnames', 1,n_conds)', 1, n_chans*n_conds);
     lnums = reshape(repmat(lnums', 1, n_conds)', 1, n_chans*n_conds); 
 else
-    lnames = "";
+    lnames = cnames;
 end
 
 data_table = array2table(ANOVAdata');

@@ -206,6 +206,9 @@ h.fig = uifigure('Position', [100,100,700,550]);
 h.fig.Tag = 'Appearance Editor';
 
 
+drawnow;
+pause(1)
+
  %create a menu for accessing the existing schemes
  h.menu_file = uimenu('Parent', h.fig,...
        'Text','&File',...
@@ -259,7 +262,7 @@ y = sin(10 * x);
     h.dispWindow.Layout.Column = 2;
     h.dispWindow.Layout.Row = 1;
     drawnow;
-    pause(1);
+    pause(2);
 
     pos = h.dispWindow.InnerPosition;
     h.dispAxis = uiaxes('Parent', h.dispWindow,'Position', [0, pos(4)-280, pos(3), 270], 'Toolbar',[]);

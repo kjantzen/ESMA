@@ -43,6 +43,7 @@ pb.Message = 'Stashing data...';
 p.GND = GND;
 p.study = study;
 p.ts_colors = line_colors(handles);
+p.ts_style = repmat({'-', '--', '-.', ':'}, 1, 6);
 clear GND;
 
 
@@ -66,6 +67,73 @@ fprintf('...done\n');
 pb.Message = 'All done...Enjoy!!';
 pause(1);
 close(pb);
+
+%***************************************************************************
+function callback_togglePlotANOVAStyle(~,event, h)
+
+%get the state to display
+if isfield(event, 'Edited')
+    changingStatTest = true;
+else
+    changingStatTest = false;
+end
+
+state = h.check_plotANOVAStyle.Value;
+testIndx = h.dropdown_ANOVAtest.Value;
+if testIndx == 0
+    wwu_msgdlg("A GLM test must exist and be selected to use this option", 'Plot as ANOVA',...
+        {'Ok'}, 'isError',true);
+    return
+end
+
+if state
+    p = h.figure.UserData;
+    if ~isfield(p.GND, 'ANOVA') || isempty(p.GND.ANOVA) || length(p.GND.ANOVA) < testIndx
+        wwu_msgdlg("No stats information was found", 'Plot as ANOVA', {'OK'}, 'isError',true);
+        return
+    end
+    test = p.GND.ANOVA(testIndx);
+    chans = unique(test.chans_used);
+    h.check_allchans.Value = false; %make sure the all channel check is off
+    chan_indx = find(contains(h.list_channels.Items, chans));
+    h.list_channels.Value = h.list_channels.ItemsData(chan_indx);
+
+    indx = matches(h.list_condition.Items,test.conditions);
+    h.list_condition.Value = h.list_condition.ItemsData(indx);
+    m = cond2StyleTable(test);
+    h.check_plotANOVAStyle.UserData = m;
+    callback_ploterp([],[],h);
+elseif   ~xor(state, changingStatTest)
+    callback_ploterp([],[],h);
+end
+
+%***************************************************************************
+function m = cond2StyleTable(stat)
+
+    
+    nFactors = length(stat.factors);
+    %channel is not a factor we have to worry about
+    %when plotting
+    if contains('Channel', stat.factors(end).Factor)
+        nFactors = nFactors -1;
+        stat.factors(end) = [];
+    end
+    nConds = length(stat.conditions);
+
+    %combine colors and styles to make life easier
+    
+    m = zeros(nConds, nFactors);
+    lm = stat.level_matrix(1:nConds,:);
+    for ii = 1:nFactors
+        l = unique(lm(:,ii));
+        for jj = 1:length(l)
+            m(contains(lm(:,ii), l(jj)), ii) = jj;
+        end
+    end
+    m = array2table(m, 'VariableNames', {stat.factors.Factor});
+    m.condition = stat.conditions';
+    
+
 %***************************************************************************
 function callback_togglemapoption(hObject, event, h)
 %toggle mean cursor status
@@ -1369,6 +1437,7 @@ end
 
 h.panel_topo.UserData = my_h;
 drawnow nocallbacks
+
 %***************************************************************************
 %main erp drawing function
 function callback_ploterp(~, ~, h)
@@ -1382,18 +1451,25 @@ mnTime = h.spinner_mintime.Value;
 mxTime = h.spinner_maxtime.Value;
 mnAmp = h.spinner_minamp.Value;
 mxAmp = h.spinner_maxamp.Value;
+ANOVAStyle = h.check_plotANOVAStyle.Value;
 
 
 p = h.figure.UserData;
 [d, se,~, s,labels,~,cond_sel] = getdatatoplot(p.study, p.GND, h);
 
-%account for the fact that plotting will be upside down in order to get
-%the channel data in order from top to bottom
-%d = d * -1;
-
 %can't plot it if it is not there!
 if isempty(d)
     return
+end
+
+%if th euser has selected the button to display ERP trances as a function
+%of the conditions in a stats test.
+if ANOVAStyle
+    styleMatrix = h.check_plotANOVAStyle.UserData;
+    stacked = false;  
+    statInfo = p.GND.ANOVA(h.dropdown_ANOVAtest.Value);
+    statRange = statInfo.timewindow; 
+
 end
 
 %preallocate for the legend names
@@ -1419,22 +1495,56 @@ cla(h.axis_erp);
 hold(h.axis_erp, 'on');
 
 for ii = 1:size(d,3)
+
+    %assign colors and styles to allow user to better figure out which
+    %trace is from which condition - requires statistical information
+    if ANOVAStyle
+        nFactor = width(styleMatrix)-1;
+        n = h.list_condition.Items{cond_sel(ii)};
+        indx = matches(styleMatrix.condition, n);
+        if sum(indx) == 0
+            continue
+        end
+        styleColumn = table2cell(styleMatrix(indx,:));
+        pColor = p.study.ERPColorMap(styleColumn{1}, :);
+        if nFactor < 2
+            pStyle = '-';
+        else
+            pStyle = p.ts_style{styleColumn{2}};
+        end
+    else
+       pColor = p.study.ERPColorMap(ii,:);
+       pStyle = '-';
+    end
     dd = squeeze(d(:,:,ii));
+
+      %plot the statistics
+    if MUoverlay && ~isempty(s)
+        hold(h.axis_erp, 'on');
+        tt = repmat(p.GND.time_pts, size(s,1),1);
+        
+        splot = scatter(h.axis_erp, tt(s>0)', dd(s>0)',60,'filled');
+        splot.CData =  pColor;
+    end
+
+    %plot the standard error overlay
     if ~isempty(se) && SEoverlay
         for jj = 1:size(d,1)
         e = squeeze(se(jj,:,ii));
             xe = [p.GND.time_pts, fliplr(p.GND.time_pts)];
             ye = [dd(jj,:) + e, fliplr(dd(jj,:)-e)];
             er = patch(h.axis_erp,xe, ye,p.ts_colors(ii, :));
-            er.FaceColor = p.ts_colors(ii, :);
+            er.FaceColor = pColor;
             er.EdgeColor = 'None';
-            er.FaceAlpha = .3;
+            er.FaceAlpha = .25;
         end
         
     end
       
-    
-    ph = plot(h.axis_erp, p.GND.time_pts, dd', 'Color', p.ts_colors(ii, :), 'LineWidth', 2);
+    %set the color and other line properties (ttpe and width?) based on the
+    %condition of the seleted statistical test if requested
+    ph = plot(h.axis_erp, p.GND.time_pts, dd', 'Color',pColor, 'LineWidth', 1.5,...
+        'LineStyle',pStyle);
     hold(h.axis_erp, 'on');
     for phi = 2:length(ph)
         ph(phi).Annotation.LegendInformation.IconDisplayStyle = 'off';
@@ -1443,18 +1553,9 @@ for ii = 1:size(d,3)
     legend_handles(ii) = ph(1);
     legend_names(ii) = h.list_condition.Items(cond_sel(ii));
     
-    %plot the statistics
-    if MUoverlay && ~isempty(s)
-        hold(h.axis_erp, 'on');
-        tt = repmat(p.GND.time_pts, size(s,1),1);
-        
-        splot = scatter(h.axis_erp, tt(s>0)', dd(s>0)',60,'filled');
-        splot.CData =  p.ts_colors(ii, :);%clust_colors(s(s>0),:);
-        %splot.ColorVariable
-
-    end
+  
 end
-h.axis_erp.Colormap = lines;
+%h.axis_erp.Colormap = lines;
 
 hold(h.axis_erp, 'off');
     
@@ -1498,6 +1599,16 @@ l = line(h.axis_erp, [time_lock_ms, time_lock_ms], h.axis_erp.YLim,...
     'Color', [.5,.5,.5], 'LineWidth', 1.5);
 l.Annotation.LegendInformation.IconDisplayStyle = 'off';
 
+if ANOVAStyle
+    %draw a shaded region around where the stats were done
+    yr = h.axis_erp.YLim;
+    rgn = patch(h.axis_erp, ...
+        [statRange(1),statRange(2),statRange(2),statRange(1),statRange(1)],...
+        [yr(1), yr(1), yr(2), yr(2), yr(1)],...
+        [.5,.5,.5], 'FaceAlpha', .25,...
+        'EdgeColor', 'none');
+    uistack(rgn,"bottom");
+end
 if length(legend_names) > 6
     legend_columns = 6;
 else
@@ -1522,8 +1633,9 @@ function callback_togglestatspanel(hObject, ~, h)
 %%
 % ************************************************************************
 function lc = line_colors(h)
+%return an arry of colors to use for line plotting colors.
 
-    %get teh background color of the plotting area
+    %get the background color of the plotting area
     bcolor = h.panel_axes.BackgroundColor;
     %default gamma level
     y = 2.2;
@@ -1551,8 +1663,7 @@ function lc = line_colors(h)
         lc(7,:) = [1, 1, 0];
         lc(8,:) = [0, 1, 0];
     end
-    
-    fprintf("lum is %d", lum)    
+
     lc = repmat(lc,3,1);
 
 % ************************************************************************
@@ -1603,6 +1714,8 @@ handles.dropdown_MUeffect.ValueChangedFcn = {@callback_changestatselection, hand
 handles.dropdown_ANOVAtest.ValueChangedFcn = {@callback_populateANOVAtestinfo, handles};
 handles.button_plotANOVA.ButtonPushedFcn = {@callback_plotANOVAresult, handles};
 handles.button_exportANOVA.ButtonPushedFcn = {@callback_plotANOVAresult, handles, true};
+handles.check_plotANOVAStyle.ValueChangedFcn = {@callback_togglePlotANOVAStyle, handles};
+handles.dropdown_ANOVAtest.ValueChangedFcn = {@callback_togglePlotANOVAStyle, handles};
 
 
 handles.menu_refresh.MenuSelectedFcn = {@callback_reloadfiles, handles, true};
@@ -1664,9 +1777,6 @@ handles.panel_topo = uipanel(...
     'ForegroundColor', scheme.Panel.FontColor.Value);
 handles.panel_topo.Layout.Column = 2;
 handles.panel_topo.Layout.Row = 5;
- 
-%try embedding teh uiaxes in a panel to deal with some strange resizing
-%issues
 
 %panel for holding the uiaxis 
 handles.panel_axes = uipanel(...
@@ -1919,32 +2029,18 @@ handles.grp_statselect = uibuttongroup(...
     'Parent',handles.panel_statoverlay,...
     'Position',[psh(1), psh(4)-30, psh(3), 30]);
 
-handles.button_statstab(1) = uibutton(handles.grp_statselect, ...
-    'Position', [0, 0, psh(3)/3, 30],...
-    'Text', 'Mass Univ',...
-    'BackgroundColor', scheme.Panel.BackgroundColor.Value,...
-    'FontName', scheme.Panel.Font.Value,...
-    'FontColor', scheme.Panel.FontColor.Value,...
-    'FontSize', scheme.Panel.FontSize.Value,...
-    'Tag', '1');
-
-handles.button_statstab(2) = uibutton(handles.grp_statselect, ...
-    'Position', [psh(3)/3, 0, psh(3)/3, 30],...
-    'Text', 'GLM',...
-    'BackgroundColor', scheme.Panel.BackgroundColor.Value,...
-    'FontName', scheme.Panel.Font.Value,...
-    'FontColor', scheme.Panel.FontColor.Value,...
-    'FontSize', scheme.Panel.FontSize.Value,...
-    'Tag', '2');
-
-handles.button_statstab(3) = uibutton(handles.grp_statselect,...
-    'Position', [psh(3)/3*2,0, psh(3)/3, 30],...
-    'Text', 'New Test',...
-    'BackgroundColor', scheme.Panel.BackgroundColor.Value,...
-    'FontName', scheme.Panel.Font.Value,...
-    'FontColor', scheme.Panel.FontColor.Value,...
-    'FontSize', scheme.Panel.FontSize.Value,...
-    'Tag', '3');
+stats_tab_text = {'Mass Univ', 'GLM', 'New Test'};
+for ii = 1:length(stats_tab_text)
+    xpos = psh(3) / 3 * (ii -1); 
+    handles.button_statstab(ii) = uibutton(handles.grp_statselect, ...
+        'Position', [xpos, 0, psh(3)/3, 30],...
+        'Text', stats_tab_text{ii},...
+        'BackgroundColor', scheme.Panel.BackgroundColor.Value,...
+        'FontName', scheme.Panel.Font.Value,...
+        'FontColor', scheme.Panel.FontColor.Value,...
+        'FontSize', scheme.Panel.FontSize.Value,...
+        'Tag', int2str(ii));
+end
 
 handles.tab_stats(1) = uipanel(...
     'Parent', handles.panel_statoverlay,...
@@ -2039,7 +2135,7 @@ handles.tree_massuniv = uitree(...
 %**********************
 %ANOVA tab
 uilabel('Parent', handles.tab_stats(2),...
-    'Position', [10, 300, 260, 20],...
+    'Position', [10, 310, 260, 20],...
     'Text', 'Select a test',...
     'FontName', scheme.Label.Font.Value,...
     'FontSize', scheme.Label.FontSize.Value,...
@@ -2047,7 +2143,7 @@ uilabel('Parent', handles.tab_stats(2),...
 
 handles.dropdown_ANOVAtest = uidropdown(...
     'Parent', handles.tab_stats(2),...
-    'Position', [10,275, 260, 20],...
+    'Position', [10,290, 260, 20],...
     'BackgroundColor',scheme.Dropdown.BackgroundColor.Value,...
     'FontColor', scheme.Dropdown.FontColor.Value,...
     'FontName', scheme.Dropdown.Font.Value,...
@@ -2055,7 +2151,7 @@ handles.dropdown_ANOVAtest = uidropdown(...
 
 handles.button_plotANOVA = uibutton(...
     'Parent', handles.tab_stats(2),...
-    'Position', [185, 240, 85, 25],...
+    'Position', [185, 260, 85, 25],...
     'Text', 'Display',...
     'BackgroundColor', scheme.Button.BackgroundColor.Value,...
     'FontColor', scheme.Button.FontColor.Value,...
@@ -2064,15 +2160,24 @@ handles.button_plotANOVA = uibutton(...
 
 handles.button_exportANOVA = uibutton(...
     'Parent', handles.tab_stats(2),...
-    'Position', [95, 240, 85, 25],...
+    'Position', [95, 260, 85, 25],...
     'Text', 'Export',...
     'BackgroundColor', scheme.Button.BackgroundColor.Value,...
     'FontColor', scheme.Button.FontColor.Value,...
     'FontName', scheme.Button.Font.Value,...
     'FontSize', scheme.Button.FontSize.Value);
 
+handles.check_plotANOVAStyle = uicheckbox(...
+    'Parent', handles.tab_stats(2),...
+    'Position', [10, 230, 120, 25],...
+    'Text', 'Show as ERP plot',...
+    'Value',false,...
+    'FontSize', scheme.Checkbox.FontSize.Value,...
+    'FontColor', scheme.Checkbox.FontColor.Value,...
+    'FontName', scheme.Checkbox.Font.Value);
+
 uilabel('Parent', handles.tab_stats(2),...
-    'Position', [10, 215, 260, 20],...
+    'Position', [10, 210, 260, 20],...
     'Text', 'Test information',...
     'FontName', scheme.Label.Font.Value,...
     'FontSize', scheme.Label.FontSize.Value,...

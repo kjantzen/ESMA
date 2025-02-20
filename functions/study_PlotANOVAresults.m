@@ -77,7 +77,7 @@ h.panel.Layout.Column = 2;
 
 %allow a drawing update because we need to know how big this panel will be
 drawnow;
-
+pause(1)
 
 uilabel('Parent', h.panel,...
     'Position', [10, 130, 130, 20],...
@@ -254,9 +254,6 @@ h.check_violin.ValueChangedFcn = {@callback_createplots, r, h};
 h.check_errorbars.ValueChangedFcn = {@callback_createplots, r, h};
 h.check_singletrials.ValueChangedFcn = {@callback_createplots, r, h};
 
-
-drawnow;
-
 callback_createplots([],[],r,h)
 
 %**************************************************************************
@@ -383,7 +380,7 @@ if isempty(d)
         'Position',[0,0,h.axis_holder.InnerPosition(3),h.axis_holder.InnerPosition(4)] ,...
         'VerticalAlignment','center',...
         'HorizontalAlignment','center',...
-        'FontColor','w');
+        'FontColor',h.scheme.Axis.AxisColor.Value);
     drawnow;
     return
 end
@@ -403,10 +400,8 @@ for ii = 1:nPlots
     B =(nPlots-ii) * H;
     a = uiaxes('Parent', h.axis_holder);
     if PlotBar
-        p = bar(a,d(ii).Mean);
-        for jj = 1:length(p)
-            p(jj).FaceAlpha = .25;
-        end
+        p = bar(a,d(ii).Mean, 'FaceAlpha', .65, ...
+            'EdgeColor',h.scheme.Axis.AxisColor.Value);
     end
     a.OuterPosition = [0,B,W,H-20];
     a.XTickLabel = d(ii).XLabels;
@@ -443,7 +438,8 @@ for ii = 1:nPlots
             violinplot(a, x, squeeze(d(ii).RawValue(1:ngroups,i, :))',...
              'DensityScale','count',...
              'FaceColor', colorRange(i,:),...
-             'EdgeColor', h.scheme.Axis.AxisColor.Value);
+             'EdgeColor', h.scheme.Axis.AxisColor.Value,...
+             'DensityWidth',.3);
         end
         if PlotSingleTrials
             scatter(a, x, squeeze(d(ii).RawValue(1:ngroups,i, :)),...
@@ -466,12 +462,11 @@ for ii = 1:nPlots
  
     hold(a, 'off');
 
-    a.XTick = 1:nPlots;
+    a.XTick = 1:ngroups;
     l = legend(a,d(ii).CLabels);
     l.Box = "off";
     l.BackgroundAlpha = 0;
     l.TextColor = h.scheme.Axis.AxisColor.Value;   
-    drawnow
 end
 %*************************************************************************
 function rNew = arrangeData(r)
