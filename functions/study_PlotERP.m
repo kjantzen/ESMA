@@ -23,6 +23,9 @@ pb.Message = 'Loading Data...';
 handles.figure.Name = sprintf('ERP Tool: %s', fname);
 load(filename{1}, '-mat');
 
+%calculate the within subject confidence interval
+GND = addWithinCI(GND);
+
 pb.Message = 'Initializing display with data values...';
 initialize_gui(handles, GND);
 pb.Message = 'Creating callbacks...';
@@ -42,10 +45,8 @@ end
 pb.Message = 'Stashing data...';
 p.GND = GND;
 p.study = study;
-p.ts_colors = line_colors(handles);
 p.ts_style = repmat({'-', '--', '-.', ':'}, 1, 6);
 clear GND;
-
 
 %initialize the cursor
 cinfo.cursor = [];
@@ -560,7 +561,7 @@ manual_select = ~event.Value;
 h.list_channels.Enable = manual_select;
 cur_selected = h.list_channels.Value;
 
-%select all thh regular channels
+%select all the regular channels
 if ~manual_select
     d = h.list_channels.ItemsData;
     s = cell2mat(d');
@@ -613,6 +614,9 @@ if reload_flag
     p.study = study;
     
     h.figure.UserData = p;
+    callback_ploterp({},{},h);
+    %callback_toggleallchannel([],h.check_allchans,h);
+
 end
 
 cname = {p.GND.bin_info.bindesc};
@@ -1056,6 +1060,22 @@ if ~isempty(new_cnum) && ~isempty(cinfo.cursor)
 end
 
 %**************************************************************************
+function GND = addWithinCI(GND)
+    %calculate the 95% confidence interval so that can be used instead of
+    %the standard error across subject
+    
+    %get thh mean over time and channel for each subject
+    nS = size(GND.indiv_erps, 4);
+    nC = size(GND.indiv_erps, 3);
+    sMean = mean(GND.indiv_erps, 3); %mean within subject
+    gMean = mean(sMean, 4); %grand mean
+    sMean = repmat(sMean, 1, 1, nC, 1);
+    gMean = repmat(gMean, 1, 1, nC, nS);
+
+    normSD = squeeze(std(GND.indiv_erps - sMean + gMean, 0,4));
+    GND.grands_within_CI = tinv(.975, nS-1) * normSD / sqrt(nS) * sqrt(nC/(nC-1));
+
+%**************************************************************************
 function [d,se, s, p,labels_or_times, ch_out, cond_sel] = getdatatoplot(study, GND, h, cursors, aveBetween)
 
 d = []; se = [];
@@ -1064,6 +1084,7 @@ ch_out = [];
 cond_sel = [];
 s = [];
 p = [];
+
 
 %if cursor information is passed we will send back only the information
 %specific to the time of each cursor, otherwise the entire time series will
@@ -1121,6 +1142,12 @@ if mass_univ_overlay
 
         if ~isstruct(r.clust_info)
             sig_clust = zeros(size(adj_pval));
+        elseif ~isfield(r.clust_info, effect_name)
+            sig_clust_nums = find(r.clust_info.null_test);
+            sig_clust = zeros(size(r.clust_info.clust_ids));
+            for sc = 1:length(sig_clust_nums)
+                sig_clust(r.clust_info.clust_ids == sig_clust_nums(sc)) = sc;
+            end
         else
             sig_clust_nums = find(r.clust_info.(effect_name).null_test);
             %now get the cluster positions
@@ -1151,11 +1178,11 @@ if ~isempty(ch_sel)
             d = mean(GND.grands(ch_sel,pt(1):pt(2),cond_sel),2);
         else
             d = GND.grands(ch_sel,pt,cond_sel);
-            se = GND.grands_stder(ch_sel, pt, cond_sel);
+            se = GND.grands_within_CI(ch_sel, pt, cond_sel);
+            %se = GND.grands_stder(ch_sel, pt, cond_sel);
         end
         %get the statistics information
-        if mass_univ_overlay
-            
+        if mass_univ_overlay            
             %initialize the array to the full size of the data
              stat = zeros(size(GND.grands,1), size(GND.grands,2));
              pstat = stat;
@@ -1165,7 +1192,6 @@ if ~isempty(ch_sel)
                 fval = repmat(fval, 1, length(r.used_tpt_ids));
                 pval = repmat(pval, 1, length(r.used_tpt_ids));
             end
-            
             stat(r.used_chan_ids,r.used_tpt_ids) = fval; %fill the relevant portion of the  matrix    
             pstat(r.used_chan_ids, r.used_tpt_ids) = pval;
             if aveBetween
@@ -1174,8 +1200,7 @@ if ~isempty(ch_sel)
             else
                 s = stat(ch_sel, pt); %select the part the user requested
                 p = pstat(ch_sel,pt);
-            end
-            
+            end            
         end 
     else
         if aveBetween
@@ -1208,7 +1233,8 @@ if ~isempty(ch_groups) && ~mapping_mode
             if sbj == 0
                 ch_group_data(ii,pt,jj) = squeeze(mean(GND.grands(study.chgroups(ch_groups(ii)).chans,:,cond_sel(jj)),1));
                 %get the std error averaged across the channels in the group 
-                se(ii,pt,jj) = squeeze(mean(GND.grands_stder(study.chgroups(ch_groups(ii)).chans,:,cond_sel(jj)),1));
+                se(ii,pt,jj) = squeeze(mean(GND.grands_within_CI(study.chgroups(ch_groups(ii)).chans,:,cond_sel(jj)),1));
+                %se(ii,pt,jj) = squeeze(mean(GND.grands_stder(study.chgroups(ch_groups(ii)).chans,:,cond_sel(jj)),1));
                 if mass_univ_overlay && ~mapping_mode %mapping data for these channels is not valid
                     %again - initialize the array to the full size of the data
                     stat = zeros(size(GND.grands,1), size(GND.grands,2));
@@ -1257,6 +1283,7 @@ end
 % plot the topographic maps indicated by the active cursors
 function plot_topos(h)
 
+
 if h.menu_mapquality.Checked
     gridscale =  300;
 else 
@@ -1282,7 +1309,6 @@ c = h.axis_erp.UserData;
 p = h.figure.UserData;
 my_h = h.panel_topo.UserData; %get handles to the subplots
 
-
 n_maps = length(c.cursor);
 if averageBetweenCursors
     if n_maps ~= 2
@@ -1292,17 +1318,13 @@ if averageBetweenCursors
         n_maps = 1;
     end
 end
-
 [d, ~,s, pv,map_time, ch_out, cond_num] = getdatatoplot(p.study, p.GND, h, c.cursor, averageBetweenCursors);
 if scale_option ==1; map_scale = max(max(max(abs(d)))); end
-
 
 if ~isempty(s)
     d(:,:,end+1) = s;
     has_stat = true;
 end
-
-
 %n_maps = 1; %temporary while i work out averaging between cursors
 if n_maps < 1
     ch = h.panel_topo.Children;
@@ -1373,13 +1395,13 @@ for ii = 1:n_maps
             %ms = [0,max(abs(v))];
             if ms(2)==0; ms(2) = 1; end %just in case there are no stat sig results
             title_string = 'F-score';
-            cmap = autumn;
+            cmap = feval(p.study.Render.Map.StatPalette);
             eval_string = '''conv'', ''off''';
             extraChans = find(pv(:,ii));
         else
             ms = [-map_scale; map_scale];
             title_string =  h.list_condition.Items{cond_num(jj)};
-            cmap = jet;
+            cmap = feval(p.study.Render.Map.Palette);
             extraChans = ch_out;
         end
         
@@ -1447,6 +1469,7 @@ userScale = ~h.menu_autoscale.Checked;
 SEoverlay = h.menu_stderr.Checked;
 MUoverlay = h.check_MUoverlay.Value;
 separation = h.spinner_distance.Value/100;
+lwidth = h.spinner_lwidth.Value;
 mnTime = h.spinner_mintime.Value;
 mxTime = h.spinner_maxtime.Value;
 mnAmp = h.spinner_minamp.Value;
@@ -1462,16 +1485,14 @@ if isempty(d)
     return
 end
 
-%if th euser has selected the button to display ERP trances as a function
+%if the user has selected the button to display ERP traces as a function
 %of the conditions in a stats test.
 if ANOVAStyle
     styleMatrix = h.check_plotANOVAStyle.UserData;
     stacked = false;  
     statInfo = p.GND.ANOVA(h.dropdown_ANOVAtest.Value);
     statRange = statInfo.timewindow; 
-
 end
-
 %preallocate for the legend names
 %I am not preallocating for the line structures because I am lazy
 legend_names = cell(1,size(d,3));
@@ -1479,7 +1500,7 @@ legend_handles = [];
 
 % if the user has selected the butter fly plot option where 
 % are stacked on the same origin.
-if ~stacked  
+if ~stacked  && size(d, 1) > 1
     if userScale 
          spread_amnt = max(abs([mnAmp, mxAmp])) * separation;   %get the plotting scale    
     else
@@ -1493,9 +1514,7 @@ end
 %main plotting loop - plot the time series for each condition
 cla(h.axis_erp);
 hold(h.axis_erp, 'on');
-
 for ii = 1:size(d,3)
-
     %assign colors and styles to allow user to better figure out which
     %trace is from which condition - requires statistical information
     if ANOVAStyle
@@ -1506,44 +1525,40 @@ for ii = 1:size(d,3)
             continue
         end
         styleColumn = table2cell(styleMatrix(indx,:));
-        pColor = p.study.ERPColorMap(styleColumn{1}, :);
+        pColor = p.study.Render.ERP.Palette(styleColumn{1}, :);
         if nFactor < 2
             pStyle = '-';
         else
             pStyle = p.ts_style{styleColumn{2}};
         end
     else
-       pColor = p.study.ERPColorMap(ii,:);
+       pColor = p.study.Render.ERP.Palette(ii,:);
        pStyle = '-';
     end
     dd = squeeze(d(:,:,ii));
-
-      %plot the statistics
+    %plot the statistics
     if MUoverlay && ~isempty(s)
         hold(h.axis_erp, 'on');
-        tt = repmat(p.GND.time_pts, size(s,1),1);
-        
+        tt = repmat(p.GND.time_pts, size(s,1),1);        
         splot = scatter(h.axis_erp, tt(s>0)', dd(s>0)',60,'filled');
         splot.CData =  pColor;
     end
-
     %plot the standard error overlay
     if ~isempty(se) && SEoverlay
         for jj = 1:size(d,1)
         e = squeeze(se(jj,:,ii));
             xe = [p.GND.time_pts, fliplr(p.GND.time_pts)];
             ye = [dd(jj,:) + e, fliplr(dd(jj,:)-e)];
-            er = patch(h.axis_erp,xe, ye,p.ts_colors(ii, :));
+            er = patch(h.axis_erp,xe, ye,pColor);
             er.FaceColor = pColor;
             er.EdgeColor = 'None';
             er.FaceAlpha = .25;
         end
-        
     end
-      
     %set the color and other line properties (ttpe and width?) based on the
     %condition of the seleted statistical test if requested
-    ph = plot(h.axis_erp, p.GND.time_pts, dd', 'Color',pColor, 'LineWidth', 1.5,...
+    ph = plot(h.axis_erp, p.GND.time_pts, dd', 'Color',pColor,...
+        'LineWidth', lwidth,...
         'LineStyle',pStyle);
     hold(h.axis_erp, 'on');
     for phi = 2:length(ph)
@@ -1555,37 +1570,27 @@ for ii = 1:size(d,3)
     
   
 end
-%h.axis_erp.Colormap = lines;
-
-hold(h.axis_erp, 'off');
-    
+hold(h.axis_erp, 'off');    
 %handle axes and scaling differently depending on whether the plot is
 %stacked or not
-if stacked
+if ~stacked && size(d, 1) > 1
+    h.axis_erp.YLim = [min(min(min(d))) - (spread_amnt * .1), max(max(max(d))) + (spread_amnt * .1)];
+    h.axis_erp.YTick = sort(spread_matrix(:,1));
+    h.axis_erp.YTickLabel = labels(v);
+    h.axis_erp.YLabel.String = 'microvolts x channel';
+else
     if userScale 
         h.axis_erp.YLim = [mnAmp, mxAmp]; 
     else
         h.axis_erp.YLim = [min(min(min(d))) * 1.1, max(max(max(d))) * 1.1];
     end
-
     l = line(h.axis_erp, h.axis_erp.XLim, [0,0],...
         'Color', [.5,.5,.5], 'LineWidth', 1.5);
-    l.Annotation.LegendInformation.IconDisplayStyle = 'off';
-    
+    l.Annotation.LegendInformation.IconDisplayStyle = 'off';    
     h.axis_erp.YTickMode = 'auto';
-    %h.axis_erp.YTickLabel = -h.axis_erp.YTick;
-    %h.axis_erp.YTickLabel = h.axis_erp.YTick;
-    h.axis_erp.YLabel.String = 'microvolts';
-    
-else    
-    h.axis_erp.YLim = [min(min(min(d))) - (spread_amnt * .1), max(max(max(d))) + (spread_amnt * .1)];
-    h.axis_erp.YTick = sort(spread_matrix(:,1));
-    h.axis_erp.YTickLabel = labels(v);
-    
-    h.axis_erp.YLabel.String = 'microvolts x channel';
-    
+    h.axis_erp.YTickLabelMode = 'auto';
+    h.axis_erp.YLabel.String = 'microvolts';        
 end
-
 h.axis_erp.XGrid = 'on'; h.axis_erp.YGrid = 'on';
 h.axis_erp.XLim = [mnTime, mxTime];
 h.axis_erp.XLabel.String = 'Time (ms)';
@@ -1692,6 +1697,7 @@ handles.figure.WindowButtonMotionFcn = {@callback_handlemouseevents, handles};
 handles.figure.WindowKeyPressFcn = {@callback_handlekeyevents, handles};
 
 handles.spinner_distance.ValueChangedFcn = {@callback_ploterp, handles};
+handles.spinner_lwidth.ValueChangedFcn = {@callback_ploterp, handles};
 handles.spinner_mintime.ValueChangedFcn = {@callback_changePlotRange, handles};
 handles.spinner_maxtime.ValueChangedFcn = {@callback_changePlotRange, handles};
 handles.spinner_minamp.ValueChangedFcn = {@callback_changePlotRange, handles};
@@ -1824,8 +1830,8 @@ handles.panel_plotopts.Layout.Column = 2;
 handles.panel_plotopts.Layout.Row = 1;
 
 uilabel('Parent', handles.panel_plotopts,...
-    'Position', [10, 7, 60, 20],...
-    'Text', 'Time range',...
+    'Position', [0, 7, 60, 20],...
+    'Text', 'Time limits',...
     'HorizontalAlignment','left',...
     'FontName', scheme.Label.Font.Value,...
     'FontSize', scheme.Label.FontSize.Value,...
@@ -1833,7 +1839,7 @@ uilabel('Parent', handles.panel_plotopts,...
 
 handles.spinner_mintime = uispinner(...
     'Parent', handles.panel_plotopts,...
-    'Position', [75,7,100,20],...
+    'Position', [60,7,100,20],...
     'RoundFractionalValues', 'off',...
     'ValueDisplayFormat', '%6.2f ms',...
     'Tag', 'mintime',...
@@ -1843,7 +1849,7 @@ handles.spinner_mintime = uispinner(...
     'FontSize', scheme.Dropdown.FontSize.Value);
 
 uilabel('Parent', handles.panel_plotopts,...
-    'Position', [175, 7, 20, 20],...
+    'Position', [160, 7, 20, 20],...
     'Text', 'to',...
     'HorizontalAlignment','center',...
     'FontName', scheme.Label.Font.Value,...
@@ -1852,7 +1858,7 @@ uilabel('Parent', handles.panel_plotopts,...
 
 handles.spinner_maxtime = uispinner(...
     'Parent', handles.panel_plotopts,...
-    'Position', [200,7,100,20],...
+    'Position', [180,7,100,20],...
     'RoundFractionalValues', 'off',...
     'ValueDisplayFormat', '%6.2f ms',...
     'Tag', 'maxtime',...    
@@ -1863,8 +1869,8 @@ handles.spinner_maxtime = uispinner(...
 
 
 uilabel('Parent', handles.panel_plotopts,...
-    'Position', [320, 7, 60, 20],...
-    'Text', 'Amp range',...
+    'Position', [290, 7, 60, 20],...
+    'Text', 'Amp limits',...
     'HorizontalAlignment','left',...    
     'FontName', scheme.Label.Font.Value,...
     'FontSize', scheme.Label.FontSize.Value,...
@@ -1872,7 +1878,7 @@ uilabel('Parent', handles.panel_plotopts,...
 
 handles.spinner_minamp = uispinner(...
     'Parent', handles.panel_plotopts,...
-    'Position', [380,7,80,20],...
+    'Position', [350,7,80,20],...
     'Value', -5, ...
     'Limits', [-inf, 0],...
     'Step',.1,...
@@ -1886,7 +1892,7 @@ handles.spinner_minamp = uispinner(...
     'FontSize', scheme.Dropdown.FontSize.Value);
 
 uilabel('Parent', handles.panel_plotopts,...
-    'Position', [460, 7, 20, 20],...
+    'Position', [430, 7, 20, 20],...
     'Text', 'to',...
     'HorizontalAlignment','center',...
     'FontName', scheme.Label.Font.Value,...
@@ -1895,7 +1901,7 @@ uilabel('Parent', handles.panel_plotopts,...
 
 handles.spinner_maxamp = uispinner(...
     'Parent', handles.panel_plotopts,...
-    'Position', [480,7,80,20],...
+    'Position', [450,7,80,20],...
     'Value', 5, ...
     'Limits', [0, inf],...
     'Step',.1,...
@@ -1909,7 +1915,7 @@ handles.spinner_maxamp = uispinner(...
     'FontSize', scheme.Dropdown.FontSize.Value);
 
 uilabel('Parent', handles.panel_plotopts,...
-    'Position', [580, 7, 80, 20],...
+    'Position', [540, 7, 80, 20],...
     'Text', 'Stack Dist.',...
     'HorizontalAlignment','Left',...    
     'FontName', scheme.Label.Font.Value,...
@@ -1918,11 +1924,33 @@ uilabel('Parent', handles.panel_plotopts,...
 
 handles.spinner_distance = uispinner(...
     'Parent', handles.panel_plotopts,...
-    'Position', [660,7,80,20],...
+    'Position', [600,7,70,20],...
     'Value', 100, ...
     'Limits', [1, inf],...
     'RoundFractionalValues', 'on',...
     'ValueDisplayFormat', '%i %%',...
+    'BackgroundColor',scheme.Dropdown.BackgroundColor.Value,...
+    'FontColor', scheme.Dropdown.FontColor.Value,...
+    'FontName', scheme.Dropdown.Font.Value,...
+    'FontSize', scheme.Dropdown.FontSize.Value);
+
+uilabel('Parent', handles.panel_plotopts,...
+    'Position', [680, 7, 80, 20],...
+    'Text', 'Line width',...
+    'HorizontalAlignment','Left',...    
+    'FontName', scheme.Label.Font.Value,...
+    'FontSize', scheme.Label.FontSize.Value,...
+    'FontColor', scheme.Label.FontColor.Value);
+
+handles.spinner_lwidth = uispinner(...
+    'Parent', handles.panel_plotopts,...
+    'Position', [730,7,70,20],...
+    'Value', 1.5, ...
+    'Limits', [.5, 4],...
+    'Step', .5,...
+    'AllowEmpty', 'off',...
+    'RoundFractionalValues', 'off',...
+    'ValueDisplayFormat', '%3.1f',...
     'BackgroundColor',scheme.Dropdown.BackgroundColor.Value,...
     'FontColor', scheme.Dropdown.FontColor.Value,...
     'FontName', scheme.Dropdown.Font.Value,...
@@ -2408,12 +2436,10 @@ handles.menu_stats = uimenu('Parent', handles.menu_file, 'Label', 'Delete select
 handles.menu_ANOVA = uimenu('Parent', handles.menu_file, 'Label', 'Delete selected &GLM Test', 'Tag', 'ANOVA', 'Accelerator', 'G');
 handles.menu_editcond = uimenu('Parent', handles.menu_file, 'Label', 'Edit Conditions', 'Separator', 'on');
 
-
-handles.menu_plot = uimenu('Parent', handles.figure, 'Label', 'ERP View');
+handles.menu_plot = uimenu('Parent', handles.figure, 'Label', 'ERP Options');
 handles.menu_autoscale = uimenu('Parent', handles.menu_plot, 'Label', 'Auto scale amplitude', 'Checked', true);
-handles.menu_stderr = uimenu('Parent', handles.menu_plot, 'Label', 'Show Std Err');
+handles.menu_stderr = uimenu('Parent', handles.menu_plot, 'Label', 'Show 95% CI (Within)');
 handles.menu_stack = uimenu('Parent', handles.menu_plot, 'Label', 'Stack Channels', 'Checked', true);
-
 
 handles.menu_cursor = uimenu('Parent', handles.figure,'Label', 'Cursor');
 handles.menu_cursoradd = uimenu('Parent', handles.menu_cursor,'Label', 'Add Cursor', 'Tag', 'add', 'Accelerator', 'A');

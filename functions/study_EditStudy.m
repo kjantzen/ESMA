@@ -12,7 +12,7 @@ fh = h.figure;
 if newStudy
     study = callback_newStudy([],[],h);
     %close the figure if the study comes back empty 
-    if isempty(study)
+    if isempty(study)col
         close(h.figure);
         return
     end
@@ -149,21 +149,20 @@ populate_ChanGroupDisplay(study, h)
 populate_bintree(study, h)
 populate_ERPColorDisplay(study, h)
 callback_changeBinGroupButtonStatus([],[], h, false)
+h.dropdown_map_palette.Value = study.Render.Map.Palette;
+h.dropdown_statmap_palette.Value = study.Render.Map.StatPalette;
+h.map.Colormap = feval(study.Render.Map.Palette);
+h.statmap.Colormap = feval(study.Render.Map.StatPalette);
 %*************************************************************************
 function populate_ERPColorDisplay(study,h)
 
-%if ~isfield(study, 'ERPColorMap')
-%    study.ERPColorMap = erpColorMap;
-%else
-    map = study.ERPColorMap;
-    if length(map) < 8
-        fprintf('ERP color map does not have the expected number of colors.   Using the default.\n');
-        study.ERPColorMap = erpColorMap;
-    end
-%end
-
+map = study.Render.ERP.Palette;
+if length(map) < 8
+    fprintf('ERP color map does not have the expected number of colors.   Using the default.\n');
+    study.Render.ERP.Palette = erpColorMap;
+end
 for ii = 1:8
-    h.color_erp(ii).Value = study.ERPColorMap(ii,:);
+    h.color_erp(ii).Value = study.Render.ERP.Palette(ii,:);
 end
     
 %*************************************************************************
@@ -179,9 +178,21 @@ function map = erpColorMap(mapname)
     end
     %then trim it to exactly 8
     map = map(1:8,:); 
+
+%*************************************************************************
+function callback_selectNewColorMap(hObject, ~, h)
+    study = getstudy(h);
+    if strcmp(hObject.Tag, 'ScalpMap')
+        study.Render.Map.Palette = hObject.Value;
+        h.map.Colormap = feval(hObject.Value);
+    else
+        study.Render.Map.StatPalette = hObject.Value;
+        h.statmap.Colormap = feval(hObject.Value);
+    end
+    study = study_SaveStudy(study);
+    setstudy(h,study);
 %*************************************************************************
 function populate_SubjectDisplay(study, h)
-
 %clear the nodes from the tree
 n = h.tree_subjectlist.Children;
 delete(n);
@@ -223,19 +234,17 @@ if study.nsubjects > 0
 end
 %*************************************************************************
 function callback_addPredefindERPPalette(hObject,~, h)
-
  study = getstudy(h);
- study.ERPColorMap = erpColorMap(hObject.Value);
- setstudy(study, h)
+ study.Render.ERP.Palette = erpColorMap(hObject.Value);
  study = study_SaveStudy(study);
+ setstudy(h, study)
  populate_ERPColorDisplay(study,h)
 %*************************************************************************
 function callback_changeSingleERPPaletteColor(hObject, ~, h, indx)
-
  study = getstudy(h);
- study.ERPColorMap(indx, :) = hObject.Value;
+ study.Render.ERP.Palette(indx, :) = hObject.Value;
  study = study_SaveStudy(study);
- setstudy(study, h);
+ setstudy(h, study);
 
 %% BIN GROUP FUNCTIONS
 %*************************************************************************
@@ -1166,7 +1175,6 @@ h.button_canceladdbin.ButtonPushedFcn = {@callback_canceladdbintogroup, h};
 h.button_bingroupedit.ButtonPushedFcn = {@callback_editbingroup, h, false};
 h.list_binevents.ValueChangedFcn = {@callback_addtoeventlist, h};
 h.button_bingroupcancel.ButtonPushedFcn = {@callback_changeBinGroupButtonStatus, h, false};
-%h.tree_bingrouplist.SelectionChangedFcn = {@callback_binGroupSelected, h};
 h.tree_bingrouplist.DoubleClickedFcn = {@callback_binGroupSelected, h};
 
 h.button_addchangroup.ButtonPushedFcn  = {@callback_createchangroup, h};
@@ -1184,6 +1192,9 @@ h.dropdown_erp_palette.ValueChangedFcn = {@callback_addPredefindERPPalette, h};
 for ii = 1: 8
     h.color_erp(ii).ValueChangedFcn = {@callback_changeSingleERPPaletteColor, h, ii};
 end
+h.dropdown_map_palette.ValueChangedFcn = {@callback_selectNewColorMap, h};
+h.dropdown_statmap_palette.ValueChangedFcn = {@callback_selectNewColorMap, h};
+
 %**************************************************************************
 function h = build_GUI()
 
@@ -1206,6 +1217,9 @@ h.figure.Resize = false;
 h.figure.Name = 'Study Editor';
 h.figure.Tag = 'hcnd_study_editor';
 h.figureNumberTitle = false;
+
+drawnow
+pause(.1)
 
 %main buttons
 x = width - 10 - buttonwidth;
@@ -1876,25 +1890,33 @@ h.tab(5) = uipanel(...
     'FontSize', scheme.Panel.FontSize.Value,...
     'BorderType','line',...
     'Visible','off');
-drawnow
-pause(1)
 
 h.color_select_grid = uigridlayout('Parent', h.tab(5),...
     'ColumnWidth',{'1x', '1.5x'},...
     'RowHeight', {'1x'},...
-    'BackgroundColor', scheme.Axis.BackgroundColor.Value);
+    'BackgroundColor', scheme.Panel.BackgroundColor.Value,...
+    'Padding', [1,1,1,1]);
 
 h.color_select_panel = uipanel('Parent', h.color_select_grid,...
-    'Title', 'ERP Plotting Colors',...
-    'BackgroundColor', scheme.Window.BackgroundColor.Value,...
-    'ForegroundColor', scheme.Label.FontColor.Value,...
+    'Title', 'ERP Palette',...
+    'BackgroundColor', scheme.Panel.BackgroundColor.Value,...
+    'ForegroundColor', scheme.Panel.FontColor.Value,...
     'FontName',scheme.Panel.Font.Value,...
     'FontSize', scheme.Panel.FontSize.Value);
 h.color_select_panel.Layout.Row = 1;
 h.color_select_panel.Layout.Column = 1;
 
+h.map_select_panel = uipanel('Parent', h.color_select_grid,...
+    'Title', 'Head Map Palette',...
+    'BackgroundColor', scheme.Panel.BackgroundColor.Value,...
+    'ForegroundColor', scheme.Panel.FontColor.Value,...
+    'FontName',scheme.Panel.Font.Value,...
+    'FontSize', scheme.Panel.FontSize.Value);
+h.map_select_panel.Layout.Row = 1;
+h.map_select_panel.Layout.Column = 2;
+
 for ii = 1:8
-    btm = (8-ii) * 25 + 10;
+    btm = (8-ii) * 25 + 50;
     h.color_erp(ii) = uicolorpicker('Parent', h.color_select_panel,...
         'Position', [20, btm, 120, 15],...
         'BackgroundColor', scheme.Window.BackgroundColor.Value);
@@ -1908,8 +1930,8 @@ for ii = 1:8
 end
 
 h.dropdown_erp_palette = uidropdown('Parent', h.color_select_panel,...
-    'Position', [20, 220, 150, scheme.Dropdown.Height.Value],...
-    'BackgroundColor', scheme.Dropdown.BackgroundColor.Value,...
+    'Position', [20, 260, 150, scheme.Dropdown.Height.Value],...
+    'BackgroundColor', scheme.Axis.BackgroundColor.Value,...
     'FontName', scheme.Dropdown.Font.Value,...
     'FontSize', scheme.Dropdown.FontSize.Value,...
     'FontColor', scheme.Dropdown.FontColor.Value,...
@@ -1918,12 +1940,67 @@ colorpalette_names = {'gem12','glow12','sail','reef','meadow','dye','earth'};
 h.dropdown_erp_palette.Items = colorpalette_names;
 
 uilabel( 'Parent', h.color_select_panel,...
-    'Position', [20, 225+scheme.Dropdown.Height.Value, 150, 20],...
+    'Position', [20, 260+scheme.Dropdown.Height.Value, 150, 20],...
     'BackgroundColor', scheme.Window.BackgroundColor.Value,...
     'FontName',scheme.Label.Font.Value,...
     'FontColor',scheme.Label.FontColor.Value,...
     'FontSize',scheme.Label.FontSize.Value,...
     'Text', 'ERP preset palattes');
+
+
+%hardcoded list of current color maps
+colormap_names = {'abyss', 'autumn', 'bone', 'cool','copper', 'gray', 'hot', 'hsv', 'jet', 'parula', 'pink', 'prism', 'sky', 'spring', 'summer','turbo', 'winter'};
+h.dropdown_map_palette = uidropdown('Parent', h.map_select_panel,...
+    'Position', [20, 260, 150, scheme.Dropdown.Height.Value],...
+    'BackgroundColor', scheme.Axis.BackgroundColor.Value,...
+    'FontName', scheme.Dropdown.Font.Value,...
+    'FontSize', scheme.Dropdown.FontSize.Value,...
+    'FontColor', scheme.Dropdown.FontColor.Value,...
+    'Placeholder', 'ERP color palettes',...
+    'Tag','ScalpMap');
+h.dropdown_map_palette.Items = colormap_names;
+h.dropdown_statmap_palette = uidropdown('Parent', h.map_select_panel,...
+    'Position', [230, 260, 150, scheme.Dropdown.Height.Value],...
+    'BackgroundColor', scheme.Axis.BackgroundColor.Value,...
+    'FontName', scheme.Dropdown.Font.Value,...
+    'FontSize', scheme.Dropdown.FontSize.Value,...
+    'FontColor', scheme.Dropdown.FontColor.Value,...
+    'Placeholder', 'ERP color palettes',...
+    'Tag','StatMap');
+h.dropdown_statmap_palette.Items = colormap_names;
+
+uilabel( 'Parent', h.map_select_panel,...
+    'Position', [20, 260+scheme.Dropdown.Height.Value, 150, 20],...
+    'BackgroundColor', scheme.Window.BackgroundColor.Value,...
+    'FontName',scheme.Label.Font.Value,...
+    'FontColor',scheme.Label.FontColor.Value,...
+    'FontSize',scheme.Label.FontSize.Value,...
+    'Text', 'Scalp map palattes');
+
+uilabel( 'Parent', h.map_select_panel,...
+    'Position', [230, 260+scheme.Dropdown.Height.Value, 150, 20],...
+    'BackgroundColor', scheme.Window.BackgroundColor.Value,...
+    'FontName',scheme.Label.Font.Value,...
+    'FontColor',scheme.Label.FontColor.Value,...
+    'FontSize',scheme.Label.FontSize.Value,...
+    'Text', 'Statistical map palattes');
+h.map = uiaxes('Parent', h.map_select_panel,...
+    'Position', [10, 10, 220, 240]);
+imagesc(h.map, peaks(100));
+colorbar(h.map);
+h.map.XTick = [];
+h.map.YTick = [];
+h.map.XLimitMethod = 'tight';
+h.map.YLimitMethod = 'tight';
+
+h.statmap = uiaxes('Parent', h.map_select_panel,...
+    'Position', [230, 10, 220, 240]);
+imagesc(h.statmap, abs(peaks(100)));
+colorbar(h.statmap);
+h.statmap.XTick = [];
+h.statmap.YTick = [];
+h.statmap.XLimitMethod = 'tight';
+h.statmap.YLimitMethod = 'tight';
 
 %Context menus
 h.cm_epochlist = uicontextmenu(h.figure);

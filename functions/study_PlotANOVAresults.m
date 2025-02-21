@@ -125,25 +125,29 @@ h.check_singletrials = uicheckbox('Parent', h.panel,...
     'FontColor', scheme.Checkbox.FontColor.Value,...
     'FontName',scheme.Checkbox.Font.Value,...
     'FontSize', scheme.Checkbox.FontSize.Value);
-
 h.check_errorbars = uicheckbox('Parent', h.panel,...
-    'Position', [250, 45, 200, 25],...
-    'Value', true,...
-    'Text', 'Standard Error',...
+    'Position', [250, 35, 200, 25],...
+    'Value', false,...
+    'Text', 'Std Error (subject)',...
     'FontColor', scheme.Checkbox.FontColor.Value,...
     'FontName',scheme.Checkbox.Font.Value,...
     'FontSize', scheme.Checkbox.FontSize.Value);
-
+h.check_CIbars = uicheckbox('Parent', h.panel,...
+    'Position', [250, 60, 200, 25],...
+    'Value', true,...
+    'Text', '95% CI (within)',...
+    'FontColor', scheme.Checkbox.FontColor.Value,...
+    'FontName',scheme.Checkbox.Font.Value,...
+    'FontSize', scheme.Checkbox.FontSize.Value);
 h.check_violin = uicheckbox('Parent', h.panel,...
-    'Position', [250, 80, 200, 25],...
+    'Position', [250, 85, 200, 25],...
     'Value', true,...
     'Text', 'Violin Plot',...
     'FontColor', scheme.Checkbox.FontColor.Value,...
     'FontName',scheme.Checkbox.Font.Value,...
     'FontSize', scheme.Checkbox.FontSize.Value);
-
 h.check_bar = uicheckbox('Parent', h.panel,...
-    'Position', [250, 115, 200, 25],...
+    'Position', [250, 110, 200, 25],...
     'Value', true,...
     'Text', 'Bar Plot',...
     'FontColor', scheme.Checkbox.FontColor.Value,...
@@ -200,7 +204,6 @@ else
     d.Conditions = r.conditions';
 end
 
-
 %initialize the plotting drop downs
 if r.nfactors == 1
     state = [false, false];
@@ -217,9 +220,9 @@ h.dropdown_coloraxis.Value = h.dropdown_coloraxis.ItemsData(default_select(1));
 h.dropdown_multiplot.Enable = state(2);
 h.dropdown_multiplot.Value = h.dropdown_multiplot.ItemsData(default_select(2));
 
-if exist('violinplot.m', 'file') == 2
-    h.radio_violin.Enable = false;
-    h.radio_violin.Value = false;
+if exist('violinplot.m', 'file') ~= 2
+    h.check_violin.Enable = false;
+    h.check_violin.Value = false;
 end
 
 d = movevars(d, 'Conditions', 'Before', d.Properties.VariableNames{1});
@@ -227,7 +230,6 @@ d.Mean = num2cell(d.Mean);
 d.StdDev = num2cell(d.StdDev);
 d.StdErr = num2cell(d.StdErr);
 d.Median = num2cell(d.Median);
-
 
 h.desctable.Data = d{:,:};
 h.desctable.ColumnName = d.Properties.VariableNames;
@@ -251,6 +253,7 @@ h.dropdown_coloraxis.ValueChangedFcn = {@callback_createplots, r, h};
 h.dropdown_multiplot.ValueChangedFcn = {@callback_createplots, r, h};
 h.check_bar.ValueChangedFcn = {@callback_createplots, r, h};
 h.check_violin.ValueChangedFcn = {@callback_createplots, r, h};
+h.check_CIbars.ValueChangedFcn = {@callback_createplots, r, h};
 h.check_errorbars.ValueChangedFcn = {@callback_createplots, r, h};
 h.check_singletrials.ValueChangedFcn = {@callback_createplots, r, h};
 
@@ -264,17 +267,14 @@ function data = getData(r, h)
 
 %get the factor to show on the x axis
 var(1) = h.dropdown_xaxis.Value;
-
 %if available the factor to show as colors
 if r.nfactors > 1
     var(2) = h.dropdown_coloraxis.Value;
 end
-
 %if available get the factor to show as different plots
 if r.nfactors > 2
     var(3) = h.dropdown_multiplot.Value;
 end
-
 %get out if any of the factors above are the same
 %this is expected if the person is part way through changing the values so
 %dont make a big deal out of it
@@ -286,6 +286,8 @@ end
 
 %it is easier to work with the data if it is not in a table
 within = table2cell(r.within);
+%calculate within subject confidence intervals
+CI = withinCI(r.data);
 
 [~, id, ~] = unique(within(:,var(1)));
 nOnXAxis = length(id);
@@ -309,11 +311,13 @@ else
     plotLabel = {'Data'};
 end
 
+
 %make a structure for each plot
 for ii = 1:nPlots
 
     data(ii).Mean = zeros(nOnXAxis, nColors);
     data(ii).StdErr = zeros(nOnXAxis, nColors);
+    data(ii).CI = zeros(nOnXAxis, nColors);
     
     data(ii).XTitle = r.factors(var(1)).Factor;
     data(ii).YTitle = "ERP amplitude";
@@ -337,8 +341,9 @@ for ii = 1:nPlots
             rows = temp_table(indx,:);
             data(ii).Mean(jj,1) = mean([rows{:, r.nfactors+1}]);
             data(ii).StdErr(jj,1) = mean([rows{:,r.nfactors+3}]);
+            data(ii).CI(jj,1) = CI(indx);
             %use rows as a column index into the raw data.
-            data(ii).RawValue(jj, 1, :) = table2array(temp_raw_data(:, indx));
+            data(ii).RawValues(jj, 1, :) = table2array(temp_raw_data(:, indx));
 
         else
             for kk = 1:nColors %loop over color variable
@@ -349,12 +354,31 @@ for ii = 1:nPlots
                 %there may be more than 3 variables.
                 data(ii).Mean(jj,kk) = mean([rows{:, r.nfactors + 1}]);
                 data(ii).StdErr(jj,kk) = mean([rows{:, r.nfactors + 3}]);
-                data(ii).RawValue(jj, kk, :) = table2array(temp_raw_data(:, indx));
+                data(ii).CI(jj,kk) = CI(indx);
+                data(ii).RawValues(jj, kk, :) = table2array(temp_raw_data(:, indx));
             end
         end
     end
 end
        
+
+%**************************************************************************
+function CI = withinCI(dTable, alpha, tails)
+%calculates CI for a within subject design using the method of Cusineau and
+%the correction by Morey
+%
+arguments
+    dTable
+    alpha double = .05
+    tails double = 2
+end
+d = table2array(dTable);
+[ns, nc] = size(d);
+sMean = repmat(mean(d, 2), 1, nc); %subject mean
+gMean = repmat(mean(mean(d)), ns,nc); %grand mean
+nd = d-sMean+gMean; %remove subject mean and add grand mean back
+sd = std(nd);
+CI = tinv(1-alpha/tails, ns-1) * sd / sqrt(ns) * sqrt(nc/(nc-1));
 
 %**************************************************************************
 function callback_createplots(hObject, event, r, h)
@@ -366,6 +390,7 @@ function callback_createplots(hObject, event, r, h)
 
 PlotBar = h.check_bar.Value;
 PlotViolin = h.check_violin.Value;
+PlotCI = h.check_CIbars.Value;
 PlotSingleTrials = h.check_singletrials.Value;
 PlotErrorBars = h.check_errorbars.Value;
 
@@ -386,15 +411,12 @@ if isempty(d)
 end
 
 nPlots = length(d);
-
-%set the size of teh axis
+%set the size of the axis
 W = h.axis_holder.InnerPosition(3);
 H = h.axis_holder.InnerPosition(4);
 if nPlots > 1
     H = H/2.1;    
 end
-
-%now make some simple plots for testing
 
 for ii = 1:nPlots
     B =(nPlots-ii) * H;
@@ -435,14 +457,14 @@ for ii = 1:nPlots
         
         %add the individual data points
         if PlotViolin
-            violinplot(a, x, squeeze(d(ii).RawValue(1:ngroups,i, :))',...
+            violinplot(a, x, squeeze(d(ii).RawValues(1:ngroups,i, :))',...
              'DensityScale','count',...
              'FaceColor', colorRange(i,:),...
              'EdgeColor', h.scheme.Axis.AxisColor.Value,...
              'DensityWidth',.3);
         end
         if PlotSingleTrials
-            scatter(a, x, squeeze(d(ii).RawValue(1:ngroups,i, :)),...
+            scatter(a, x, squeeze(d(ii).RawValues(1:ngroups,i, :)),...
                 'MarkerFaceColor',colorRange(i,:),...
                 'MarkerEdgeColor', h.scheme.Axis.AxisColor.Value,...
                 'SizeData', 50);
@@ -456,6 +478,16 @@ for ii = 1:nPlots
             e.MarkerSize = 10;
             e.MarkerEdgeColor = h.scheme.Axis.AxisColor.Value;
             e.MarkerFaceColor = colorRange(i,:);
+        end
+        if PlotCI
+            e= errorbar(a, x, d(ii).Mean(:,i), d(ii).CI(:,i), '.');
+            e.Color = h.scheme.Axis.AxisColor.Value;
+            e.LineWidth = 1;
+            e.Marker = "o";
+            e.MarkerSize = 10;
+            e.MarkerEdgeColor = h.scheme.Axis.AxisColor.Value;
+            e.MarkerFaceColor = colorRange(i,:);
+            
         end
         
     end
