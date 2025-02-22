@@ -244,7 +244,7 @@ end
 h.sourcetable.Data = sd;
 h.sourcetable.ColumnName = s.Properties.VariableNames;
 s.Properties.RowNames = strrep(s.Properties.RowNames, '(Intercept):','');
-s.Properties.RowNames = strrep(s.Properties.RowNames, ':','*');
+s.Properties.RowNames = strrep(s.Properties.RowNames, ':','X');
 h.sourcetable.RowName = s.Properties.RowNames;
 
 h.scheme = scheme;

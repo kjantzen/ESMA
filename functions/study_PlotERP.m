@@ -22,7 +22,6 @@ pb.Message = 'Loading Data...';
 [~,fname,~] = fileparts(filename{:});
 handles.figure.Name = sprintf('ERP Tool: %s', fname);
 load(filename{1}, '-mat');
-
 %calculate the within subject confidence interval
 GND = addWithinCI(GND);
 
@@ -136,11 +135,19 @@ function m = cond2StyleTable(stat)
     
 
 %***************************************************************************
-function callback_togglemapoption(hObject, event, h)
-%toggle mean cursor status
- hObject.Checked = ~hObject.Checked;
- plot_topos(h)
+function callback_togglemapoption(hObject, ~, h)
+    for ii = 1:4
+        h.menu_mapquality(ii).Checked = false;
+    end
+    hObject.Checked = ~hObject.Checked;
+    plot_topos(h)
 
+%***************************************************************************
+function callback_toggleAverageBetweenCursors(hObject, ~, h)
+    hObject.Checked = ~hObject.Checked;
+    plot_topos(h)
+
+ %***************************************************************************
 function callback_toggleautoscale(hObject, event, h)
 
     hObject.Checked = ~hObject.Checked;
@@ -152,7 +159,7 @@ function callback_toggleautoscale(hObject, event, h)
 %************************************************************************
 function callback_toggletopomenustate(hObject, event, h)
 
-for ii = 1:2
+for ii = 1:3
     h.menu_mapscale(ii).Checked = false;
 end
 hObject.Checked = true;
@@ -597,7 +604,8 @@ if reload_flag
     %update with the most recent data file and the most recent study file
     erp_filename =fullfile(p.GND.filepath, p.GND.filename);
     load(erp_filename, '-mat');
-    
+    %calculate the within subject confidence interval
+    GND = addWithinCI(GND);
     if isfield(GND, 'F_tests')
         if ~isempty(GND.F_tests)
             for ii = 1:length(GND.F_tests)
@@ -753,6 +761,7 @@ p = h.figure.UserData;
 tn = h.dropdown_ANOVAtest.Value;
 r = p.GND.ANOVA(tn);
 factors = {r.factors.Factor};
+callback_togglePlotANOVAStyle(hObject, event, h);
 
 delete(h.tree_ANOVA.Children);
 
@@ -1064,24 +1073,27 @@ function GND = addWithinCI(GND)
     %calculate the 95% confidence interval so that can be used instead of
     %the standard error across subject
     
-    %get thh mean over time and channel for each subject
     nS = size(GND.indiv_erps, 4);
-    nC = size(GND.indiv_erps, 3);
+    nC = size(GND.indiv_erps, 3); 
     sMean = mean(GND.indiv_erps, 3); %mean within subject
-    gMean = mean(sMean, 4); %grand mean
+    gMean = mean(sMean, 4); %grand mean across subject
     sMean = repmat(sMean, 1, 1, nC, 1);
     gMean = repmat(gMean, 1, 1, nC, nS);
-
-    normSD = squeeze(std(GND.indiv_erps - sMean + gMean, 0,4));
-    GND.grands_within_CI = tinv(.975, nS-1) * normSD / sqrt(nS) * sqrt(nC/(nC-1));
+    normMean = GND.indiv_erps - sMean + gMean;
+    normSD = squeeze(std(normMean, 0,4)); %new SD across subjects
+    %this is the standard error within
+    GND.grands_within_CI = normSD/sqrt(nS) * sqrt(nC/(nC-1));
+    %this is the 95% confidence interval within
+    %GND.grands_within_CI = tinv(.975, nS-1) * normSD / sqrt(nS) * sqrt(nC/(nC-1));
 
 %**************************************************************************
-function [d,se, s, p,labels_or_times, ch_out, cond_sel] = getdatatoplot(study, GND, h, cursors, aveBetween)
+function [d,se, s, p,labels_or_times, ch_out, cond_sel, fixedScale] = getdatatoplot(study, GND, h, cursors, aveBetween)
 
 d = []; se = [];
 labels_or_times = [];
 ch_out = [];
 cond_sel = [];
+fixedScale = [];
 s = [];
 p = [];
 
@@ -1181,6 +1193,8 @@ if ~isempty(ch_sel)
             se = GND.grands_within_CI(ch_sel, pt, cond_sel);
             %se = GND.grands_stder(ch_sel, pt, cond_sel);
         end
+        fixedScale = max(max(max(GND.grands(ch_sel,:,cond_sel))));
+
         %get the statistics information
         if mass_univ_overlay            
             %initialize the array to the full size of the data
@@ -1208,6 +1222,7 @@ if ~isempty(ch_sel)
         else
             d = GND.indiv_erps(ch_sel, pt, cond_sel, sbj);
         end
+        fixedScale = max(max(max(GND.indiv_erps(ch_sel, :,cond_sel, sbj))));
         %no stats information for individual subject data
     end    
     labels_or_times = {GND.chanlocs(ch_sel).labels};
@@ -1225,8 +1240,9 @@ ch_groups = ch(find(ch(:,2)),2);
 %dont do this part if either there are no channel groups selected or this
 %function was called from the plot_topo function
 if ~isempty(ch_groups) && ~mapping_mode
-    %get the means of any channel gorups
+    %get the means of any channel groups
     ch_group_data = zeros(length(ch_groups), length(GND.time_pts), length(cond_sel));
+    se = ch_group_data;
     ch_group_s = zeros(length(ch_groups), length(GND.time_pts));
     for ii = 1:length(ch_groups)
         for jj = 1:length(cond_sel)
@@ -1283,28 +1299,32 @@ end
 % plot the topographic maps indicated by the active cursors
 function plot_topos(h)
 
-
-if h.menu_mapquality.Checked
-    gridscale =  300;
-else 
-    gridscale = 64;
-end
-
-averageBetweenCursors = h.menu_cursormean.Checked;
-
-%get map plotting options
-for ii = 1:2
-    if h.menu_mapscale(ii).Checked
+gridscale = 40;
+for ii = 1:4
+    if h.menu_mapquality(ii).Checked
+        gridscale = 40 * ii;
         break
     end
 end
 
-scale_option = ii;
+%if h.menu_mapquality.Checked
+%    gridscale =  300;
+%else 
+%    gridscale = 64;
+%end
+
+averageBetweenCursors = h.menu_cursormean.Checked;
+
+%get map plotting options
+for ii = 1:3
+    if h.menu_mapscale(ii).Checked
+        scale_option = ii;
+        break
+    end
+end
 
 has_stat = false;  %assume there are no stats
 c = h.axis_erp.UserData;
-
-
 
 p = h.figure.UserData;
 my_h = h.panel_topo.UserData; %get handles to the subplots
@@ -1318,8 +1338,12 @@ if averageBetweenCursors
         n_maps = 1;
     end
 end
-[d, ~,s, pv,map_time, ch_out, cond_num] = getdatatoplot(p.study, p.GND, h, c.cursor, averageBetweenCursors);
-if scale_option ==1; map_scale = max(max(max(abs(d)))); end
+[d, ~,s, pv,map_time, ch_out, cond_num, fixedScale] = getdatatoplot(p.study, p.GND, h, c.cursor, averageBetweenCursors);
+if scale_option ==1
+    map_scale = max(max(max(abs(d)))); 
+elseif scale_option == 3 %fixed scale
+    map_scale = fixedScale;
+end
 
 if ~isempty(s)
     d(:,:,end+1) = s;
@@ -1447,7 +1471,7 @@ for ii = 1:n_maps
     end
 end
 
-if scale_option ==1
+if scale_option ~=2
     ht = h.panel_topo.Position(4); 
     cb = colorbar(my_h(1));
     cb.Units = 'pixels';
@@ -1478,7 +1502,7 @@ ANOVAStyle = h.check_plotANOVAStyle.Value;
 
 
 p = h.figure.UserData;
-[d, se,~, s,labels,~,cond_sel] = getdatatoplot(p.study, p.GND, h);
+[d, se,~, s,labels,~,cond_sel, ~] = getdatatoplot(p.study, p.GND, h);
 
 %can't plot it if it is not there!
 if isempty(d)
@@ -1721,7 +1745,7 @@ handles.dropdown_ANOVAtest.ValueChangedFcn = {@callback_populateANOVAtestinfo, h
 handles.button_plotANOVA.ButtonPushedFcn = {@callback_plotANOVAresult, handles};
 handles.button_exportANOVA.ButtonPushedFcn = {@callback_plotANOVAresult, handles, true};
 handles.check_plotANOVAStyle.ValueChangedFcn = {@callback_togglePlotANOVAStyle, handles};
-handles.dropdown_ANOVAtest.ValueChangedFcn = {@callback_togglePlotANOVAStyle, handles};
+%handles.dropdown_ANOVAtest.ValueChangedFcn = {@callback_togglePlotANOVAStyle, handles};
 
 
 handles.menu_refresh.MenuSelectedFcn = {@callback_reloadfiles, handles, true};
@@ -1736,10 +1760,12 @@ handles.menu_autoscale.MenuSelectedFcn = {@callback_toggleautoscale, handles};
 
 handles.menu_cursoradd.MenuSelectedFcn = {@callback_managecursors, handles};
 handles.menu_cursorsub.MenuSelectedFcn = {@callback_managecursors, handles};
-handles.menu_cursormean.MenuSelectedFcn = {@callback_togglemapoption, handles};
+handles.menu_cursormean.MenuSelectedFcn = {@callback_toggleAverageBetweenCursors, handles};
 
-handles.menu_mapquality.MenuSelectedFcn = {@callback_togglemapoption, handles};
-for ii = 1:2
+for ii = 1:4
+    handles.menu_mapquality(ii).MenuSelectedFcn = {@callback_togglemapoption, handles};
+end
+for ii = 1:3
     handles.menu_mapscale(ii).MenuSelectedFcn = {@callback_toggletopomenustate, handles};
 end
 for ii = 1:3
@@ -2438,7 +2464,7 @@ handles.menu_editcond = uimenu('Parent', handles.menu_file, 'Label', 'Edit Condi
 
 handles.menu_plot = uimenu('Parent', handles.figure, 'Label', 'ERP Options');
 handles.menu_autoscale = uimenu('Parent', handles.menu_plot, 'Label', 'Auto scale amplitude', 'Checked', true);
-handles.menu_stderr = uimenu('Parent', handles.menu_plot, 'Label', 'Show 95% CI (Within)');
+handles.menu_stderr = uimenu('Parent', handles.menu_plot, 'Label', 'Show Std Error (Within Subject)');
 handles.menu_stack = uimenu('Parent', handles.menu_plot, 'Label', 'Stack Channels', 'Checked', true);
 
 handles.menu_cursor = uimenu('Parent', handles.figure,'Label', 'Cursor');
@@ -2447,8 +2473,14 @@ handles.menu_cursorsub = uimenu('Parent', handles.menu_cursor,'Label', 'Remove C
 handles.menu_cursormean = uimenu('Parent', handles.menu_cursor, 'Label', 'Average between cursors', 'Checked', 'off');
 
 handles.menu_map = uimenu('Parent', handles.figure, 'Label', 'Scalp maps');
-handles.menu_mapquality = uimenu('Parent', handles.menu_map, 'Label', 'Print Quality', 'Checked', 'off');
+handles.menu_mapRes = uimenu('Parent',handles.menu_map, 'Label', 'Quality');
+labels = {'low', 'medium', 'high', 'print quality'};
+for ii = 1:4
+    handles.menu_mapquality(ii) = uimenu('Parent', handles.menu_mapRes, 'Label', labels{ii}, 'Checked', 'off');
+end
+handles.menu_mapquality(2).Checked = true; %default to medium res
 handles.menu_scale = uimenu('Parent', handles.menu_map, 'Label', 'Map Scale Limits');
 handles.menu_mapscale(1) = uimenu('Parent', handles.menu_scale, 'Label', 'ALl maps on the same scale', 'Checked', 'on', 'Tag', 'Auto');
 handles.menu_mapscale(2) = uimenu('Parent', handles.menu_scale, 'Label', 'Scale individually', 'Checked', 'off', 'Tag', 'Always');
+handles.menu_mapscale(3) = uimenu('Parent', handles.menu_scale, 'Label', 'Fixed Scale', 'Checked', 'off', 'Tag', 'Fixed');
 
