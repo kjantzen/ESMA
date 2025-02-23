@@ -1384,13 +1384,11 @@ for ii = length(my_h):-1:total_maps+1
     delete(my_h(ii));
     my_h(ii) = [];
 end
-
 %delete the colorbars
 cb_h = findobj(h.panel_topo, 'Type', 'Colorbar');
 if ~isempty(cb_h)
     delete(cb_h);
 end
-
 msize = 5; %markersize for displaying the channels displayed
 
 for ii = 1:n_maps
@@ -1412,7 +1410,6 @@ for ii = 1:n_maps
         end
         
         cla(my_h(pcount));
-        
         eval_string = [];
         if jj==n_conds && has_stat %this is the statistical map
             ms = [0,max(max(d(:,:,n_conds))) * .8];

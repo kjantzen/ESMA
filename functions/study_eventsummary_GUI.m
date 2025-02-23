@@ -124,7 +124,7 @@ end
 
 fprintf('appending new events to master list...\n')
 for ee = 1:length(cevents)
-    if sum(contains(gevents, cevents(ee))) == 0
+    if sum(matches(gevents, cevents(ee))) == 0
         gevents(end + 1) = cevents(ee);
         count(:, end + 1) = 0;
     end
