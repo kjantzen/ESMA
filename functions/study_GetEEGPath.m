@@ -13,7 +13,7 @@ function EEGPath = study_GetEEGPath
        end
     end
     if nopath
-        msg = sprintf('No valid path file exists. \n\nClick "Select path" to identify the folder where your experiments can be found.', EEGPATHFILE);
+        msg = sprintf('No valid path file exists. \n\nClick "Select path" to identify the folder where your experiments can be found.');
         buttons = {'Cancel', 'Select path'};
         title = 'Missing path file';
         result = wwu_msgdlg(msg,title,buttons, "isError",false);

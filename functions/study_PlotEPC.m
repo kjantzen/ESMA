@@ -754,6 +754,12 @@ plotboth = h.menu_plotboth.Checked;
 scale = h.spinner_changescale.Value;
 overlay = true;
 
+if invert 
+    dataDir = -1;
+else
+    dataDir = 1;
+end
+
 %get the plotting position from the slider
 if ~isempty(eventdata)
     if contains(eventdata.EventName, 'ValueChanging')
@@ -788,11 +794,11 @@ end
 %the user can decide between plotting the ICA activations of the normal
 %data
 if plotica
-    d = squeeze(p.EEG.icaact(:,:,trialnum));
+    d = squeeze(p.EEG.icaact(:,:,trialnum)) * dataDir;
     selected = p.selcomps;
     overlay = false;
 else
-    d = squeeze(p.EEG.data(:,:,trialnum));
+    d = squeeze(p.EEG.data(:,:,trialnum)) * dataDir;
     selected = p.selchans;
     if projica && (sum(p.selcomps) > 0)
         if p.projectopt
@@ -800,7 +806,7 @@ else
         else
             comps = find(p.selcomps);
         end
-        d2 = icaproj(d, p.EEG.icaweights * p.EEG.icasphere, comps);
+        d2 = icaproj(d, p.EEG.icaweights * p.EEG.icasphere, comps) * dataDir;
         if ~overlay
             d = d2;
             clear d2
@@ -859,7 +865,6 @@ for ii = 1:length(ph)
         end
     end
 end
-
 
 if ~stacked
     h.axis_main.YTick = scalefac;
