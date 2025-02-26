@@ -1096,6 +1096,7 @@ cond_sel = [];
 fixedScale = [];
 s = [];
 p = [];
+gfp = [];
 
 
 %if cursor information is passed we will send back only the information
@@ -1118,16 +1119,19 @@ sbj = h.list_subject.Value;
 %check to see if the user wants to plot mass_univariate statistics
 mass_univ_overlay = h.check_MUoverlay.Value;
 
-%get the time points to plot or map
+%get the channels from the selected conditions
+ch_sel = ch(find(ch(:,1)),1);
+ch_out = ch_sel;    %send this back to the calling function
+
 if mapping_mode
-    t = sort([cursors.time]); %sort so that maps always increase in time
-    pt = zeros(size(t));
-    for ii = 1:length(t)
-        [~,pt(ii)] = min(abs(t(ii) - GND.time_pts));  %get the exact time of the cursor
-    end
+    [~,pt] = arrayfun(@(a) min(abs(a-GND.time_pts)), sort([cursors.time]));
+    ch_sel = 1:length(GND.chanlocs); %overwrite channel selection if we are mapping
+    plot_GFP = false;
 else
     pt =1:length(GND.time_pts); %get all the points 
+    plot_GFP = h.menu_GFP.Checked;  %allow the user to choose
 end
+
 
 %get the statistics to plot if desired
 if mass_univ_overlay
@@ -1175,13 +1179,6 @@ if mass_univ_overlay
     end
 end
 
-%get the channels from the selected conditions
-ch_sel = ch(find(ch(:,1)),1);
-ch_out = ch_sel;    %send this back to the calling function
-if mapping_mode
-    ch_sel = 1:length(GND.chanlocs); %overwrite channel selection if we are mapping
-end
-
 %it is possible that no channels are selected because just the channel
 %groups can be selected
 if ~isempty(ch_sel)
@@ -1225,13 +1222,11 @@ if ~isempty(ch_sel)
         fixedScale = max(max(max(GND.indiv_erps(ch_sel, :,cond_sel, sbj))));
         %no stats information for individual subject data
     end    
-    labels_or_times = {GND.chanlocs(ch_sel).labels};
-end
-
-%if this is for the mapping routine, return the times of the maps instead
-%of the labels of the channels
-if mapping_mode
-    labels_or_times = t;
+    if mapping_mode
+        labels_or_times = sort([cursors.time]);
+    else
+        labels_or_times = {GND.chanlocs(ch_sel).labels};
+    end
 end
 
 %now get the channel group information 
@@ -1291,9 +1286,19 @@ if ~isempty(ch_groups) && ~mapping_mode
             s = ch_group_s;
         end
     end
-    
-    
 end
+%last thing to do is add the global field power to the end
+if plot_GFP
+    %calculate the global field power
+    if sbj == 0
+        gfp = std(GND.grands(:,:,cond_sel),0,1);
+    else
+        gfp = GND.indiv_erps(ch_sel, pt, cond_sel, sbj);
+    end
+
+    d = cat(1, d, gfp);
+    labels_or_times(end + 1) = {'GFP'}; 
+ end
 
 %************************************************************************
 % plot the topographic maps indicated by the active cursors
@@ -1557,6 +1562,7 @@ for ii = 1:size(d,3)
        pStyle = '-';
     end
     dd = squeeze(d(:,:,ii));
+
     %plot the statistics
     if MUoverlay && ~isempty(s)
         hold(h.axis_erp, 'on');
@@ -1564,6 +1570,7 @@ for ii = 1:size(d,3)
         splot = scatter(h.axis_erp, tt(s>0)', dd(s>0)',60,'filled');
         splot.CData =  pColor;
     end
+
     %plot the standard error overlay
     if ~isempty(se) && SEoverlay
         for jj = 1:size(d,1)
@@ -1576,8 +1583,7 @@ for ii = 1:size(d,3)
             er.FaceAlpha = .25;
         end
     end
-    %set the color and other line properties (ttpe and width?) based on the
-    %condition of the seleted statistical test if requested
+
     ph = plot(h.axis_erp, p.GND.time_pts, dd', 'Color',pColor,...
         'LineWidth', lwidth,...
         'LineStyle',pStyle);
@@ -1585,11 +1591,12 @@ for ii = 1:size(d,3)
     for phi = 2:length(ph)
         ph(phi).Annotation.LegendInformation.IconDisplayStyle = 'off';
     end
-    
+    if matches(labels{end}, 'GFP')
+        ph(end).LineWidth = ph(end).LineWidth + .5;
+        ph(end).Color = [0,.8,0];
+    end
     legend_handles(ii) = ph(1);
     legend_names(ii) = h.list_condition.Items(cond_sel(ii));
-    
-  
 end
 hold(h.axis_erp, 'off');    
 %handle axes and scaling differently depending on whether the plot is
@@ -1754,6 +1761,7 @@ handles.menu_editcond.MenuSelectedFcn = {@callback_editconditions, handles};
 handles.menu_stderr.MenuSelectedFcn = {@callback_toggleplotoption, handles};
 handles.menu_stack.MenuSelectedFcn = {@callback_toggleplotoption, handles};
 handles.menu_autoscale.MenuSelectedFcn = {@callback_toggleautoscale, handles};
+handles.menu_GFP.MenuSelectedFcn = {@callback_toggleautoscale, handles};
 
 handles.menu_cursoradd.MenuSelectedFcn = {@callback_managecursors, handles};
 handles.menu_cursorsub.MenuSelectedFcn = {@callback_managecursors, handles};
@@ -2463,6 +2471,7 @@ handles.menu_plot = uimenu('Parent', handles.figure, 'Label', 'ERP Options');
 handles.menu_autoscale = uimenu('Parent', handles.menu_plot, 'Label', 'Auto scale amplitude', 'Checked', true);
 handles.menu_stderr = uimenu('Parent', handles.menu_plot, 'Label', 'Show Std Error (Within Subject)');
 handles.menu_stack = uimenu('Parent', handles.menu_plot, 'Label', 'Stack Channels', 'Checked', true);
+handles.menu_GFP = uimenu('Parent', handles.menu_plot, 'Label', 'Show Global Field Power', 'Checked', false);
 
 handles.menu_cursor = uimenu('Parent', handles.figure,'Label', 'Cursor');
 handles.menu_cursoradd = uimenu('Parent', handles.menu_cursor,'Label', 'Add Cursor', 'Tag', 'add', 'Accelerator', 'A');

@@ -469,7 +469,7 @@ else
     msgstr = sprintf(...
         'Are you sure you want to delete these %i files? This action cannot be undone!', length(filestodelete));
     if(contains(uiconfirm(h.figure, msgstr, 'Confirm file deletion'), 'OK'))
-        cellfun(@delete, filestodelete);
+        inspe(@delete, filestodelete);
         populate_filelist(study,h);
         study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Delete Files', 'function', 'callback_deletefiles', 'paramstring', filestodelete, 'fileID', '');
         study = study_SaveStudy(study);
@@ -1091,7 +1091,7 @@ if isempty(selfiles)
     return
 end
 
-if cnum==0 && length(study.bingroup(gnum).bins) > 0
+if cnum==0 && ~isemptylength(study.bingroup(gnum).bins)
     cnum = 1:length(study.bingroup(gnum).bins);
     fprintf('Extracting all %i conditions in %s.', length(cnum), study.bingroup(gnum).name);
 else
@@ -1395,8 +1395,8 @@ function callback_inspectICA(hObject, event, h)
     study = getstudy(h);
     filelist = getselectedfiles(study, h);
     if isempty(filelist); return; end
-    
     study_ICAClassInspect(study, filelist);
+
 %************************************************************************** 
 %reject labelled components
 function callback_rejectICA(hObject, event,h)
@@ -1504,8 +1504,7 @@ function addSubFolderPaths()
     if ~contains(d, 'ICLabel')
         error('Please make sure the ICLabel plugin is installed via eeglab before continuing');
     end
-    
-    
+        
     %check to make sure the plugin and functions folders have been put
     %on the path
 %    if ~contains(path,pluginsDir)
