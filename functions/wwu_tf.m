@@ -64,11 +64,9 @@ function TFData = wwu_tf(cfg, EEG)
 % OUTPUT
 %   tf - a channel x time x frequency x condition array of power values
 %
-
 if nargin < 2
     error('At least 2 inputs are required.');
 end
-
 
 if ~isfield(cfg, 'cycles')
     cfg.cycles = 0;
@@ -93,24 +91,20 @@ if isfield(cfg, 'defWinsize') && ~cfg.defWinsize
     cmd = [cmd, ', ''winsize'', cfg.winsize'];
 else
     cfg.winsize = -EEG.xmin * EEG.srate;
-    cmd = [cmd, ', ''winsize'', cfg.winsize'];
-    
+    cmd = [cmd, ', ''winsize'', cfg.winsize'];   
 end
-
 if isfield(cfg, 'defFreq') && ~cfg.defFreq
     cmd = [cmd, ', ''freqs'', cfg.freqs'];
-
 end
-
 if isfield(cfg, 'preStim') && ~cfg.preStim
     cmd = [cmd, ', ''baseline'', cfg.baseline'];
 end
-
-
 allersp = [];
+allitc = [];
+allpower = [];
+allphase = [];
 %get condition information
 if isfield(EEG, 'bindesc') %assume we have embedded condition information
-    
     %allocate matrix for storing the tf data
     %get a list of epoch numbers for each bin
     elist = getepochlist(EEG);
@@ -122,14 +116,16 @@ else
     nCond = 1;
     TFData.bindesc = 'all trials';
 end
-
 if cfg.runtest
     figure();
     cmd = [cmd, ', ''plotphasesign'', ''off'');'];
     data = squeeze(EEG.data(cfg.testChannel,:,elist(cfg.testCond).epoch));
     [ersp, itc, powbase, times, freqs, erspboot, itcboot, tfdata] = eval(cmd);
     allersp = ersp;
-
+    allitc = itc; 
+    allpower = mean(tfdata ./ conj(tfdata), 4);  %may have to divide by points
+    allphase = mean(angle(tfdata), 4);
+    
 else
     cmd = [cmd, ', ''plotersp'', ''off'', ''plotitc'', ''off'');']; %add the no plotting commands here.
     for ii = 1:nCond
@@ -137,15 +133,23 @@ else
             data = squeeze(EEG.data(ch,:,elist(ii).epoch));
             [ersp, itc, powbase, times, freqs, erspboot, itcboot, tfdata] = eval(cmd);
             if isempty(allersp)
-                allersp = zeros(EEG.nbchan, size(ersp,1), size(ersp,2), nCond);
+                allersp = zeros(EEG.nbchan, size(tfdata,1), size(tfdata,2), nCond);
+                allitc = allersp;
+                allpower = allersp;
+                allphase = allersp;
             end
             allersp(ch,:,:,ii) = ersp;
-
+            allitc(ch,:,:,ii) = abs(itc);
+            allpower(ch,:,:,ii) = mean(tfdata.*conj(tfdata), 3);
+            allphase(ch,:,:,ii) = mean(angle(tfdata), 3);
         end
     end
 end
 
 TFData.ersp = allersp;
+TFData.itc = allitc;
+TFData.power = allpower;
+TFData.phase = allphase;
 TFData.times = times;
 TFData.freqs = freqs;
 TFData.ncond = nCond;

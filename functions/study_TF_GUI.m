@@ -264,8 +264,6 @@ p.preStim = h.check_prestim.Value;
 p.baseline = [h.edit_baselinelow.Value, h.edit_baselinehigh.Value];
 
 p.remMean = h.check_removemean.Value;
-
-
 %**************************************************************************
 function p = checkParams(p, filename)
 
@@ -276,11 +274,10 @@ closereq();
 %**********************************************
 function callback_calculateTF(hObject, eventdata, h, filenames, study, runTest)
 
-
+%these are currently defaults but should be mad as options
 exclude_badtrials = true;
 exclude_badcomps = true;
 exclude_badsubjs = false;
-
 
 p = getParameters(h);
 p.runtest = runTest;  %if true only a single channel will be calculated
@@ -288,6 +285,7 @@ p.runtest = runTest;  %if true only a single channel will be calculated
 %output this to the  across subject folder
 study_path = study_GetEEGPath;
 outdir = eeg_BuildPath(study_path, study.path, 'across subject');
+
 %create the output directory
 if ~exist(outdir, 'Dir')
     mkdir(outdir)
@@ -303,19 +301,15 @@ try
     pbar = uiprogressdlg(h.figure,...
         'Title', 'computing ersp',...
         'ShowPercentage', 'on');
-
     if runTest
         EEGIn = wwu_LoadEEGFile(filenames{1});
         fprintf('converting data to time frequency\n');
         ersp = wwu_tf(p, EEGIn);
     else
-        %set a progress bar
-    
         nfile = length(filenames);
         sCount = 0;  %count the # of participants included 
         for jj = 1:nfile
             EEGIn = wwu_LoadEEGFile(filenames{jj});
-
             %interpolate any missing or removed channels
             if ~isempty(EEGIn.chaninfo.removedchans)
                 EEGIn = eeg_interp(EEGIn, EEGIn.chaninfo.removedchans);
@@ -324,12 +318,10 @@ try
             if isfield(EEGIn.chaninfo, 'badchans') && sum(EEGIn.chaninfo.badchans) > 0
                 EEGIn = eeg_interp(EEGIn, find(EEGIn.chaninfo.badchans));
             end
-
             if strcmp(study.subject(jj).status, 'bad') && (exclude_badsubjs == true)
                 continue
             end
             sCount = sCount + 1;
-             
             if exclude_badtrials
                 pbar.Message = 'Removing bad trials';
                 btrials = study_GetBadTrials(EEGIn);
@@ -342,19 +334,19 @@ try
                 pbar.Message = 'Removing bad components';
                 EEGIn = pop_subcomp(EEGIn, [], 0, 0);
             end
-
-
             pbar.Message = 'Computing ERSP for all channels and conditions';
             
             %pass the data to the lower level routine that computes ersp on
             %the conditions and channels
-
             subTFData = wwu_tf(p, EEGIn);
 
             %initialize the variables if this is the first time through
             if sCount == 1 
                 %allocate space for all the ersp data
-                TFData.indiv_ersp = zeros(nfile, subTFData.nchan, length(subTFData.freqs), length(subTFData.times), subTFData.ncond);
+                TFData.ersp = zeros(nfile, subTFData.nchan, length(subTFData.freqs), length(subTFData.times), subTFData.ncond);
+                TFData.itc = TFData.ersp;
+                TFData.power = TFData.ersp;
+                TFData.phase = TFData.ersp;
                 TFData.times = subTFData.times;
                 TFData.freqs = subTFData.freqs;
                 TFData.chanlocs = EEGIn.chanlocs;
@@ -362,29 +354,24 @@ try
                 TFData.ncond = subTFData.ncond;
                 TFData.nchan = subTFData.nchan;
             end
-            TFData.indiv_ersp(sCount, :,:,:,:) = subTFData.ersp;
+            TFData.ersp(sCount, :,:,:,:) = subTFData.ersp;
+            TFData.itc(sCount, :,:,:,:) = subTFData.itc;
+            TFData.power(sCount, :,:,:,:) = subTFData.power;
+            TFData.phase(sCount, :,:,:,:) = subTFData.phase;
+            
             TFData.erp_file{sCount} = filenames{jj};
-           
             pbar.Value  = jj/nfile;
-
-
         end
 
-        %figure out which participants are good and bad
-        sbjinave = find(contains({study.subject.status}, 'good'));
-
         %compute the grand average
-        grand = squeeze(mean(TFData.indiv_ersp(sbjinave,:,:,:,:), 1));
-        TFData.grand_ersp  = grand;
-
-
+        %grand = squeeze(mean(TFData.indiv_ersp(sbjinave,:,:,:,:), 1));
+        %TFData.grand_ersp  = grand;
+        pbar.Message = 'Saving data';
         newfile = fullfile(outdir, [outfile, '.ersp']);
-        save(newfile, 'TFData');
+        save(newfile, 'TFData', '-v7.3');
 
         clear EEGIn
         close(pbar)
-
-
         closereq();
     end
 catch ME

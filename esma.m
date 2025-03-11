@@ -24,8 +24,10 @@ function esma()
 %major revision indicates the addition of a new major function or a change
 %that may impact people using previous version.
 %Minor revisions indicate a bug fix or addition/expansion of a minor feature.
-VersionNumber = '2.2.0';
+VersionNumber = '1.0.0';
 fprintf('Starting EEG Study Management and Analysis V%s....\n', VersionNumber);
+
+checkForNewVersion()
 
 try
     addSubFolderPaths
@@ -151,6 +153,8 @@ handles.menu_preprocess = uimenu('Parent', handles.figure, 'Label', 'Preprocess'
 handles.menu_resample = uimenu('Parent', handles.menu_preprocess, 'Label', 'Resample');
 handles.menu_filter = uimenu('Parent', handles.menu_preprocess, 'Label', 'Filter');
 handles.menu_rbadtimes = uimenu('Parent', handles.menu_preprocess, 'Label', 'Remove bad time segments');
+
+handles.menu_arbadchans = uimenu('Parent', handles.menu_preprocess, 'Label', 'Autodetect bad channels');
 handles.menu_rbadchans = uimenu('Parent', handles.menu_preprocess, 'Label', 'Remove bad channels');
 handles.menu_reref = uimenu('Parent', handles.menu_preprocess, 'Label', 'Average reference');
 handles.menu_cleanline = uimenu('Parent', handles.menu_preprocess, 'Label', 'Reduce line noise');
@@ -167,8 +171,12 @@ handles.menu_icainspect = uimenu(handles.menu_icamain, 'Label', 'ICA classificat
 handles.menu_icacopy = uimenu(handles.menu_icamain, 'Label', 'Copy components', 'Separator', 'on', 'Tag', 'copy');
 handles.menu_icapaste = uimenu(handles.menu_icamain, 'Label', 'Paste components', 'Enable', 'off', 'Tag', 'paste');
 
-handles.menu_erp = uimenu(handles.figure, 'Label', 'ERP');
-handles.menu_erpave = uimenu(handles.menu_erp, 'Label', 'Compute Averaged ERPs');
+handles.menu_ave = uimenu(handles.figure, 'Label', 'Average');
+handles.menu_erpave(1) = uimenu(handles.menu_ave, 'Label', 'Time Domain Average (ERP)', 'Tag', 'TIME');
+handles.menu_erpave(2) = uimenu(handles.menu_ave, 'Label', 'Frequency Domain Average (FFT)', 'Tag', 'FREQ');
+handles.menu_computetf = uimenu('Parent', handles.menu_ave, 'Label', 'TimeXFrequency domain Average (ERSP)');
+
+
 
 %tools menu
 handles.menu_utils = uimenu('Parent', handles.figure,'Label', '&Tools', 'Accelerator', 't');
@@ -197,6 +205,7 @@ set(handles.menu_deletefiles, 'Callback', {@callback_deletefiles, handles});
 set(handles.menu_renamefiles, 'Callback', {@callback_changeFilenames, handles});
 set(handles.menu_exportfiles, 'Callback', {@callback_exportfiles, handles});
 set(handles.menu_rbadtimes, 'Callback', {@callback_removeDataSegments, handles});
+set(handles.menu_arbadchans, 'Callback', {@callback_detectBadChannels, handles});
 set(handles.menu_rbadchans, 'Callback', {@callback_interpchans, handles});
 set(handles.menu_resample, 'Callback', {@callback_resample, handles});
 set(handles.menu_filter, 'Callback', {@callback_filter, handles});
@@ -210,7 +219,8 @@ set(handles.menu_ica, 'Callback', {@callback_ICA, handles});
 set(handles.menu_classify, 'Callback', {@callback_classifyICA, handles});
 set(handles.menu_icainspect, 'Callback', {@callback_inspectICA, handles});
 set(handles.menu_icareject, 'Callback', {@callback_rejectICA, handles});
-set(handles.menu_erpave, 'Callback', {@callback_average, handles});
+set(handles.menu_erpave(1), 'Callback', {@callback_average, handles});
+set(handles.menu_erpave(2), 'Callback', {@callback_average, handles});
 set(handles.menu_icacopy, 'Callback', {@callback_copypastecomponents, handles});
 set(handles.menu_icapaste, 'Callback', {@callback_copypastecomponents, handles});
 
@@ -468,8 +478,8 @@ else
     start = clock;
     msgstr = sprintf(...
         'Are you sure you want to delete these %i files? This action cannot be undone!', length(filestodelete));
-    if(contains(uiconfirm(h.figure, msgstr, 'Confirm file deletion'), 'OK'))
-        inspe(@delete, filestodelete);
+    if(matches(uiconfirm(h.figure, msgstr, 'Confirm file deletion'), 'OK'))
+        cellfun(@delete, filestodelete);
         populate_filelist(study,h);
         study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Delete Files', 'function', 'callback_deletefiles', 'paramstring', filestodelete, 'fileID', '');
         study = study_SaveStudy(study);
@@ -636,10 +646,10 @@ for ii = 1:study.nsubjects
     end
 end
 
-FileTypes = {'Biosemi Files', 'Continuous EEG', 'Epoched Trial Data', 'ERP (Average)', 'ERSP (Average)', 'EEGLab Files', 'Other'};
-Included_Extensions = {'.bdf', '.cnt', '.epc', '.GND', '.ersp', '.set'};
+FileTypes = {'Biosemi Files', 'Continuous EEG', 'Epoched Trial Data', 'ERP (Average)', 'FFT (Average)', 'ERSP (Average)', 'EEGLab Files', 'Other'};
+Included_Extensions = {'.bdf', '.cnt', '.epc', '.GND', '.FFTGND', '.ersp', '.set'};
 Excluded_Extensions = {'.fdt'};
-Acrosssubj_Extensions = {'.GND', '.ersp'};
+Acrosssubj_Extensions = {'.GND', '.FFTGND', '.ersp'};
 
 %clear the existing list of files
 n = h.tree_filetree.Children;
@@ -654,7 +664,6 @@ end
 for ii = 1:length(flist)
     %get the file extension used for categorization
     [~,fname,ext] = fileparts(flist(ii).name);
-    
     if ~isempty(find(strcmp(Excluded_Extensions, ext),1))
         continue
     end
@@ -674,10 +683,8 @@ if ~exist(searchpath, 'dir')
 else
     for ee = 1:length(Acrosssubj_Extensions)
         flist = dir(fullfile(searchpath,filesep, ['*',Acrosssubj_Extensions{ee}]));
-        for ii = 1:length(flist)
-            
+        for ii = 1:length(flist)       
             [~,fname,ext] = fileparts(flist(ii).name);
-        
              category = find(strcmp(Included_Extensions,Acrosssubj_Extensions{ee}));
              if isempty(category); category = length(FileTypes); end
              [~,fNameOnly,~] = fileparts(flist(ii).name);
@@ -794,8 +801,10 @@ try
             study_PlotEPC(study, files);
         case '.GND' %averaged subject and grand average data
             study_PlotERP(study, files);
+        case '.FFTGND'
+            study_PlotFFT(study, files);
         case '.ersp'
-            study_PlotERSP(study, files);
+            study_PlotERSP_NEW(study, files);
         otherwise
             uialert(h.figure, 'Other files types are not supported, but I am working on it!', 'Plot Data');
             return
@@ -840,7 +849,7 @@ cntr = 0;
 n_uniquefiles = 0;
 
 %this is an average file not stored in the subject folders
-if contains(fext,'.GND') || contains(fext, '.ersp')
+if contains(fext,'GND') || contains(fext, '.ersp')
     for jj = 1:length(fnames)
         temp = eeg_BuildPath(eeg_path, study.path, 'across subject', fnames{jj});
         if exist(temp, 'file') > 0
@@ -952,11 +961,8 @@ fh = study_Filter_GUI(study, fnames);
 waitfor(fh);
 
 callback_refresh(hObject, eventdata, h)
-
-
 %**************************************************************************
 function callback_reref(hObject, eventdata, h)
-
 file_id = '_ref';
 option = 0;
 study = getstudy(h);
@@ -1091,7 +1097,7 @@ if isempty(selfiles)
     return
 end
 
-if cnum==0 && ~isemptylength(study.bingroup(gnum).bins)
+if cnum==0 && ~isempty(study.bingroup(gnum).bins)
     cnum = 1:length(study.bingroup(gnum).bins);
     fprintf('Extracting all %i conditions in %s.', length(cnum), study.bingroup(gnum).name);
 else
@@ -1191,6 +1197,89 @@ function callback_evtsummary(hObject, event, h)
         return
     end
     study_eventsummary_GUI(study, filelist);
+%%
+%*************************************************************************
+function callback_detectBadChannels(hObject, eventdata, h)
+
+%check to make sure the file is available since it is eeglab dependent
+
+tic
+parameters.Operation = {'Operation', 'Auto detect bad channels'};
+parameters.date = {'Date and time', datetime("now");};
+
+study = getstudy(h);
+stime = clock;
+option = 0;
+file_id = '_archan';
+selfiles = getselectedfiles(study, h);
+if isempty(selfiles)
+    return
+end
+pb = uiprogressdlg(h.figure,'Message', 'Auto detecting bad channels using clean_artifacts', 'Value',0,'Title','Detect bad channels');
+maxpbVal= length(selfiles) * 4;
+curpbVal = 0;
+nFiles = length(selfiles);
+reportData = cell(length(selfiles), 3);
+allChanLabels = {study.chanlocs.labels};
+    
+for ii = 1:nFiles
+    curpbVal = curpbVal + 1;
+    pb.Message = 'building output filename...';
+    pb.Value = curpbVal/maxpbVal;
+
+    [path, file, ext] = fileparts(selfiles{ii});
+    [file_id, option,writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
+    if option == 3 && ~writeflag
+        fprintf('skipping existing file...\n');
+        reportData{ii,3} = 'not saved';
+        continue;
+    else
+        outfilename = fullfile(path,[file, file_id, ext]);
+        reportData{ii,3} = outfilename;
+    end
+    curpbVal = curpbVal + 1;
+    pb.Message = 'loading subject data...';
+    pb.Value = curpbVal/maxpbVal;
+
+    EEG = wwu_LoadEEGFile(selfiles{ii});
+
+    curpbVal = curpbVal + 1;
+    pb.Message = 'Finding bad channels...';
+    pb.Value = curpbVal/maxpbVal;
+
+    temp = clean_artifacts(EEG, 'WindowCriterion', 'off', 'BurstCriterion', 'off', 'BurstCriterionRefTolerances', 'off');
+    if ~isfield(temp, 'chaninfo') || ~isfield(temp.chaninfo, 'removedchans')
+        fprintf('No bad channels found .... moving to next file.\n');         fprintf('No bad channels found for subject #%i\n', ii)
+         reportData{ii,1} = 0;
+         reportData{ii,2} = 'none';   
+    else
+        removedChanLabels = {temp.chaninfo.removedchans.labels};
+        removeChanString = join(removedChanLabels);
+        fprintf('%i bad channels labeled.\n', length(removedChanLabels));
+        badChanIndx = cellfun(@(x) strmatch(x,allChanLabels), removedChanLabels);
+        %initialize the badchans vector if necessary
+        if ~isfield(EEG.chaninfo, 'badchans')
+            EEG.chaninfo.badchans = zeros(1, length(study.chanlocs));
+        end
+        EEG.chaninfo.badchans(badChanIndx) = 1;  %set channels to bad
+        fprintf('Removing channels\n%s.\n', removeChanString{1});
+        reportData{ii,1} = sum(EEG.chaninfo.badchans);
+        reportData{ii,2} = removeChanString{1};
+     end
+     curpbVal = curpbVal + 1;
+    pb.Message = 'saving data...';
+    pb.Value = curpbVal/maxpbVal;
+    wwu_SaveEEGFile(EEG, outfilename);
+end
+parameters.duration = {'Duration (seconds)', toc};
+
+wwu_UpdateProcessLog(study,'SheetName', 'auto bad chans', ...
+    'ColumnNames',{'# marked', 'Channels marked', 'Ouput File'},...
+    'RowNames',selfiles, 'Values', reportData, 'Parameters',parameters)
+study_AddHistory(study, 'start', stime, 'finish', clock, 'event', 'Auto Removed bad channels', 'paramstring', selfiles);
+populate_filelist(study, h);
+msgbox("Note - channels have been marked as bad.  Plot the data to view them and use 'Remove bad channels' to remove them");
+
 %*************************************************************************
 function callback_interpchans(hObject, eventdata, h)
 tic
@@ -1240,8 +1329,7 @@ for ii = 1:nFiles
     if ~isfield(EEG.chaninfo, 'badchans') || sum(EEG.chaninfo.badchans)==0
         fprintf('No bad channels found for subject #%i\n', ii)
         reportData{ii,1} = 0;
-        reportData{ii,2} = 'none';
-   
+        reportData{ii,2} = 'none';   
     else
         bchans = EEG.chaninfo.badchans;
         ch_names = join({EEG.chanlocs(find(bchans)).labels});
@@ -1446,7 +1534,7 @@ function callback_average(hObject, eventdata, h)
             end
         end
      end
-    fh = study_Averager_GUI(study, files);    
+    fh = study_Averager_GUI(study, files, hObject.Tag);    
     waitfor(fh);
     populate_filelist(study, h);
 %**************************************************************************
@@ -1497,20 +1585,38 @@ function addSubFolderPaths()
     if isempty(d)
         error('Could not find the EEGLAB plugins folder.  Please check your EEGLAB installation.');
     end
-    d = [d.name];
-    if ~contains(d, 'Biosig')
-        error('Please make sure the Biosig plugin is installed via eeglab before continuing');
+    dn = {d.name};
+    toolboxFolders = {'Biosig', 'ICLabel', 'clean_rawdata'};
+    for tb = toolboxFolders
+        indx = contains(dn, tb);
+        if sum(indx) == 0
+           error('Please make sure the %s plugin is installed using eeglab before continuing', tb);
+        else
+            tbPath = fullfile(d(indx).folder, d(indx).name);
+            addpath(tbPath);
+        end
     end
-    if ~contains(d, 'ICLabel')
-        error('Please make sure the ICLabel plugin is installed via eeglab before continuing');
-    end
-        
+    
+    % if ~contains(d, 'Biosig')
+    %     error('Please make sure the Biosig plugin is installed via eeglab before continuing');
+    % end
+    % if ~contains(d, 'ICLabel')
+    %     error('Please make sure the ICLabel plugin is installed via eeglab before continuing');
+    % end
+    % if ~contains(d, 'clean_rawdata')
+    %     error('Please make sure the ICLabel plugin is installed via eeglab before continuing');
+    % end
+    % 
     %check to make sure the plugin and functions folders have been put
     %on the path
 %    if ~contains(path,pluginsDir)
-        addpath(pluginsDir);
-        fp = genpath(fullfile(eeglabpath, 'functions'));
-        addpath(fp);
+    addpath(pluginsDir);
+    fp = genpath(fullfile(eeglabpath, 'functions'));
+    addpath(fp);
+    % addpath(fullfile(pluginsDir, 'Biosig'));
+    % addpath(fullfile(pluginsDir, 'ICLabel'));
+    % addpath(fullfile(pluginsDir, 'clean_rawdata'));
+    % 
 %    end
 
  %     %check for FMUT installation
@@ -1522,7 +1628,7 @@ function addSubFolderPaths()
         msg = "Could not find Mass Univariate installation!";
         msg = sprintf("%s\nPlease make sure the Mass Univariate ERP toolbox is installed on this comuputer and is on the MATLAB path", msg);
         msg = sprintf("%s\nThe toolbox can be downloaded from https://github.com/dmgroppe/Mass_Univariate_ERP_Toolbox", msg);
-        error(msg);
+        error(msg); %#ok<SPERR>
     end
 
     %check for fieldtrip installation
@@ -1557,7 +1663,7 @@ function addSubFolderPaths()
     end
 
 %*************************************************************************
-function checkForNewVersion(user, repository, downloadType, name)
+function checkForNewVersion()
 % Code to check and download a new version if it exists
 % Adapted from - Zoltan Csati's function filestr = githubFetch
 % GITHUBFETCH  Download file from GitHub.
@@ -1583,30 +1689,20 @@ function checkForNewVersion(user, repository, downloadType, name)
 %       % same as githubFetch('matlab2tikz', 'matlab2tikz', 'release', 'latest')
 %   Zoltan Csati
 %   04/02/2018
+website = 'https://github.com/kjantzen/';
+repository = 'ESMA';
 
-narginchk(3, 4);
-website = 'https://github.com';
 % Check for download type
-branchRequested = strcmpi(downloadType, 'branch');
-releaseRequested = strcmpi(downloadType, 'release');
-assert(branchRequested | releaseRequested, ...
-    'Type must be either ''branch'' or ''release''.');
-% Check if the user exists
+branchRequested = false;
+releaseRequested = true;
+
 try
-    urlread(fullfile(website, user));
+    webread(repository);
 catch ME
-    if strcmp(ME.identifier, 'MATLAB:urlread:FileNotFound')
-        error('User does not exist.');
-    end
+    fprintf('User or repository not found.  Skipping update check.')
+    return
 end
-% Check if the repository exists for the given user
-try
-    urlread(fullfile(website, user, repository));
-catch ME
-    if strcmp(ME.identifier, 'MATLAB:urlread:FileNotFound')
-        error('Repository does not exist.');
-    end
-end
+
 % Process branch or release versions
 if nargin < 4 % no branch or release version provided
     if branchRequested
@@ -1617,21 +1713,24 @@ if nargin < 4 % no branch or release version provided
 end
 if releaseRequested
     if strcmpi(name, 'latest') % extract the latest version number
-        s = urlread(fullfile(website, user, repository, 'releases', 'latest'));
+        s = webread([repository, '/releases/latest']);
         % Search based on https://stackoverflow.com/a/23756210/4892892
         [startIndex, endIndex] = regexp(s, '(?<=<title>).*?(?=</title>)');
         releaseLine = s(startIndex:endIndex);
         % Extract the release number
         [startIndex, endIndex] = regexp(releaseLine, '([0-9](\.?))+');
         name = releaseLine(startIndex:endIndex);
-        assert(~isempty(name), 'No release found. Try downloading a branch.');
+        if isempty(name)
+            fprintf('No release found ... skipping check...\n');
+            return
+        end
     end
     versionName = ['v', name];
 elseif branchRequested
     versionName = name;
 end
 % Download the requested branch or release
-githubLink = fullfile(website, user, repository, 'archive', [versionName, '.zip']);
+githubLink = [repository, 'archive', versionName, '.zip'];
 downloadName = [repository, '-', name, '.zip'];
 try
     fprintf('Download started ...\n');
@@ -1694,8 +1793,6 @@ function callback_editscheme(~,~,h)
         esma;
     end
 %**************************************************************************
-function callback_editdatapath(~,~)
-    
+function callback_editdatapath(~,~)   
     study_ChangeEEGPath;
     esma;
-%

@@ -52,7 +52,14 @@ study.nsubjects = 0;
 study.nconditions = 0;
 study.history = [];
 study.subject = [];
-study.version = 1;
+study.version = 2;
+
+map = orderedcolors('gem12');
+study.Render.ERP.Palette = map(1:8, :);
+study.Render.ERP.LineWidth = 1.5;
+study.Render.Map.Palette = 'turbo';
+study.Render.Map.StatPalette = 'autumn';
+
 
 %make sure that the general tab is selected
 h.infotabs.SelectedTab = h.tab(1);

@@ -50,6 +50,8 @@ else
     % struct option
     if isfield(EEG, 'EEG')
         EEG = EEG.EEG;
+    elseif isfield(EEG, 'GND')  %allow for using this function to open GND files as well
+        EEG = EEG.GND;
     end
 
     %continuous and epoched files are faithful to the eeglab format so they can
@@ -68,7 +70,6 @@ else
         end
     end
 end
-
 %set default file and saved values
 EEG.saved = 'yes';
 EEG.filename = [fname, fileext];

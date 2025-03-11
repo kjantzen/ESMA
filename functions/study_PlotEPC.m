@@ -806,7 +806,7 @@ else
         else
             comps = find(p.selcomps);
         end
-        d2 = icaproj(d, p.EEG.icaweights * p.EEG.icasphere, comps) * dataDir;
+        d2 = icaproj(d, p.EEG.icaweights * p.EEG.icasphere, comps);
         if ~overlay
             d = d2;
             clear d2

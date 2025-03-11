@@ -13,7 +13,16 @@
 %                   Conditions are defined by bin labels in each file
 % Update 5/13/20 KJ Jantzen
 %
-function fh = study_Averager_GUI(study, filenames)
+function fh = study_Averager_GUI(study, filenames, aveType)
+
+
+if nargin < 3
+    aveType = 'TIME';
+end
+
+if ~matches(aveType, 'TIME') && ~matches(aveType, "FREQ")
+    error('The averaging type must be either time ("TIME" or frequency "FREQ"!');
+end
 
 scheme = eeg_LoadScheme;
 W = 400; H = 300;
@@ -45,7 +54,7 @@ Parent = handles.panel1;
 handles.check_excludebadtrials = uicheckbox('parent', Parent,...
     'Text', 'Exclude bad trials before averaging',...
     'Value', 1, ...
-    'Position', [20, 180, 300, 20],...
+    'Position', [20, 200, 300, 20],...
     'FontName', scheme.Checkbox.Font.Value,...
     'FontSize', scheme.Checkbox.FontSize.Value,...
     'FontColor', scheme.Checkbox.FontColor.Value);
@@ -53,7 +62,7 @@ handles.check_excludebadtrials = uicheckbox('parent', Parent,...
 handles.check_excludebadcomps = uicheckbox('parent', Parent,...
     'Text', 'Project without bad components before averaging',...
     'Value', 1, ...
-    'Position', [20, 140, 300, 20],...
+    'Position', [20, 170, 300, 20],...
     'FontName', scheme.Checkbox.Font.Value,...
     'FontSize', scheme.Checkbox.FontSize.Value,...
     'FontColor', scheme.Checkbox.FontColor.Value);
@@ -61,7 +70,7 @@ handles.check_excludebadcomps = uicheckbox('parent', Parent,...
 handles.check_interpolate = uicheckbox('parent', Parent,...
     'Text', 'Interpolate deleted or missing channels before averaging',...
     'Value', 1, ...
-    'Position', [20, 100, 300, 20],...
+    'Position', [20, 140, 300, 20],...
     'FontName', scheme.Checkbox.Font.Value,...
     'FontSize', scheme.Checkbox.FontSize.Value,...
     'FontColor', scheme.Checkbox.FontColor.Value);
@@ -69,11 +78,49 @@ handles.check_interpolate = uicheckbox('parent', Parent,...
 handles.check_excludebadsubjs = uicheckbox('parent', Parent,...
     'Text', 'Exclude bad participatns',...
     'Value', 1, ...
-    'Position', [20, 60, 300, 20],...
+    'Position', [20, 110, 300, 20],...
     'FontName', scheme.Checkbox.Font.Value,...
     'FontSize', scheme.Checkbox.FontSize.Value,...
     'FontColor', scheme.Checkbox.FontColor.Value);
 
+if matches(aveType, 'FREQ')
+    uilabel('Parent', Parent,...
+        'Text', 'Time range got computing the FFT', ...
+        'Position', [20, 80, 200, 20],...
+        'FontName', scheme.Label.Font.Value,...
+        'FontColor', scheme.Label.FontColor.Value,...
+        'FontSize', scheme.Label.FontSize.Value);
+    uilabel('Parent', Parent,...
+        'Text', 'Start', ...
+        'Position', [20, 55, 30, 20],...
+        'FontName', scheme.Label.Font.Value,...
+        'FontColor', scheme.Label.FontColor.Value,...
+        'FontSize', scheme.Label.FontSize.Value);
+    uilabel('Parent', Parent,...
+        'Text', 'End', ...
+        'Position', [160, 55, 30, 20],...
+        'FontName', scheme.Label.Font.Value,...
+        'FontColor', scheme.Label.FontColor.Value,...
+        'FontSize', scheme.Label.FontSize.Value);
+    handles.edit_timeStart = uieditfield(...
+        Parent,'numeric',...
+        'Position', [60, 55, 80, 20],...
+        'FontName', scheme.Edit.Font.Value,...
+        'FontColor', scheme.Edit.FontColor.Value,...
+        'FontSize', scheme.Edit.FontSize.Value,...
+        'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
+        'ValueDisplayFormat', '%.2f ms');
+    handles.edit_timeEnd = uieditfield(...
+        Parent, 'numeric',...
+        'Position', [190, 55, 80, 20],...
+         'FontName', scheme.Edit.Font.Value,...
+        'FontColor', scheme.Edit.FontColor.Value,...
+        'FontSize', scheme.Edit.FontSize.Value,...
+        'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
+        'ValueDisplayFormat', '%.2f ms');
+    populateStartEndTimes(handles, filenames)
+
+end
 uilabel('Parent', Parent,...
     'Text', 'Name for the average', ...
     'Position', [20, 20, 150, 20],...
@@ -119,8 +166,10 @@ end
 
 p.study = study;
 p.filenames = filenames;
+p.aveType = aveType;
 
 handles.figure.UserData  = p;
+
 
 %**************************************************************************
 %start of functions
@@ -129,15 +178,25 @@ function callback_exit(hObject, eventdata, h)
     close(h.figure)
     
 %**************************************************************************
+function populateStartEndTimes(h, filenames)
+
+    %load a file to get time ranges
+    EEG = wwu_LoadEEGFile(filenames{1}, 'times');
+    h.edit_timeStart.Value = EEG.times(1);
+    h.edit_timeEnd.Value = EEG.times(end);
+    h.edit_timeStart.Limits = [EEG.times(1), EEG.times(end)];
+    h.edit_timeEnd.Limits = [EEG.times(1), EEG.times(end)];
+    h.edit_timeStart.AllowEmpty = false;
+    h.edit_timeEnd.AllowEmpty = false;
+
+
+%**************************************************************************
 function callback_DoAverage(hObject, eventdata, h)
 p = h.figure.UserData;
 study = p.study;
-
 tic
-
 %for now I think I will just do the average here rather than farm it out to the non-gui routine.
 %This may change as things get more complex.
-
 exclude_badtrials = h.check_excludebadtrials.Value;
 exclude_badcomps = h.check_excludebadcomps.Value;
 exclude_badsubjs = h.check_excludebadsubjs.Value;
@@ -160,31 +219,27 @@ if isempty(outfilename)
     uialert(h.figure, 'Please enter a valid output filename.', 'Averaging Error');
     return
 end
-
 %create the output directory
 if ~exist(outdir, 'Dir')
     mkdir(outdir)
 end
-
 %make sure there is something to process
 if isempty(p.filenames)
     uialert(h.figure, 'Somehow you made it this far without selecting files', 'Averaging Error');
     delete(h.figure);
     return
 end
-
 pb = uiprogressdlg(h.figure);
 
-%create a temporary version of each file in the across subject directory so
-%that I can remove trials and or components in necessary
-
-%if more than one set of files is selected, the outfile name will be incremented
+%information for the excel log
 reportColumnNames = {'Included in average', 'Trials Removed', 'Components Removed','Number of channels', 'Average File'};
 reportRows = cell(length(p.filenames),1);
 reportData = cell(length(p.filenames), 5);
 loopCount = 0;
+%create a temporary version of each file in the across subject directory so
+%that I can remove trials and or components in necessary
 for ii = 1:size(p.filenames,1)
-    
+ 
     %if the file exists already append a number to the end
     if exist(fullfile(outdir, [outfilename, '.GND']),'file')
         parselocal = max(strfind(outfilename, '_'));
@@ -214,7 +269,6 @@ for ii = 1:size(p.filenames,1)
         
         %figure out what subject this is and check to see if this subject
         %is a bad subject
-  
         SDir = fpath(max(strfind(fpath, filesep))+1:end);
         sr = endsWith({study.subject.path}, SDir);
         snum = find(sr);
@@ -281,15 +335,29 @@ for ii = 1:size(p.filenames,1)
         subjOutFile = fullfile(oPath, [oFile, '_preave', oExt]);
         %tempfilename = fullfile(outdir, sprintf('%s_%i.tmp',fname,fcount));
         flist{fcount} = subjOutFile;
+
+        %truncate time points based on users desire to complete FFT on a subset of the data
+        if matches(p.aveType, 'FREQ')
+            minT = h.edit_timeStart.Value;
+            maxT = h.edit_timeEnd.Value;
+            [~,minIndx] = min(abs(minT-EEG.times));
+            [~,maxIndx] = min(abs(maxT - EEG.times));
+            EEG.data = EEG.data(:,minIndx:maxIndx, :);
+            EEG.pnts = maxIndx - minIndx + 1;
+            EEG.times = EEG.times(minIndx:maxIndx);
+        end
+
         wwu_SaveEEGFile(EEG, subjOutFile);
-
-        %
-
     end
     
 pb.Message = 'creating average';
-GNDFile = fullfile(outdir, [outfilename, '.GND']);
-sets2GND(flist,'out_fname', GNDFile,'verblevel', 3);
+if matches(p.aveType, 'FREQ')
+    GNDFile = fullfile(outdir, [outfilename, '.FFTGND']);
+    sets2FFTGND(flist,'out_fname', GNDFile,'verblevel', 3, 'bsln', nan);
+else
+    GNDFile = fullfile(outdir, [outfilename, '.GND']);
+     sets2GND(flist,'out_fname', GNDFile,'verblevel', 3);
+end   
 
 %now load the GND file and assign the between subject condition information
 GND = load(GNDFile, '-mat');
