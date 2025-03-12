@@ -573,6 +573,8 @@ end
 factors = {stats.factors.Factor};
 %factors = cellfun(@strtrim, stats.factors, 'UniformOutput', false);
 factors = cellfun(@(x) replace(x,' ', '_'), factors, 'UniformOutput', false);
+factors = fliplr(factors);  %flip the order becuase FMUT wants them in fastes to slowest moving order
+clevels = fliplr(clevels);
 
 %build the command string for a within subject design
 command_str = [stats.test, '( GND, ''bins'', cond_order, ''factor_names'', factors, ''factor_levels'', clevels,' ch_hood head_radius];

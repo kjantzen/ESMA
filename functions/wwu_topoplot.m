@@ -97,7 +97,7 @@
 %   'plotdisk'        - ['on'|'off'] plot disk instead of dots for electrodefor 'blank' option. Size of disk
 %                       is controled by input values at each electrode. If an imaginary value is provided, 
 %                       plot partial circle with red for the real value and blue for the imaginary one.
-%
+%   'backcolor'       - color of the mask around the outside of the head
 % Dipole plotting options:
 %   'dipole'          - [xi yi xe ye ze] plot dipole on the top of the scalp map
 %                       from coordinate (xi,yi) to coordinates (xe,ye,ze) (dipole head 
@@ -358,6 +358,8 @@ if nargs > 2
         end
         Param = lower(Param);
         switch Param
+            case 'backcolor'
+                BACKCOLOR = Value;
             case 'conv'
                 CONVHULL = lower(Value);
                 if ~strcmp(CONVHULL,'on') && ~strcmp(CONVHULL,'off')

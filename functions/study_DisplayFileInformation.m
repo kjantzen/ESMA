@@ -96,9 +96,9 @@ function addFields(parent, struct)
         fieldEmpty = isempty(struct.(fields{ii}));
         if ~fieldEmpty
             switch fieldClass
-                case 'struct'
-                    n.Text = sprintf('%s[ %s struct ]  Expand node to view first entry.', n.Text,  makeSizeString(struct.(fields{ii})));
-                    addFields(n, struct.(fields{ii})(1));
+ %               case 'struct'
+ %                   n.Text = sprintf('%s[ %s struct ]  Expand node to view first entry.', n.Text,  makeSizeString(struct.(fields{ii})));
+ %                   addFields(n, struct.(fields{ii})(1));
                 case {'double' 'single' 'integer'}
                     if fieldScalar
                         n.Text = sprintf('%s%s',n.Text, num2str(struct.(fields{ii})));

@@ -1232,14 +1232,14 @@ for ii = 1:nFiles
     pb.Value = curpbVal/maxpbVal;
 
     EEG = wwu_LoadEEGFile(selfiles{ii});
-    fprintf('working on %i. %s\n', ii, selfiles{ii});
-    
+    fpi
+
     curpbVal = curpbVal + 1;
     pb.Message = 'Finding bad channels...';
     pb.Value = curpbVal/maxpbVal;
 
     temp = clean_artifacts(EEG, 'WindowCriterion', 'off', 'BurstCriterion', 'off', 'BurstCriterionRefTolerances', 'off');
-    if ~isfield(temp, 'chaninfo') || ~isfield(temp.chaninfo, 'removedchans') || isempty(temp.chaninfo.removedchans)
+    if ~isfield(temp, 'chaninfo') || ~isfield(temp.chaninfo, 'removedchans')
         fprintf('No bad channels found .... moving to next file.\n');         fprintf('No bad channels found for subject #%i\n', ii)
          reportData{ii,1} = 0;
          reportData{ii,2} = 'none';   

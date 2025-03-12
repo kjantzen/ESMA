@@ -125,12 +125,11 @@ for ii = 1:nfiles
     
     %lets assume for now that we want to get rid of all channels greater than
     %64 for the moment.
-    %status = squeeze(EEGraw.data(EEGraw.nbchan,:));
-    EEG = pop_select( EEGraw, 'nochannel',65:EEGraw.nbchan);
+    EEG = pop_select( EEGraw, 'rmchannel',65:EEGraw.nbchan);
     EEG = eeg_checkset( EEG );
     
     if ~isempty(p.ChanstoStrip)
-        EEGAI = pop_select( EEGraw, 'channel', p.ChanstoStrip(ii,:));
+        EEGAI = pop_select( EEGraw, 'rmchannel', p.ChanstoStrip(ii,:));
         EEGAI = eeg_checkset(EEGAI);
         outname_ai = [name, '_ai.set'];
     end

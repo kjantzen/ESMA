@@ -172,22 +172,21 @@ pvaf = eeg_pvaf(p.EEG, ic_number, 'plot', 'off');
 fprintf('Component accounts for %.2f PV\n', pvaf);
 curr_thresh = h.spinner_threshold.Value/100;
 
-mapTitle = sprintf('Component %i (%.1f%%)', ic_number, pvaf);
-bad_status = p.EEG.reject.gcompreject(ic_number)
-if bad_status
-    mapTitle = [mapTitle, ' BAD'];
-    bcolor = p.badtrialcolor;
-else
-    mapTitle = [mapTitle, ' GOOD'];
-    bcolor = p.scheme.Window.BackgroundColor.Value;
-end
 
 cla(h.axis_icatopo);
-wwu_topoplot(ic,  p.EEG.chanlocs, 'axishandle', h.axis_icatopo, 'backcolor', bcolor);
+wwu_topoplot(ic,  p.EEG.chanlocs, 'axishandle', h.axis_icatopo, 'whitebk', 'on');
 cb = colorbar(h.axis_icatopo);
 cb.Color = p.scheme.Axis.AxisColor.Value;
+mapTitle = sprintf('Component %i (%.1f%%)', ic_number, pvaf);
 
-h.axis_icatopo.Title.String = mapTitle;
+if p.EEG.reject.gcompreject(ic_number)
+   mapTitle = [mapTitle, ' BAD'];
+   h.axis_icatopo.BackgroundCrlor = p.badtrialcolor;
+else
+    mapTitle = [mapTitle, ' GOOD'];
+    h.axis_icatopo.BackgroundColor = p.scheme.Window.BackgroundColor.Value;
+end
+h.axis_icatopo.Title.String = mapTitle
 h.axis_icatopo.Title.Color = p.scheme.Label.FontColor.Value;
 h.axis_icatopo.Title.FontSize = 14;
 

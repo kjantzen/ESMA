@@ -5,13 +5,10 @@ arguments
     p.Outfile = []
     p.WindowHandle = []
 end
-
 status = 0;
-
 if isempty(filenames) || ~iscell(filenames)
     error('study_ClassifyICA:NoFile', 'filenames must be a cell array strings containing valid names of files');
 end
-
 if ~isempty(p.WindowHandle)
     pb = uiprogressdlg(p.WindowHandle, 'Title', 'Please Wait', 'Message', 'Classifying ICA components for all files...');
 end
