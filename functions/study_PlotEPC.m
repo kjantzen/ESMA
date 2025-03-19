@@ -5,28 +5,27 @@ arguments
     filenames (1,:)
 end
 
-%build the figure
 scheme = eeg_LoadScheme;
-
 p.goodtrialcolor = 'g';
 p.badtrialcolor = 'r';
 p.goodsubjectcolor = scheme.Axis.BackgroundColor.Value;
-p.badsubjectcolor = 'w';
+p.badsubjectcolor = 'r';
 p.backcolor = scheme.Window.BackgroundColor.Value;
 p.goodbackgroundcolor = scheme.Window.BackgroundColor.Value;
 %set the bad trial color to red with the same saturation and value as the
 %axis background
 tc = rgb2hsv(scheme.Axis.BackgroundColor.Value); tc(1) = 0;
 p.badbackgroundcolor= hsv2rgb(tc);
-
 p.scheme = scheme;
+
+badSbjStyle = uistyle('BackgroundColor',[1, .5, .5]);
+badSbj = matches({study.subject.status}, 'bad');
 
 if scheme.ScreenWidth < 1000
     W = round(scheme.ScreenWidth); H = round(scheme.ScreenHeight);
 else
     W = round(scheme.ScreenWidth * .5); H = round(scheme.ScreenHeight * .6);
 end
-
 figpos = [(scheme.ScreenWidth - W)/2, (scheme.ScreenHeight - H)/2, W, H];
 
 %create the figure
@@ -214,6 +213,8 @@ handles.dropdown_subjselect = uidropdown(...
     'FontName',scheme.Dropdown.Font.Value,...
     'FontColor', scheme.Dropdown.FontColor.Value,...
     'FontSize', scheme.Dropdown.FontSize.Value);
+
+addStyle(handles.dropdown_subjselect, badSbjStyle, 'item', find(badSbj));
 
 handles.label_hoverChannel = uilabel(...,
     'Parent', handles.panel_infobar,...
@@ -546,32 +547,15 @@ function callback_setcompbadstatus(hObject, eventdata, h)
 p = h.figure.UserData;
 
 comps = p.selcomps;
-remove = false;
+p.EEG = getNewestData(h, p.EEG);
 switch hObject.Tag
     case 'togood'
         comps = ~comps;
+        p.EEG.reject.gcompreject = comps & p.EEG.reject.gcompreject;
+    case 'tobad'
+        p.EEG.reject.gcompreject = comps| p.EEG.reject.gcompreject;
     case 'remove'
-        comps(1:end) = 0;
-        remove = true;
-end
-
-p.EEG = getNewestData(h, p.EEG);
-%check to see if there are any bad components already
-if sum(p.EEG.reject.gcompreject) > 0 && ~remove
-    %as the user what they want to do
-    msg = 'There are existing bad components.';
-    msg = [msg, ' Would you like to keep the existing bad component and add the currently selected ones or overwrite the existing components?'];
-    response = wwu_msgdlg(msg, 'Existing bad components', {'Add', 'Overwrite', 'Cancel'});
-    switch response
-        case 'Cancel'
-            return
-        case 'Add'
-            p.EEG.reject.gcompreject = comps| p.EEG.reject.gcompreject;
-        case 'Overwrite'
-            p.EEG.reject.gcompreject = comps;
-    end
-else
-    p.EEG.reject.gcompreject = comps;
+        p.EEG.reject.gcompreject(1:end) = 0;
 end
 
 p.EEG.saved = 'no';
@@ -1047,23 +1031,18 @@ callback_drawdata(hObject, eventdata, h);
 function mystr = getbadtrialstring(EEG, trialnum)
 
 mystr = [];
-
 if ~isempty(EEG.reject.rejmanual)
     if EEG.reject.rejmanual(trialnum)==1; mystr = "Manual: "; end
 end
-
 if ~isempty(EEG.reject.rejthresh)
     if EEG.reject.rejthresh(trialnum)==1; mystr = [mystr, "Threshold: "]; end
 end
-
 if ~isempty(EEG.reject.rejkurt)
     if EEG.reject.rejkurt(trialnum)==1; mystr = [mystr, "Kurtosis: "];end
 end
-
 if ~isempty(EEG.reject.rejconst)
     if EEG.reject.rejconst(trialnum)==1; mystr = [mystr, "Trend: "];end
 end
-
 if ~isempty(EEG.reject.rejjp)
     if EEG.reject.rejjp(trialnum)==1; mystr = [mystr, "Joint Prob: "];end
 end

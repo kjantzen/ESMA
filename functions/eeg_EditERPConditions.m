@@ -28,9 +28,7 @@ function callback_MakeBin(hObject, event, h)
         uialert(h.figure, 'You must provide a bin name and formula!', 'Oops');
         return
     end
-
-    maxBins = length(GND.bin_info);
-    
+    maxBins = length(GND.bin_info);   
     %extract  the data from all the bins into variables
     for ii = 1:maxBins
         dstring = sprintf('c%i = GND.indiv_erps(:,:,ii,:);', ii);

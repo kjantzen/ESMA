@@ -51,7 +51,8 @@ for ii = 1:length(options)
         'BackgroundColor', scheme.Button.BackgroundColor.Value,...
         'FontName', scheme.Button.Font.Value,...
         'FontSize', scheme.Button.FontSize.Value,...
-        'FontColor', scheme.Button.FontColor.Value);
+        'FontColor', scheme.Button.FontColor.Value,...
+        'Tag', options{ii});
 end
 
 for ii = 1:length(options)
@@ -63,28 +64,29 @@ uiwait(h.fig);
 
 if isvalid(h.fig)
     output = h.fig.UserData;
-    delete(h.fig);
 else
     output.cnum = [];
     output.gnum = [];
     output.option = [];
 end
+delete(h.fig)
 
  
 %**************************************************************************
 function callback_handleButtonPress(hObject, hEvent, h, study)
 
-    n = h.tree_bingrouplist.SelectedNodes;
-    if isempty(n)
-         uialert(h.figure, 'Please select an Epoch Group first.', 'Create Epoch files');   
-         return
+    if matches(hObject.Tag, 'OK')
+        n = h.tree_bingrouplist.SelectedNodes;    
+        if isempty(n) 
+             uialert(h.fig, 'Please select an Epoch Group first.', 'Create Epoch files');   
+             return
+        end
+        info.gnum = n.NodeData{1};
+        info.cnum = n.NodeData{2};
+        info.option = hObject.Text;
+        
+        h.fig.UserData = info;
     end
-    info.gnum = n.NodeData{1};
-    info.cnum = n.NodeData{2};
-    info.option = hObject.Text;
-    
-    h.fig.UserData = info;
-
     uiresume(h.fig);
 %************************************************************************
 %this fills the epoch tree information list with the current epoch

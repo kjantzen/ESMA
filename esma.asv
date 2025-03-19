@@ -140,6 +140,7 @@ handles.menu_archivestudy = uimenu(handles.menu_study, 'Label', 'Archive Study')
 handles.menu_file = uimenu('Parent', handles.figure,'Label', '&File', 'Accelerator', 'f');
 handles.menu_renamefiles = uimenu(handles.menu_file, 'Label', '&Rename');
 handles.menu_deletefiles = uimenu(handles.menu_file, 'Label', '&Delete','Accelerator', 'd');
+handles.menu_copyfiles = uimenu(handles.menu_file, 'Label', 'Duplicate', 'Accelerator', 'c');
 handles.menu_exportfiles = uimenu(handles.menu_file, 'Label', 'Export to eeglab', 'Separator', 'on');
 
 %plotting menu
@@ -152,7 +153,7 @@ handles.menu_resample = uimenu('Parent', handles.menu_preprocess, 'Label', 'Resa
 handles.menu_filter = uimenu('Parent', handles.menu_preprocess, 'Label', 'Filter');
 handles.menu_rbadtimes = uimenu('Parent', handles.menu_preprocess, 'Label', 'Remove bad time segments');
 
-handles.menu_arbadchans = uimenu('Parent', handles.menu_preprocess, 'Label', 'Autodetect bad channels');
+handles.menu_arbadchans = uimenu('Parent', handles.menu_preprocess, 'Label', 'Automatically clean data');
 handles.menu_rbadchans = uimenu('Parent', handles.menu_preprocess, 'Label', 'Remove bad channels');
 handles.menu_reref = uimenu('Parent', handles.menu_preprocess, 'Label', 'Average reference');
 handles.menu_cleanline = uimenu('Parent', handles.menu_preprocess, 'Label', 'Reduce line noise');
@@ -174,14 +175,25 @@ handles.menu_erpave(1) = uimenu(handles.menu_ave, 'Label', 'Time Domain Average 
 handles.menu_erpave(2) = uimenu(handles.menu_ave, 'Label', 'Frequency Domain Average (FFT)', 'Tag', 'FREQ');
 handles.menu_computetf = uimenu('Parent', handles.menu_ave, 'Label', 'TimeXFrequency domain Average (ERSP)');
 
-
-
 %tools menu
 handles.menu_utils = uimenu('Parent', handles.figure,'Label', '&Tools', 'Accelerator', 't');
 handles.menu_convert = uimenu(handles.menu_utils, 'Label', 'Convert Biosemi File');
 handles.menu_script = uimenu(handles.menu_utils, 'Label', 'Run Custom Script');
 handles.menu_filesummary = uimenu(handles.menu_utils, 'Label', 'Show File Information');
 handles.menu_evtsummary = uimenu(handles.menu_utils, 'Label', 'Event Summary');
+
+%context menu
+handles.cm = uicontextmenu(handles.figure);
+handles.scm(1) = uimenu(handles.cm, "Text", "Plot");
+handles.scm(2) = uimenu(handles.cm, "Text", "Rename");
+handles.scm(3) = uimenu(handles.cm, "Text", "Delete");
+handles.scm(4) = uimenu(handles.cm, "Text", "Duplicate");
+handles.scm(5) = uimenu(handles.cm, "Text", "Export");
+
+for ii = 1:5
+    set(handles.scm(ii), 'Callback', {@callback_contextMenu, handles});
+end
+
 
 %assign all the callbacks
 set(handles.menu_datapath, 'Callback', @callback_editdatapath)
@@ -200,6 +212,7 @@ set(handles.menu_filesummary, 'Callback', {@callback_filesummary, handles})
 set(handles.menu_evtsummary, 'Callback', {@callback_evtsummary, handles});
 set(handles.menu_trialplot, 'Callback', {@callback_trialplot, handles});
 set(handles.menu_deletefiles, 'Callback', {@callback_deletefiles, handles});
+set(handles.menu_copyfiles, 'Callback', {@callback_copyfiles, handles});
 set(handles.menu_renamefiles, 'Callback', {@callback_changeFilenames, handles});
 set(handles.menu_exportfiles, 'Callback', {@callback_exportfiles, handles});
 set(handles.menu_rbadtimes, 'Callback', {@callback_removeDataSegments, handles});
@@ -245,6 +258,35 @@ close(msg);
 
 %%
 %Start of function definitions
+function callback_contextMenu(hObject, event, h)
+
+nodeIsSelected = false;
+for selNode = h.tree_filetree.SelectedNodes
+    if isequal(event.ContextObject, selNode)
+        nodeIsSelected = true;
+        break
+    end
+end
+if ~nodeIsSelected
+    h.tree_filetree.SelectedNodes(end+1) = event.ContextObject;
+end
+
+switch hObject.Text
+    case 'Plot'
+        h.tree_filetree.SelectedNodes = event.ContextObject;
+        callback_trialplot(hObject, event, h);
+    case 'Rename'
+        callback_changeFilenames(hObject, event, h);
+    case 'Delete'
+        callback_deletefiles(hObject, event, h);
+    case 'Duplicate'
+        callback_copyfiles(hObject, event, h);
+    case 'Export'
+        callback_exportfiles(hObject, event, h);
+    otherwise
+        warning('Unsupported menu option');
+end
+
 %**************************************************************************
 function callback_copypastecomponents(hObject, ~, h)
 
@@ -253,14 +295,11 @@ if study.nsubjects < 1
     uialert(h.figure, 'No subjects are listed in your study','Conversion Error');
     return
 end
-
 flist = getselectedfiles(study,h);
 if isempty(flist)
     return
 end
-
 pg = uiprogressdlg(h.figure, 'Message', '', 'Title', 'Copy Paste', 'Indeterminate', 'on');
-
 copy_info = [];
 switch hObject.Tag
     case 'copy'
@@ -296,7 +335,6 @@ switch hObject.Tag
         h.menu_icacopy.UserData = copy_info;
         h.menu_icapaste.Enable = 'on';
         fprintf('Components from %i files save to the clipboard\n', length(flist));
-        
     case 'paste'
         pg.Message = 'Pasting ICA components';
         copy_info = h.menu_icacopy.UserData;
@@ -426,7 +464,7 @@ function callback_changeFilenames(hObject, event, h)
     end
 %**************************************************************************
 %exports files to the eeglab set format
-function callback_exportfiles(hObject, eventdata, h, format)
+function callback_exportfiles(~, ~, h, ~)
 
 study = getstudy(h);
 filestoexport = getselectedfiles(study, h);
@@ -461,10 +499,28 @@ else
     populate_filelist(study,h);
    
 end
+%**************************************************************************
+%deletes selected files from the disk
+function callback_copyfiles(~, ~, h)
+
+h.figure.Pointer = 'watch';
+study = getstudy(h);
+filestodelete = getselectedfiles(study, h);
+
+if isempty(filestodelete)
+    uialert(h.figure, 'No files have been selected')
+else
+    for ff = filestodelete
+        [p, f, e] = fileparts(ff{1});
+        copyfile(ff{1}, fullfile(p, [f, '_copy', e]));
+    end
+    populate_filelist(study,h);
+end
+h.figure.Pointer = 'watch';
 
 %**************************************************************************
 %deletes selected files from the disk
-function callback_deletefiles(hObject, eventdata, h)
+function callback_deletefiles(~, ~, h)
 
 study = getstudy(h);
 filestodelete = getselectedfiles(study, h);
@@ -479,10 +535,10 @@ else
     if(matches(uiconfirm(h.figure, msgstr, 'Confirm file deletion'), 'OK'))
         cellfun(@delete, filestodelete);
         populate_filelist(study,h);
-        study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Delete Files', 'function', 'callback_deletefiles', 'paramstring', filestodelete, 'fileID', '');
-        study = study_SaveStudy(study);
-        setstudy(study,h);
-        populate_studyinfo(study,h)
+   %     study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Delete Files', 'function', 'callback_deletefiles', 'paramstring', filestodelete, 'fileID', '');
+   %     study = study_SaveStudy(study);
+   %     setstudy(study,h);
+       % populate_studyinfo(study,h)
     end
     
     
@@ -528,7 +584,7 @@ end
 
 h.figure.Pointer = 'arrow';
 %************************************************************************
-function callback_loadstudy(hObject, eventdata, h)
+function callback_loadstudy(~, ~, h)
 
 h.figure.Pointer = 'watch';
 %first clear out the current list
@@ -649,14 +705,22 @@ Included_Extensions = {'.bdf', '.cnt', '.epc', '.GND', '.FFTGND', '.ersp', '.set
 Excluded_Extensions = {'.fdt'};
 Acrosssubj_Extensions = {'.GND', '.FFTGND', '.ersp'};
 
-%clear the existing list of files
-n = h.tree_filetree.Children;
-n.delete;
-
-Nodes = [];
-for ii = 1:length(FileTypes)
-    Nodes(ii).Node = uitreenode(h.tree_filetree, 'Text', FileTypes{ii});
-    Nodes(ii).Node.Tag = 'uneditable';
+%get the top level treen nodes
+Nodes = h.tree_filetree.Children;
+if ~isempty(Nodes)
+    %delete children of each
+    ch = {Nodes.Children};
+    for nn = ch
+        if ~isempty(nn{1})
+            nn{1}.delete
+        end
+    end
+else
+    Nodes = gobjects(1,length(FileTypes));
+    for ii = 1:length(FileTypes)
+        Nodes(ii) = uitreenode(h.tree_filetree, 'Text', FileTypes{ii});
+        Nodes(ii).Tag = 'uneditable';
+    end
 end
 
 for ii = 1:length(flist)
@@ -670,7 +734,7 @@ for ii = 1:length(flist)
     if isempty(category); category = length(FileTypes); end
     [~,fNameOnly,~] = fileparts(flist(ii).name);
     node_name = sprintf('(%i)\t%s', flist(ii).count,fNameOnly);
-    uitreenode(Nodes(category).Node,'Text', node_name, 'NodeData', flist(ii).name, 'Tag', 'editable');
+    uitreenode(Nodes(category),'Text', node_name, 'NodeData', flist(ii).name, 'Tag', 'editable', 'ContextMenu', h.cm);
 end
 
 %now get the average files from the across subect folder
@@ -687,7 +751,7 @@ else
              if isempty(category); category = length(FileTypes); end
              [~,fNameOnly,~] = fileparts(flist(ii).name);
              node_name = sprintf('(%i)\t%s', 1 ,fNameOnly);
-             uitreenode(Nodes(category).Node,'Text', node_name, 'NodeData', flist(ii).name, 'Tag', 'editable');
+             uitreenode(Nodes(category),'Text', node_name, 'NodeData', flist(ii).name, 'Tag', 'editable');
              
         end
     end
@@ -695,46 +759,38 @@ end
 
 
 %*************************************************************************
-function callback_newstudy(hObject, eventdata, h, editMode)
-
-   
-    study = getstudy(h);
-    
-    if isempty(study)
-        editMode = false;
+function callback_newstudy(~, ~, h, editMode)
+ 
+study = getstudy(h);
+if isempty(study)
+    editMode = false;
+else
+    currentStudy = study.name;
+    oldStudies = h.dropdown_study.Items;
+end
+if editMode
+    fh = study_EditStudy(study);
+    waitfor(fh);
+    populate_studylist(h, currentStudy);
+else
+    fh = study_EditStudy();
+    waitfor(fh);
+    populate_studylist(h);
+    newStudies = h.dropdown_study.Items;
+    c = setdiff(newStudies, oldStudies);
+    if isempty(c)
+        populate_studylist(h, currentStudy)
     else
-        currentStudy = study.name;
-        oldStudies = h.dropdown_study.Items;
+        populate_studylist(h, c{1});
     end
-    
-    if editMode
-        fh = study_EditStudy(study);
-        waitfor(fh);
-        populate_studylist(h, currentStudy);
-    else
-        fh = study_EditStudy();
-        waitfor(fh);
-        populate_studylist(h);
-        
-        newStudies = h.dropdown_study.Items;
-    
-        c = setdiff(newStudies, oldStudies);
-    
-        if isempty(c)
-            populate_studylist(h, currentStudy)
-        else
-            populate_studylist(h, c{1});
-        end
-    end
-
+end
 %**************************************************************************
-function callback_archivestudy(hObject, event, h, deleteStudy)
+function callback_archivestudy(~, ~, h, deleteStudy)
   
     study = getstudy(h);
     EEGPath = study_GetEEGPath();
-
     if deleteStudy
-        msg = sprintf('This action will permanantly delete "%s"! ', study.name);
+        msg = sprintf('This action will permanantly delete "%s"! Data files will not be affected', study.name);
         title = 'Delete Study';
     else
         msg = sprintf('This action will move "%s" to the archive folder!  ', study.name);
@@ -775,7 +831,7 @@ function callback_archivestudy(hObject, event, h, deleteStudy)
 
 %**************************************************************************
 %plot the data from different file formats
-function callback_trialplot(hObject, eventdata, h)
+function callback_trialplot(~, ~, h)
 
 study = getstudy(h);
 if isempty(study)
@@ -984,7 +1040,7 @@ tic
 start = clock;
 %include a progress bar for this process
 pb = uiprogressdlg(h.figure, 'Title','Average reference');
-pb.Message = sprintf('Applying Average to all participants');
+pb.Message = sprintf('Applying average reference to all participants');
 
 reportColumnNames = {'Previous Reference','New Reference', 'New filename'};
 reportValues = cell(length(fnames), length(reportColumnNames));
@@ -1146,7 +1202,7 @@ callback_refresh(hObject, eventdata, h)
 %populate_filelist(study, h)
 %populate_studyinfo(study,h)
 %*************************************************************************
-function callback_reject(hObject, eventdata,h)
+function callback_reject(~, ~,h)
 study = getstudy(h);
 filenames = getselectedfiles(study, h);
 
@@ -1185,7 +1241,7 @@ function callback_filesummary(~, ~, h)
     study_DisplayFileInformation(study, filelist);
 
 %*************************************************************************
-function callback_evtsummary(hObject, event, h)
+function callback_evtsummary(~, ~, h)
     study = getstudy(h);
     filelist = getselectedfiles(study, h);
     if isempty(filelist); return; end
@@ -1199,80 +1255,27 @@ function callback_evtsummary(hObject, event, h)
 %*************************************************************************
 function callback_detectBadChannels(hObject, eventdata, h)
 
-%check to make sure the file is available since it is eeglab dependent
-
-tic
-parameters.Operation = {'Operation', 'Auto detect bad channels'};
-parameters.date = {'Date and time', datetime("now");};
 
 study = getstudy(h);
-stime = clock;
-option = 0;
-selfiles = getselectedfiles(study, h);
-if isempty(selfiles)
+fnames = getselectedfiles(study, h);
+
+if isempty(fnames); return; end
+if ~eeg_ValidateFileTypes(fnames, {'cnt'})
+    msg = 'Channel removal and ASR cleaning can only be performed on continuous data files';
+    title = 'File Type Error';
+    options ={'OK'};
+    wwu_msgdlg(msg, title, options);
     return
 end
-pb = uiprogressdlg(h.figure,'Message', 'Auto detecting bad channels using clean_artifacts', 'Value',0,'Title','Detect bad channels');
-maxpbVal= length(selfiles) * 4;
-curpbVal = 0;
-nFiles = length(selfiles);
-reportData = cell(length(selfiles), 3);
-allChanLabels = {study.chanlocs.labels};
-    
-for ii = 1:nFiles
-    curpbVal = curpbVal + 1;
-    pb.Message = 'building output filename...';
-    pb.Value = curpbVal/maxpbVal;
 
-    [path, file, ext] = fileparts(selfiles{ii});
-    outfilename = selfiles{ii};
+fh = study_CleanArtifacts(study, fnames);
+waitfor(fh);
 
-    curpbVal = curpbVal + 1;
-    pb.Message = 'loading subject data...';
-    pb.Value = curpbVal/maxpbVal;
+callback_refresh(hObject, eventdata, h)
 
-    EEG = wwu_LoadEEGFile(selfiles{ii});
-    fpi
-
-    curpbVal = curpbVal + 1;
-    pb.Message = 'Finding bad channels...';
-    pb.Value = curpbVal/maxpbVal;
-
-    temp = clean_artifacts(EEG, 'WindowCriterion', 'off', 'BurstCriterion', 'off', 'BurstCriterionRefTolerances', 'off');
-    if ~isfield(temp, 'chaninfo') || ~isfield(temp.chaninfo, 'removedchans')
-        fprintf('No bad channels found .... moving to next file.\n');         fprintf('No bad channels found for subject #%i\n', ii)
-         reportData{ii,1} = 0;
-         reportData{ii,2} = 'none';   
-    else
-        removedChanLabels = {temp.chaninfo.removedchans.labels};
-        removeChanString = join(removedChanLabels);
-        fprintf('%i bad channels labeled.\n', length(removedChanLabels));
-        badChanIndx = matches(allChanLabels, removedChanLabels);
-        %initialize the badchans vector if necessary
-        if ~isfield(EEG.chaninfo, 'badchans')
-            EEG.chaninfo.badchans = zeros(1, length(study.chanlocs));
-        end
-        EEG.chaninfo.badchans(badChanIndx) = 1;  %set channels to bad
-        fprintf('Marking channels\n%s.\n', removeChanString{1});
-        reportData{ii,1} = sum(EEG.chaninfo.badchans);
-        reportData{ii,2} = removeChanString{1};
-     end
-    curpbVal = curpbVal + 1;
-    pb.Message = 'saving data...';
-    pb.Value = curpbVal/maxpbVal;
-    wwu_SaveEEGFile(EEG, outfilename);
-end
-parameters.duration = {'Duration (seconds)', toc};
-
-wwu_UpdateProcessLog(study,'SheetName', 'auto bad chans', ...
-    'ColumnNames',{'# marked', 'Channels marked', 'Ouput File'},...
-    'RowNames',selfiles, 'Values', reportData, 'Parameters',parameters)
-study_AddHistory(study, 'start', stime, 'finish', clock, 'event', 'Auto Removed bad channels', 'paramstring', selfiles);
-populate_filelist(study, h);
-msgbox("Note - channels have been marked as bad.  Plot the data to view them and use 'Remove bad channels' to remove them");
 
 %*************************************************************************
-function callback_interpchans(hObject, eventdata, h)
+function callback_interpchans(~, ~, h)
 tic
 parameters.Operation = {'Operation', 'Remove bad channels'};
 parameters.date = {'Date and time', datetime("now");};
@@ -1436,7 +1439,7 @@ populate_filelist(study, h);
 
         
 %*************************************************************************
-function callback_computeersp(hObject, event, h)
+function callback_computeersp(~, ~, h)
     study = getstudy(h);
     filelist = getselectedfiles(study, h);
     if isempty(filelist);return;end
@@ -1454,7 +1457,7 @@ function callback_computeersp(hObject, event, h)
 
 %*************************************************************************
 % classifies ICA components using IClabel
-function callback_classifyICA(hObject, event, h)
+function callback_classifyICA(~, ~, h)
     
     study = getstudy(h);
     filelist = getselectedfiles(study, h);
@@ -1469,16 +1472,17 @@ function callback_classifyICA(hObject, event, h)
 %provides an in depth GUI for reviewing ICA's and their classificaiton.
 %The focus is on identifying ICA's for removal, not for using ICA's for
 %data analysis
-function callback_inspectICA(hObject, event, h)
+function callback_inspectICA(~, ~, h)
     
     study = getstudy(h);
     filelist = getselectedfiles(study, h);
     if isempty(filelist); return; end
+    
     study_ICAClassInspect(study, filelist);
 
 %************************************************************************** 
 %reject labelled components
-function callback_rejectICA(hObject, event,h)
+function callback_rejectICA(~, ~,h)
     study = getstudy(h);
     filelist = getselectedfiles(study, h);
     if isempty(filelist); return; end
@@ -1492,7 +1496,7 @@ function callback_rejectICA(hObject, event,h)
 
 
 %**************************************************************************
-function callback_ICA(hObject, eventdata,h)
+function callback_ICA(~, ~,h)
 study = getstudy(h);
 if isempty(study); return; end
 
@@ -1509,7 +1513,7 @@ if ~isempty(files)
     populate_studyinfo(study,h)
 end
 %**************************************************************************
-function callback_average(hObject, eventdata, h)
+function callback_average(hObject, ~, h)
     study = getstudy(h);
     if isempty(study); return; end
     
@@ -1529,7 +1533,7 @@ function callback_average(hObject, eventdata, h)
     waitfor(fh);
     populate_filelist(study, h);
 %**************************************************************************
-function callback_exit(hObject, eventdata, h)
+function callback_exit(~, ~, h)
 close(h.figure)
 %*************************************************************************\
 %resave study to the UserData of the figure
@@ -1641,7 +1645,7 @@ function addSubFolderPaths()
     end
 
 %*************************************************************************
-function checkForNewVersion(VersionNumber)
+function checkForNewVersion(~)
 % Code to check and download a new version if it exists
 % Adapted from - Zoltan Csati's function filestr = githubFetch
 % GITHUBFETCH  Download file from GitHub.
@@ -1759,7 +1763,7 @@ function callback_changeScheme(~, src)
         esma;
     end
 %**************************************************************************
-function callback_editscheme(~,~,h)
+function callback_editscheme(~,~,~)
 
     options = eeg_ReadConfig('themeFile');
     %load the  editor

@@ -146,12 +146,12 @@ snum = h.dropdown_subjselect.Value;
 fnames = h.dropdown_subjselect.UserData;
 filename = fnames{snum};
 
-h.label_subjectstatus.Text = study.subject(snum).status;
-if contains(study.subject(snum).status, 'good')
-    h.label_subjectstatus.BackgroundColor = h.scheme.GoodSubjectColor;
-else    
-    h.label_subjectstatus.BackgroundColor = h.scheme.BadSubjectColor;
-end
+% h.label_subjectstatus.Text = study.subject(snum).status;
+% if contains(study.subject(snum).status, 'good')
+%     h.label_subjectstatus.BackgroundColor = h.scheme.GoodSubjectColor;
+% else    
+%     h.label_subjectstatus.BackgroundColor = h.scheme.BadSubjectColor;
+% end
 
 %make sure something was passed
 if isempty(filename)
@@ -197,10 +197,11 @@ h.figure.UserData = plot;
 h.slider_timescroll.Limits = [1, EEG.pnts - plot.pwidth];
 h.slider_timescroll.Value = 1;
 cchan = h.spinner_changechannum.Value;
-if cchan > EEG.nbchan
+prevMaxChan = h.spinner_changechannum.Limits(2);
+h.spinner_changechannum.Limits = [1. EEG.nbchan];
+if cchan > EEG.nbchan || ((cchan == prevMaxChan) && (prevMaxChan < EEG.nbchan))
     h.spinner_changechannum.Value = EEG.nbchan;
 end
-h.spinner_changechannum.Limits = [1. EEG.nbchan];
 slider_max = EEG.nbchan - h.spinner_changechannum.Value+1;
 if h.slider_channelscroll.Value > slider_max
     h.slider_channelscroll.Value = slider_max;
@@ -699,19 +700,19 @@ handles.panel_subjpanel = uipanel(...
 
 handles.dropdown_subjselect = uidropdown(...
     'Parent', handles.panel_subjpanel,...
-    'Position', [10, 5, 100, 25],...
+    'Position', [10, 5, 200, 25],...
     'BackgroundColor',scheme.Dropdown.BackgroundColor.Value,...
     'FontColor', scheme.Dropdown.FontColor.Value,...
     'FontSize',scheme.Dropdown.FontSize.Value,...
     'FontName', scheme.Dropdown.Font.Value);
 
-handles.label_subjectstatus = uilabel(...,
-    'Parent', handles.panel_subjpanel,...
-    'Position', [120, 5, 100, 25], ...
-    'HorizontalAlignment', 'center',...
-    'FontName', scheme.Label.Font.Value,...
-    'FontColor', scheme.Label.FontColor.Value,...
-    'FontSize', scheme.Label.FontSize.Value);
+% handles.label_subjectstatus = uilabel(...,
+%     'Parent', handles.panel_subjpanel,...
+%     'Position', [120, 5, 100, 25], ...
+%     'HorizontalAlignment', 'center',...
+%     'FontName', scheme.Label.Font.Value,...
+%     'FontColor', scheme.Label.FontColor.Value,...
+%     'FontSize', scheme.Label.FontSize.Value);
 
 handles.button_prevpage = uibutton(...
     'Parent', handles.figure,...
@@ -800,6 +801,11 @@ clear axis_pos
 
 % ***********************************************************************
 function handles = setCallbacks(handles, study)
+
+badSbjStyle = uistyle('BackgroundColor',[1, .5, .5]);
+badSbj = matches({study.subject.status}, 'bad');
+addStyle(handles.dropdown_subjselect, badSbjStyle, 'item', find(badSbj));
+
 handles.figure.CloseRequestFcn = {@local_close_request, handles};
 handles.figure.WindowButtonDownFcn = {@callback_mouseeventhandler, handles};
 handles.figure.WindowButtonMotionFcn = {@callback_mouseeventhandler, handles};

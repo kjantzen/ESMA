@@ -30,24 +30,43 @@ handles = buildGUI(scheme);
 handles.dropdown_selsubject.Items   = {study.subject.ID};
 handles.dropdown_selsubject.ItemsData = 1:length(study.subject);
 handles.dropdown_selsubject.UserData = filenames;
+%identify bad subjects
+badSbjStyle = uistyle('BackgroundColor',[1, .5, .5]);
+badSbj = matches({study.subject.status}, 'bad');
+addStyle(handles.dropdown_selsubject, badSbjStyle, 'item', find(badSbj));
+
 
 drawnow
 %create a custom color map for the component classes 
- p.mycolmap = [.6,.6,.6;
-     0.4660    0.6740    0.1880;
-     0.7500    0.3250    0.0980;
-     0.9290    0.6940    0.1250;
-     0.4940    0.1840    0.5560;
-     0.7700    0.3300    0.6000;
-     0    0.4470    0.7410;
-     0.6350    0.0780    0.1840];
-p.badtrialcolor = [.8, .2, .2];
+p.mycolmap = [217,95,2;
+27,158,119;
+117,112,179;
+231,41,138;
+102,166,30;
+230,171,2;
+166,118,29;
+102,102,102];
+p.mycolmap = p.mycolmap./255;
+
+ % p.mycolmap = [.6,.6,.6;
+ %     0.4660    0.6740    0.1880;
+ %     0.7500    0.3250    0.0980;
+ %     0.9290    0.6940    0.1250;
+ %     0.4940    0.1840    0.5560;
+ %     0.7700    0.3300    0.6000;
+ %     0         0.4470    0.7410;
+ %     0.6350    0.0780    0.1840];
+p.badtrialcolor = [1, .5, .5];
 p.goodtrialcolor = [.2, .8, .2];
 p.scheme = scheme;
 handles.figure.UserData = p;
 
 fprintf('...loading and displaying data\n');
-callback_loadnewfile([], [], handles)
+if ~(callback_loadnewfile([], [], handles))
+    delete(handles.figure);
+    return
+end
+
 fprintf('..done\n')
 
 %*************************************************************************
@@ -79,9 +98,10 @@ p.EEG.saved = 'no';
 h.figure.UserData = p;
 callback_plotclassifications([],[],h);
 %**************************************************************************
-function callback_loadnewfile(hObject, eventdata, h)
+function status = callback_loadnewfile(hObject, eventdata, h)
 
 
+status = true;
 %check to see if we need to save data from another figure before saving and loading
 %in this figure.  There is no need to use the needsReload flag from the
 %function since we are loading anyway here.
@@ -98,12 +118,14 @@ filename = fnames{snum};
 %make sure something was passed
 if isempty(filename)
     uialert(h.figure, 'No data to load and plot!');
+    status = false;
     return
 end
 
 %make sure it is a file that exists
 if exist(filename, 'file') ~= 2
     uialert(h.figure, 'The selected file does not seem to exist.  Please double check the file location.');
+    status = false;
     return
 end
 
@@ -139,11 +161,13 @@ EEG = wwu_LoadEEGFile(filename);
 %make sure there are components
 if ~isfield(EEG, "icasphere") || isempty(EEG.icasphere)
     uialert(h.figure, 'No ICA components found','Load Error');
+    status = false
     return
 end
 %make sure the classification has been completed
 if ~isfield(EEG.etc, 'ic_classification')
     uialert(h.figure, 'No ICA classification has been completed','Load Error');
+    status = false;
     return
 end    
 if isempty(EEG.icaact)
@@ -256,7 +280,7 @@ if p.EEG.trials > 1
     h.axis_icamean.YLim = scale; 
     h.axis_icamean.XLim = [p.EEG.times(1), p.EEG.times(end)];
     h.axis_icamean.XLabel.String = 'Time (ms)';
-    h.axis_icamean.YLabel.String = 'Amplitude (mV)';
+    h.axis_icamean.YLabel.String = 'Amplitude (\muV)';
     h.axis_icamean.InnerPosition([1,3]) = h.axis_icaerp.InnerPosition([1,3]);
     h.axis_icamean.Position(2) = 10;
     h.axis_icamean.Box = 'off';
@@ -267,9 +291,9 @@ if p.EEG.trials > 1
     %plot the fft of the ica time series
     mp = plot(h.axis_icafft, faxis, icafft);
     mp.LineWidth = 2;
-    h.axis_icafft.XLim = [0,40];
+    h.axis_icafft.XLim = [0,80];
     h.axis_icafft.XLabel.String = 'Frequency (Hz)';
-    h.axis_icafft.YLabel.String = 'Log Power (mV/freq)';
+    h.axis_icafft.YLabel.String = 'Log Power (\muV/freq)';
     h.axis_icafft.YScale = 'log';
     h.axis_icafft.Box = 'off';
 end

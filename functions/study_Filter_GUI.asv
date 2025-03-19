@@ -207,7 +207,8 @@ function callback_filter(hObject, eventdata, h, filenames, study)
     
         end   
         clear EEGIn
-        close(pbar)   
+        close(pbar)
+   
         Parameters.elapsedtime = {'Elapsed Time (s)', toc}; 
         wwu_UpdateProcessLog(study, 'RowNames', filenames, 'ColumnNames', {'Output file'}, 'Values',reportValues', 'SheetName','filter', 'Parameters', Parameters);
         params = filenames;

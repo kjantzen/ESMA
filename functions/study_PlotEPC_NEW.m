@@ -431,7 +431,7 @@ hObject.Tooltip = sd(indx).tooltip;
 
 callback_drawdata(hObject,event, h);
 %************************************************************************
-function callback_handlekeyevents(hObject, event, h)
+function callback_handlekeyevents(~, event, h)
 
 %disp(event.Key)
 key_event = event.Key;
@@ -476,7 +476,6 @@ if strcmp(otype, 'matlab.graphics.chart.primitive.Line')
     end
 else
     h.label_hoverChannel.Text = '';
-    %   h.axis_main.Title.String = '';
 end
 
 %***************************************************************************
@@ -504,7 +503,7 @@ switch p.scrollevent
 end
 
 %**************************************************************************
-function callback_deselectchans(hObject, eventdata, h, clear_comps)
+function callback_deselectchans(~, ~, h, clear_comps)
 
 
 p = h.figure.UserData;
@@ -524,11 +523,9 @@ else
     p.selchans = zeros(1, p.EEG.nbchan);
 end
 h.figure.UserData = p;
-
 callback_drawdata([],[],h);
-
 %**************************************************************************
-function callback_selectchannel(hobject, eventdata,h, ch_num)
+function callback_selectchannel(~, ~,h, ch_num)
 
 plot_ica = h.tool_ica.State;
 p = h.figure.UserData;
@@ -541,48 +538,28 @@ h.figure.UserData = p;
 
 callback_drawdata([],[],h);
 %************************************************************************
-function callback_setcompbadstatus(hObject, eventdata, h)
+function callback_setcompbadstatus(hObject, ~, h)
 
 p = h.figure.UserData;
 
+p.EEG = getNewestData(h, p.EEG);
 comps = p.selcomps;
-remove = false;
 switch hObject.Tag
     case 'togood'
         comps = ~comps;
+        p.EEG.reject.gcompreject = comps & p.EEG.reject.gcompreject;
+    case 'tobad'
+        p.EEG.reject.gcompreject = comps | p.EEG.reject.gcompreject;
     case 'remove'
-        comps(1:end) = 0;
-        remove = true;
-end
-
-p.EEG = getNewestData(h, p.EEG);
-%check to see if there are any bad components already
-if sum(p.EEG.reject.gcompreject) > 0 && ~remove
-    %as the user what they want to do
-    msg = 'There are existing bad components.';
-    msg = [msg, ' Would you like to keep the existing bad component and add the currently selected ones or overwrite the existing components?'];
-    response = wwu_msgdlg(msg, 'Existing bad components', {'Add', 'Overwrite', 'Cancel'});
-    switch response
-        case 'Cancel'
-            return
-        case 'Add'
-            p.EEG.reject.gcompreject = comps| p.EEG.reject.gcompreject;
-        case 'Overwrite'
-            p.EEG.reject.gcompreject = comps;
-    end
-else
-    p.EEG.reject.gcompreject = comps;
+        p.EEG.reject.gcompreject(1:end) = 0;
 end
 
 p.EEG.saved = 'no';
 h.figure.UserData = p;
 callback_drawdata([],[],h);
 reselect_ICs(h)
-
-
-
 %*************************************************************************
-function callback_setscale(hObject, eventdata, h, redraw)
+function callback_setscale(~, ~, h, redraw)
 
 stacked = h.tool_stack.State;
 plotica = h.tool_ica.State;

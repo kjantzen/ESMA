@@ -11,6 +11,10 @@
 
 function study = study_LoadStudy(study_name)
 
+arguments
+    study_name {mustBeText}
+end
+
 %this will return as empty if something goes wrong
 study = [];
 if nargin < 1
@@ -23,11 +27,14 @@ STUDYPATH = fullfile(EEGPath, 'STUDIES');
 [~, fname, ~] = fileparts(study_name);
 
 input_filename = fullfile(STUDYPATH, [fname, '.study']);
-if ~exist(input_filename,'file');
+if ~exist(input_filename,'file')
     error('The study you requested does not exist');
 end
 
 s = load(input_filename, 'study', '-mat');
-study = s.study;
-
+if isfield(s, 'study')
+    study = s.study;
+else
+    study = s;
+end
 
