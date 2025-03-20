@@ -1068,16 +1068,16 @@ function GND = addWithinCI(GND)
     %GND.grands_within_CI = tinv(.975, nS-1) * normSD / sqrt(nS) * sqrt(nC/(nC-1));
 
 %**************************************************************************
-function [d,se, s, p,labels_or_times, ch_out, cond_sel, fixedScale] = getdatatoplot(study, GND, h, cursors, aveBetween)
+function [plot_data, plot_se, test_statistic, test_psig,labels_or_times, selected_channels, selected_conditions, fixedScale] = getdatatoplot(study, GND, h, cursors, aveBetween)
 
-d = []; se = [];
+plot_data = []; plot_se = [];
 labels_or_times = [];
-ch_out = [];
-cond_sel = [];
+selected_channels = [];
+selected_conditions = [];
 fixedScale = [];
-s = [];
-p = [];
-gfp = [];
+test_statistic = [];
+test_psig = [];
+global_field_power = [];
 
 
 %if cursor information is passed we will send back only the information
@@ -1093,7 +1093,7 @@ else
 end
 
 %get the conditions, channels and subject to plot from the listboxes
-cond_sel = h.list_condition.Value;
+selected_conditions = h.list_condition.Value;
 ch = cell2mat(h.list_channels.Value');
 sbj = h.list_subject.Value;
 
@@ -1101,10 +1101,11 @@ sbj = h.list_subject.Value;
 mass_univ_overlay = h.check_MUoverlay.Value;
 
 %get the channels from the selected conditions
-ch_sel = ch(find(ch(:,1)),1);
-ch_out = ch_sel;    %send this back to the calling function
+ch_sel = ch(ch(:,1)>0,1);
+selected_channels = ch_sel;    %send this back to the calling function
 
 if mapping_mode
+    %just get the specific timepoints for the cursors
     [~,pt] = arrayfun(@(a) min(abs(a-GND.time_pts)), sort([cursors.time]));
     ch_sel = 1:length(GND.chanlocs); %overwrite channel selection if we are mapping
     plot_GFP = false;
@@ -1113,30 +1114,30 @@ else
     plot_GFP = h.menu_GFP.Checked;  %allow the user to choose
 end
 
-
 %get the statistics to plot if desired
 if mass_univ_overlay
     if isempty(GND.F_tests)
         r = [];
     else
-        r = GND.F_tests(h.dropdown_MUtest.Value);   %get the desired results
+        r = GND.F_tests(h.dropdown_MUtest.Value);   %get the desired test
     end
     if isempty(r)   %if for some reason there is no data
-        s = [];
+        test_statistic = [];
         mass_univ_overlay = false;
     else
-        effect_name = h.dropdown_MUeffect.Value;    %this is the specific condition to show
-    
+        effect_name = h.dropdown_MUeffect.Value;    %this is the specific condition to show   
+        %it will be a struct if there are more than one factors, otherwise
+        %it will not - bad design ;( 
         if isstruct(r.adj_pval)
-            %try getting the cluster number here so we can plot clusters in
-            %different colors
-            adj_pval = r.adj_pval.(effect_name);
-            F_obs = r.F_obs.(effect_name);
+           adj_pval = r.adj_pval.(effect_name); %get p-stat
+           F_obs = r.F_obs.(effect_name);       %get F-score
         else
             adj_pval = r.adj_pval;
             F_obs = r.F_obs;
         end
-
+        %get an array that indicates which cluster each significant
+        %time/cahnnel point belongs to.
+        %not doing anything with this right now.
         if ~isstruct(r.clust_info)
             sig_clust = zeros(size(adj_pval));
         elseif ~isfield(r.clust_info, effect_name)
@@ -1160,47 +1161,46 @@ if mass_univ_overlay
     end
 end
 
-%it is possible that no channels are selected because just the channel
-%groups can be selected
+%check to see if actual channels were selected - if not the user wants data
+%from a channel group, which is handled next
 if ~isempty(ch_sel)
     if sbj==0 %this is the grand average
         if aveBetween
-            d = mean(GND.grands(ch_sel,pt(1):pt(2),cond_sel),2);
+            plot_data = mean(GND.grands(ch_sel,pt(1):pt(2),selected_conditions),2);
         else
-            d = GND.grands(ch_sel,pt,cond_sel);
-            se = GND.grands_within_CI(ch_sel, pt, cond_sel);
+            plot_data = GND.grands(ch_sel,pt,selected_conditions);
+            plot_se = GND.grands_within_CI(ch_sel, pt, selected_conditions);
             %se = GND.grands_stder(ch_sel, pt, cond_sel);
         end
-        fixedScale = max(max(max(GND.grands(ch_sel,:,cond_sel))));
-
+        fixedScale = max(max(max(GND.grands(ch_sel,:,selected_conditions))));
         %get the statistics information
         if mass_univ_overlay            
-            %initialize the array to the full size of the data
+            %initialize the statistic arrays to the full size of the data
              stat = zeros(size(GND.grands,1), size(GND.grands,2));
              pstat = stat;
              pval = adj_pval<r.desired_alphaORq;
-             fval = F_obs;
-            if contains(r.mean_wind, 'yes')
-                fval = repmat(fval, 1, length(r.used_tpt_ids));
-                pval = repmat(pval, 1, length(r.used_tpt_ids));
-            end
-            stat(r.used_chan_ids,r.used_tpt_ids) = fval; %fill the relevant portion of the  matrix    
-            pstat(r.used_chan_ids, r.used_tpt_ids) = pval;
-            if aveBetween
-                s = mean(stat(ch_sel,pt(1):pt(2)),2);
-                p = mean(pstat(ch_sel,pt(1):pt(2)),2);
+            if contains(r.mean_wind, 'yes') %expand to apply to all time points in teh window if averaging occured prior to the test
+                stat(r.used_chan_ids,r.used_tpt_ids) = repmat(F_obs, 1, length(r.used_tpt_ids));
+                pstat(r.used_chan_ids, r.used_tpt_ids) = repmat(pval, 1, length(r.used_tpt_ids));
             else
-                s = stat(ch_sel, pt); %select the part the user requested
-                p = pstat(ch_sel,pt);
+                stat(r.used_chan_ids,r.used_tpt_ids) = F_obs;   
+                pstat(r.used_chan_ids, r.used_tpt_ids) = pval;
+            end
+            if aveBetween
+                test_statistic = mean(stat(ch_sel,pt(1):pt(2)),2);
+                test_psig = mean(pstat(ch_sel,pt(1):pt(2)),2);
+            else
+                test_statistic = stat(ch_sel, pt); %select the part the user requested
+                test_psig = pstat(ch_sel,pt);
             end            
         end 
     else
         if aveBetween
-            d = mean(GND.indiv_erps(ch_sel, pt(1):pt(2),cond_sel,sbj),2);
+            plot_data = mean(GND.indiv_erps(ch_sel, pt(1):pt(2),selected_conditions,sbj),2);
         else
-            d = GND.indiv_erps(ch_sel, pt, cond_sel, sbj);
+            plot_data = GND.indiv_erps(ch_sel, pt, selected_conditions, sbj);
         end
-        fixedScale = max(max(max(GND.indiv_erps(ch_sel, :,cond_sel, sbj))));
+        fixedScale = max(max(max(GND.indiv_erps(ch_sel, :,selected_conditions, sbj))));
         %no stats information for individual subject data
     end    
     if mapping_mode
@@ -1217,15 +1217,15 @@ ch_groups = ch(find(ch(:,2)),2);
 %function was called from the plot_topo function
 if ~isempty(ch_groups) && ~mapping_mode
     %get the means of any channel groups
-    ch_group_data = zeros(length(ch_groups), length(GND.time_pts), length(cond_sel));
-    se = ch_group_data;
+    ch_group_data = zeros(length(ch_groups), length(GND.time_pts), length(selected_conditions));
+    plot_se = ch_group_data;
     ch_group_s = zeros(length(ch_groups), length(GND.time_pts));
     for ii = 1:length(ch_groups)
-        for jj = 1:length(cond_sel)
-            if sbj == 0
-                ch_group_data(ii,pt,jj) = squeeze(mean(GND.grands(study.chgroups(ch_groups(ii)).chans,:,cond_sel(jj)),1));
+        for jj = 1:length(selected_conditions)
+            if sbj == 0 %grand average is desired
+                ch_group_data(ii,pt,jj) = squeeze(mean(GND.grands(study.chgroups(ch_groups(ii)).chans,:,selected_conditions(jj)),1));
                 %get the std error averaged across the channels in the group 
-                se(ii,pt,jj) = squeeze(mean(GND.grands_within_CI(study.chgroups(ch_groups(ii)).chans,:,cond_sel(jj)),1));
+                plot_se(ii,pt,jj) = squeeze(mean(GND.grands_within_CI(study.chgroups(ch_groups(ii)).chans,:,selected_conditions(jj)),1));
                 %se(ii,pt,jj) = squeeze(mean(GND.grands_stder(study.chgroups(ch_groups(ii)).chans,:,cond_sel(jj)),1));
                 if mass_univ_overlay && ~mapping_mode %mapping data for these channels is not valid
                     %again - initialize the array to the full size of the data
@@ -1240,12 +1240,12 @@ if ~isempty(ch_groups) && ~mapping_mode
                     %provde a thresholded version of the F-scores for mapping
                     %in future there will be an option to turn this on and off
                  
-                    stat(r.used_chan_ids,r.used_tpt_ids) = pval; %fill the relevant portion of the  matrix
+                    stat(r.used_chan_ids,r.used_tpt_ids) = pval; %fill the relevant portion of the  matrix           
                     all_chan_s = stat(study.chgroups(ch_groups(ii)).chans, :); %select the channels in the group
                     ch_group_s(ii,pt) = max(all_chan_s,[],1); %this will indicate signficance if the timepoint was significant on any of the channels
                 end
             else
-                ch_group_data(ii,pt,jj) = squeeze(mean(GND.indiv_erps(study.chgroups(ch_groups(ii)).chans,:,cond_sel(jj), sbj),1));
+                ch_group_data(ii,pt,jj) = squeeze(mean(GND.indiv_erps(study.chgroups(ch_groups(ii)).chans,:,selected_conditions(jj), sbj),1));
             end
         end
     end
@@ -1253,18 +1253,20 @@ if ~isempty(ch_groups) && ~mapping_mode
     %put it all together if both channel group and channel information
     %exist
     if ~isempty(ch_sel)
-        d = cat(1, ch_group_data, d); 
+        plot_data = cat(1, ch_group_data, plot_data); 
         labels_or_times = horzcat({study.chgroups(ch_groups).name}, labels_or_times);
     else
-        d = ch_group_data;
+        plot_data = ch_group_data;
         labels_or_times = {study.chgroups(ch_groups).name};
     end
     %now add the statistical information if needed
     if mass_univ_overlay
         if ~isempty(ch_sel)
-            s = cat(1, ch_group_s, s);
+            test_statistic = cat(1, ch_group_s, test_statistic);
+            test_psig  = cat(1, ch_group_s, test_psig);
         else
-            s = ch_group_s;
+            test_statistic = ch_group_s;
+            test_psig = ch_group_s;
         end
     end
 end
@@ -1272,12 +1274,13 @@ end
 if plot_GFP
     %calculate the global field power
     if sbj == 0
-        gfp = std(GND.grands(:,:,cond_sel),0,1);
+        global_field_power = std(GND.grands(:,:,selected_conditions),0,1);
     else
-        gfp = GND.indiv_erps(ch_sel, pt, cond_sel, sbj);
+        global_field_power = GND.indiv_erps(ch_sel, pt, selected_conditions, sbj);
     end
 
-    d = cat(1, d, gfp);
+    plot_data = cat(1, plot_data, global_field_power);
+    test_psig = cat(1, test_psig, zeros(size(global_field_power)));
     labels_or_times(end + 1) = {'GFP'}; 
  end
 
@@ -1464,7 +1467,7 @@ ANOVAStyle = h.check_plotANOVAStyle.Value;
 
 
 p = h.figure.UserData;
-[d, se,~, s,labels,~,cond_sel, ~] = getdatatoplot(p.study, p.GND, h);
+[d, se,~,s,labels,~,cond_sel, ~] = getdatatoplot(p.study, p.GND, h);
 
 %can't plot it if it is not there!
 if isempty(d)

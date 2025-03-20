@@ -38,13 +38,13 @@ addStyle(handles.dropdown_selsubject, badSbjStyle, 'item', find(badSbj));
 
 drawnow
 %create a custom color map for the component classes 
-p.mycolmap = [217,95,2;
-27,158,119;
-117,112,179;
-231,41,138;
-102,166,30;
-230,171,2;
-166,118,29;
+p.mycolmap = [190,174,212;
+127,201,127;
+253,192,134;
+255,255,153;
+56,108,176;
+240,2,127;
+191,91,23;
 102,102,102];
 p.mycolmap = p.mycolmap./255;
 
@@ -99,7 +99,6 @@ h.figure.UserData = p;
 callback_plotclassifications([],[],h);
 %**************************************************************************
 function status = callback_loadnewfile(hObject, eventdata, h)
-
 
 status = true;
 %check to see if we need to save data from another figure before saving and loading
@@ -193,11 +192,10 @@ function callback_plotICtopo(hObject, event, h, p)
 ic_number = h.spinner_selcomp.Value;
 ic = p.EEG.icawinv(:,ic_number);
 pvaf = eeg_pvaf(p.EEG, ic_number, 'plot', 'off');
-fprintf('Component accounts for %.2f PV\n', pvaf);
 curr_thresh = h.spinner_threshold.Value/100;
 
 mapTitle = sprintf('Component %i (%.1f%%)', ic_number, pvaf);
-bad_status = p.EEG.reject.gcompreject(ic_number)
+bad_status = p.EEG.reject.gcompreject(ic_number);
 if bad_status
     mapTitle = [mapTitle, ' BAD'];
     bcolor = p.badtrialcolor;
@@ -305,8 +303,12 @@ for ii = 1:length(pbar_data)
     b.FaceColor = p.mycolmap(ii+1,:);
     if ii == 1; hold(h.axis_compbar, 'on'); end
 end
+b = bar(h.axis_compbar, nan, nan);
+b.FaceColor = p.mycolmap(1,:);
+
 hold(h.axis_compbar, 'off');
 h.axis_compbar.YLim = [0,1];
+h.axis_compbar.XLim = [.5, 7.5];
 h.axis_compbar.XTick = 1:length(pbar_data);
 h.axis_compbar.XTickLabel =p.EEG.etc.ic_classification.ICLabel.classes;
 h.axis_compbar.Color = p.scheme.Window.BackgroundColor.Value;
@@ -314,7 +316,7 @@ h.axis_compbar.Color = p.scheme.Window.BackgroundColor.Value;
 %get the classification
 [v, c] = max(pbar_data);
 if v < curr_thresh
-    classname = 'none';
+    classname = 'Unclassified';
 else
     classname = sprintf('%s (%i%%)',...
         p.EEG.etc.ic_classification.ICLabel.classes{c},...
@@ -325,14 +327,17 @@ h.axis_compbar.Title.Color = p.scheme.Axis.AxisColor.Value;
 h.axis_compbar.YLabel.String = 'Weight';
 h.axis_compbar.YLabel.Color = p.scheme.Axis.AxisColor.Value;
 lh = legend(h.axis_compbar);
-lh.String = p.EEG.etc.ic_classification.ICLabel.classes;
+lh.String = [p.EEG.etc.ic_classification.ICLabel.classes';{'Unclassified'}];
 lh.TextColor = p.scheme.Label.FontColor.Value;
 lh.Location = 'northoutside';
-lh.NumColumns = 7;
+lh.NumColumns = 8;
 lh.Box = 'off';
 
-line(h.axis_compbar, [0, 8], [curr_thresh, curr_thresh], ...
+thresh = line(h.axis_compbar, [0, 8], [curr_thresh, curr_thresh], ...
     'LineStyle', '--', 'Color',  p.scheme.Axis.AxisColor.Value);
+thresh.Annotation.LegendInformation.IconDisplayStyle = 'off';
+
+
 %lh.String(end) = {'threshold'};
 drawnow
 
@@ -354,7 +359,7 @@ if rp(1) < xlm(1) || rp(1) > xlm(2)
     return
 end
 
-%now deal with the y range which must in within the limits for at least one
+%now deal with the y range which must be within the limits for at least one
 %figure.  I am not sure what I will do with this position yet, but I might
 %as well get it
 if rp(2) > ylm(1) && rp(2) < ylm(2)
@@ -373,13 +378,11 @@ callback_plotclassifications([],[],h, comp);
 %************************************************************************
 function callback_plotclassifications(hObject, event, h, component)
 
-
 if nargin < 4
     update = false;
 else 
     update = true;
 end
-
 h.figure.Pointer = 'watch';
 needsReload = study_checkForUnsavedData(h.figure);
 if needsReload
@@ -390,32 +393,41 @@ if needsReload
 end
 
 p = h.figure.UserData;
-w = p.EEG.etc.ic_classification.ICLabel.classifications;
-l = p.EEG.etc.ic_classification.ICLabel.classes;
-nclasses = length(l);
+class_wieght = p.EEG.etc.ic_classification.ICLabel.classifications;
+class_label = p.EEG.etc.ic_classification.ICLabel.classes;
+nclasses = length(class_label);
+class_label(end + 1) = {sprintf('COMPONENT\\newlineSTATUS')};
 curr_ic = h.spinner_selcomp.Value;
 
 %get the user defined threshold
 threshold = h.spinner_threshold.Value/100;
-[thresh_w, ic_indx] = wwu_getICclass(w, threshold);
+[thresh_w, ic_indx] = wwu_getICclass(class_wieght, threshold);
+%add the status row
+bad_trial_list = p.EEG.reject.gcompreject * -.1;
+bad_trial_list(bad_trial_list == 0) = 1;
+class_wieght(:,end + 1) = bad_trial_list;
 
 if ~update
     %plot the raw values
-    imagesc(h.axis_compclassraw, w', [0,1])
-    h.axis_compclassraw.XLim = [.5,size(w,1)+.5];
-    h.axis_compclassraw.YLim = [.5,size(w,2)+.5];
-    h.axis_compclassraw.YTickLabel = l;
+    imagesc(h.axis_compclassraw, class_wieght', [-.1,1])
+    h.axis_compclassraw.XLim = [.5,size(class_wieght,1)+.5];
+    h.axis_compclassraw.YLim = [.5,size(class_wieght,2)+.5];
+    h.axis_compclassraw.YTickLabel = class_label;
     h.axis_compclassraw.Title.String = 'IC Classifications Weights';
     h.axis_compclassraw.Title.Color = p.scheme.Axis.AxisColor.Value;
     cb = colorbar(h.axis_compclassraw);
     cb.Ticks = 0:.1:1;
     cb.TickLabels = string(0:10:100);
     cb.Color = p.scheme.Label.FontColor.Value;
-    
-    colormap(h.axis_compclassraw, 'winter');
+    cb.Limits = [0, 1];
+    cmap = winter;
+    cmap(1,:)  = [1, .25, .25];
+    cmap(2,:)  = [1, .25, .25];
+    cmap(3,:)  = [1, .25, .25];
+    colormap(h.axis_compclassraw,cmap);
 
     %plot the thresholded values
-    imagesc(h.axis_compclassthresh, thresh_w',[0, nclasses] );
+    imagesc(h.axis_compclassthresh, thresh_w',[0, nclasses+1] );
     h.axis_compclassthresh.XLim = [.5,size(thresh_w,1)+.5];
     h.axis_compclassthresh.YLim = [.5,size(thresh_w,2)+.5];
     h.axis_compclassthresh.YTick = 1;
@@ -428,9 +440,11 @@ if ~update
 
     %outline the selected component
      for ii = 2:size(thresh_w,1)
-         ml = line(h.axis_compclassraw, [ii - .5, ii-.5], h.axis_compclassraw.YLim, 'Color', [.5,.5,.5]);
-         ml = line(h.axis_compclassthresh, [ii-.5,ii-.5], h.axis_compclassthresh.YLim, 'Color', [.5,.5,.5]);
+         line(h.axis_compclassraw, [ii - .5, ii-.5], h.axis_compclassraw.YLim, 'Color', [.5,.5,.5]);
+         line(h.axis_compclassthresh, [ii-.5,ii-.5], h.axis_compclassthresh.YLim, 'Color', [.5,.5,.5]);
      end
+     line(h.axis_compclassraw,  h.axis_compclassraw.XLim, [nclasses + .5, nclasses + .5], 'Color', p.scheme.Window.BackgroundColor.Value, 'LineWidth', 5);
+
       selComp(1) = rectangle(h.axis_compclassraw, 'Position', [curr_ic - .5, 0, 1, h.axis_compclassraw.YLim(2)], 'EdgeColor', 'w', ...
             'FaceColor','none', 'LineWidth',2);
       selComp(2) = rectangle(h.axis_compclassthresh, 'Position', [find(ic_indx==curr_ic) - .5, 0, 1, h.axis_compclassraw.YLim(2)], 'EdgeColor', 'w', ...

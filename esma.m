@@ -1640,100 +1640,14 @@ function addSubFolderPaths()
     subfolders = {'config', 'functions', 'toolboxes', 'icons'};
     s = pathsep;
     pathStr = [s, path, s];
-    
     for ii = subfolders
         sFolderPath = fullfile(cPath, ii{1});
         onPath  = contains(pathStr, [s, sFolderPath, s], 'IgnoreCase', ispc);
         if ~onPath
-            addpath(sFolderPath);
+
+            addpath(genpath(sFolderPath));
         end
     end
-
-%*************************************************************************
-function checkForNewVersion(~)
-% Code to check and download a new version if it exists
-% Adapted from - Zoltan Csati's function filestr = githubFetch
-% GITHUBFETCH  Download file from GitHub.
-%   
-%   Inputs:
-%       user: name of the user or the organization
-%       repository: name of the repository
-%       downloadType: 'branch' or 'release'
-%       name (optional):
-%           if downloadType is 'branch': branch name (default: 'master')
-%           if downloadType is 'release': release version (default: 'latest')
-%   Output:
-%       filestr: path to the downloaded file
-%
-%   The downloaded file type is .zip.
-%
-%   Examples:
-%       1) githubFetch('GLVis', 'glvis', 'branch')
-%       % same as githubFetch('GLVis', 'glvis', 'branch', 'master')
-%       2) githubFetch('matlab2tikz', 'matlab2tikz', 'branch', 'develop')
-%       3) githubFetch('matlab2tikz', 'matlab2tikz', 'release', '1.1.0')
-%       4) githubFetch('matlab2tikz', 'matlab2tikz', 'release')
-%       % same as githubFetch('matlab2tikz', 'matlab2tikz', 'release', 'latest')
-%   Zoltan Csati
-%   04/02/2018
-website = 'https://github.com/kjantzen/';
-repository = 'ESMA';
-
-% Check for download type
-branchRequested = false;
-releaseRequested = true;
-
-try
-    webread([website, repository]);
-catch ME
-    fprintf('User or repository not found.  Skipping update check.')
-    return
-end
-
-% Process branch or release versions
-if nargin < 4 % no branch or release version provided
-    if branchRequested
-        name = 'master';
-    elseif releaseRequested
-        name = 'latest';
-    end
-end
-if releaseRequested
-    if strcmpi(name, 'latest') % extract the latest version number
-        s = webread([website, repository, '/releases/latest']);
-        % Search based on https://stackoverflow.com/a/23756210/4892892
-        [startIndex, endIndex] = regexp(s, '(?<=<title>).*?(?=</title>)');
-        releaseLine = s(startIndex:endIndex);
-        % Extract the release number
-        [startIndex, endIndex] = regexp(releaseLine, '([0-9](\.?))+');
-        name = releaseLine(startIndex:endIndex);
-        if isempty(name)
-            fprintf('No release found ... skipping check...\n');
-            return
-        end
-    end
-    versionName = ['v', name];
-elseif branchRequested
-    versionName = name;
-end
-% Download the requested branch or release
-githubLink = [website, repository, 'archive', versionName, '.zip'];
-downloadName = [repository, '-', name, '.zip'];
-try
-    fprintf('Download started ...\n');
-    filestr = webwrite(githubLink, downloadName);
-    fprintf('Repository %s successfully downloaded.\n', repository);
-catch ME
-    if strcmp(ME.identifier, 'MATLAB:urlwrite:FileNotFound')
-        if branchRequested
-            error('Branch ''%s'' does not exist.', name);
-        elseif releaseRequested
-            error('Release version %s does not exist.', name);
-        end
-    else
-        rethrow(ME);
-    end
-end
 
 %**************************************************************************
 function hex =rgb2hex(rgb)
