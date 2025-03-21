@@ -768,7 +768,7 @@ else
     currentStudy = study.name;
     oldStudies = h.dropdown_study.Items;
 end
-if editMode
+if editMode %editing an existing study
     fh = study_EditStudy(study);
     waitfor(fh);
     populate_studylist(h, currentStudy);
@@ -777,11 +777,18 @@ else
     waitfor(fh);
     populate_studylist(h);
     newStudies = h.dropdown_study.Items;
-    c = setdiff(newStudies, oldStudies);
-    if isempty(c)
-        populate_studylist(h, currentStudy)
+    
+    if isempty(oldStudies) %this is the first study created
+        if ~isempty(newStudies)
+            populate_studylist(h, newStudies{1})
+        end
     else
-        populate_studylist(h, c{1});
+        c = setdiff(newStudies, oldStudies);
+        if isempty(c)
+            populate_studylist(h, currentStudy)
+        else
+            populate_studylist(h, c{1});
+        end
     end
 end
 %**************************************************************************
@@ -1138,7 +1145,7 @@ if ~isfield(study, 'bingroup')
 end
 
 info = study_SelectBinGroup(study);
-if isempty(info.gnum) || contains(info.option, 'Cancel')
+if isempty(info) || isempty(info.gnum) || contains(info.option, 'Cancel')
     return
 end
 gnum = info.gnum;

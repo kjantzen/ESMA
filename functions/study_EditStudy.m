@@ -12,7 +12,7 @@ fh = h.figure;
 if newStudy
     study = callback_newStudy([],[],h);
     %close the figure if the study comes back empty 
-    if isempty(study)col
+    if isempty(study)
         close(h.figure);
         return
     end
@@ -101,7 +101,7 @@ selection = uiconfirm(h.figure, msg, 'Add channel locations',...
 
 if strcmp(selection, 'Add Locations')
     h.figure.Visible = false;
-    defaultLocPath = fullfile(fileparts(mfilename("fullpath")), 'config', 'position files');
+    defaultLocPath = fullfile(fileparts(mfilename("fullpath")),'..', 'config', 'position files');
     [loc_file, loc_path] = uigetfile('*.*', 'Select channel locations file',...
         defaultLocPath);
     h.figure.Visible = true;
