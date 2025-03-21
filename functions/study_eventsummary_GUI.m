@@ -56,9 +56,9 @@ function [eventsTable, epochsTable] = load_eventdata(h, study, filenames)
     for ii = 1:nfiles
         pbar.Value = ii/nfiles;
     
-        [fpath, fname, fext] = fileparts(filenames{ii});
+        [~, fname, fext] = fileparts(filenames{ii});
         fname = [fname, fext];
-        fprintf('Loading event data for file %s\n', fname);
+        fprintf('Loading event data for file %s\n', filenames{ii});
         EEG = wwu_LoadEEGFile(filenames{ii}, {'event', 'trials', 'epoch'});
         fprintf('getting all event types from the EEG structure...\n')
         allTypes = {EEG.event.type};

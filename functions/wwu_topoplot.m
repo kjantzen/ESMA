@@ -18,6 +18,7 @@
 %   chan_locs         - name of an EEG electrode position file (>> topoplot example).
 %                       Else, an EEG.chanlocs structure (>> help readlocs or >> topoplot example)
 % Optional inputs:
+%   'axishandle'      - the handle of the axis for plotting the topo
 %   'maplimits'       - 'absmax'   -> scale map colors to +/- the absolute-max (makes green 0); 
 %                       'maxmin'   -> scale colors to the data range (makes green mid-range); 
 %                       [lo.hi]    -> use user-definined lo/hi limits
@@ -93,7 +94,7 @@
 %   'gridscale'       - [int > 32] size (nrows) of interpolated scalp map data matrix {default: 67}
 %   'colormap'        -  (n,3) any size colormap {default: existing colormap}
 %   'circgrid'        - [int > 100] number of elements (angles) in head and border circles {201}
-%   'emarkercolor'    - cell array of colors for 'blank' option.
+%   'emarkercolors'    - cell array of colors for 'blank' option.
 %   'plotdisk'        - ['on'|'off'] plot disk instead of dots for electrodefor 'blank' option. Size of disk
 %                       is controled by input values at each electrode. If an imaginary value is provided, 
 %                       plot partial circle with red for the real value and blue for the imaginary one.
@@ -1575,15 +1576,18 @@ end
 %%%%%%%% Mark specified electrode locations with red filled disks  %%%%%%%%%%%%%%%%%%%%%%
 %
 try,
+    color_count = 0;
     if strcmpi(STYLE,'blank') % if mark-selected-channel-locations mode
         for kk = 1:length(1:length(x))
             if abs(Values(kk))
                 if strcmpi(PLOTDISK, 'off')
+                    color_count = color_count + 1;
                     angleRatio = real(Values(kk))/(real(Values(kk))+imag(Values(kk)))*360;
-                    radius     = real(Values(kk))+imag(Values(kk));
-                    allradius  = [0.02 0.03 0.037 0.044 0.05];
-                    radius     = allradius(radius);
-                    hp2 = disk(AXISHANDLE,y(kk),x(kk),radius, [1 0 0], 0 , angleRatio, 16);
+             %       radius     = 1;%real(Values(kk))+imag(Values(kk))
+             %       allradius  = [0.02 0.03 0.037 0.044 0.05];
+                    radius     = .03;%allradius(radius);
+                    hp2 = disk(AXISHANDLE,y(kk),x(kk),radius,COLORARRAY{:}(color_count,:), 0 , angleRatio, 16);
+                    %hp2 = disk(AXISHANDLE,y(kk),x(kk),radius, [1 0 0], 0 , angleRatio, 16);
                     if angleRatio ~= 360
                         hp2 = disk(y(kk),x(kk),radius, [0 0 1], angleRatio, 360, 16);
                     end
