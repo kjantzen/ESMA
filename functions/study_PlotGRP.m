@@ -1,3 +1,13 @@
+%study_PlotGRP(GRPFile, F_test_number)
+% Overly simple tool for viewing FMUT between sbject results
+% in a GRP (FMUT) file format.
+% Right now you can just view the raster plot of a single F_test
+%click on the raster will generate a F-stat map and a map of which channel
+%is include in which cluster.
+% Future expansion will be
+%   1. To allow for the user to select which F test to view
+%   2. To show plots of time series as well (although these depend on GND
+%   files.
 function study_PlotGRP(GRPFile, F_test_number)
 
 arguments
@@ -9,10 +19,17 @@ if isempty(GRP)
     error('There was a problem loading the GRP file.  Goodbye!\n')
 end
 handles = buildGUI(GRP.F_tests(F_test_number));
+handles.figure.Name = GRPFile;
 GRP.test_to_display = F_test_number;
 %stash the data
 handles.figure.UserData = GRP;
 drawRaster(handles)
+
+seed_time = GRP.time_pts(round(length(GRP.time_pts)/2));
+drawCursor(handles, seed_time)
+drawTopo(handles, seed_time)
+
+clear seed_time F_test_number
 
 
 %% Helper functions
@@ -60,7 +77,6 @@ for tt = 1:length(effect_names)
     end
     GRP.F_tests(test_number).clust_info.(effect).clust_ids = sig_clust;
 end
-
 % ***********************************************************************
 function callback_replot(~,~,h)
     drawRaster(h);
@@ -143,11 +159,34 @@ wwu_topoplot(sig_ch_indx, GRP.chanlocs, 'axishandle', h.axis_cluster_topo, 'styl
     'emarkercolors', cluster_colors);
 text(h.axis_cluster_topo, 0, -.57, sprintf('%.2f ms', map_time),...
     'HorizontalAlignment','center', 'FontSize', 14);
-
 % ***********************************************************************
 function callback_handle_mouseclicks(hObject, event, h)
 time_pt = hObject.CurrentPoint(1,1);
+moveCursor(h, time_pt);
 drawTopo(h, time_pt);
+% ***********************************************************************
+function drawCursor(h, time)
+    %redraws a cursor so lets make sure there are no existing cursors
+    %already
+    cursor = h.axis_raster.UserData;
+    if ~isempty(cursor)
+        delete(cursor)
+    end
+    cursor = line(h.axis_raster, [time, time], h.axis_raster.YLim, 'Color', [.5,.5,.5], ...
+        'LineWidth', 3);
+    h.axis_raster.UserData = cursor;
+% ***********************************************************************
+function moveCursor(h, time)
+   %redraws a cursor so lets make sure there are no existing cursors
+    %already
+    cursor = h.axis_raster.UserData;
+    if isempty(cursor)
+        drawCursor(h, time)
+    else
+        cursor.XData = [time, time];
+        h.axis_raster.UserData = cursor; 
+        drawnow;
+    end
 % ***********************************************************************
 function formatted_name = formatEffectName(name)
     name_array = strsplit(name, 'X');
