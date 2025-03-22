@@ -1051,20 +1051,35 @@ end
 
 %**************************************************************************
 function GND = addWithinCI(GND)
-    %calculate the 95% confidence interval so that can be used instead of
-    %the standard error across subject
-    
-    nS = size(GND.indiv_erps, 4);
-    nC = size(GND.indiv_erps, 3); 
-    sMean = mean(GND.indiv_erps, 3); %mean within subject
-    gMean = mean(sMean, 4); %grand mean across subject
-    sMean = repmat(sMean, 1, 1, nC, 1);
+    %calculate the standard error within participant
+    % using the method of Cusineau and the correction by Morey
+    %Cousineau, D. Tutorials in Quantitative Methods for Psychology
+    %2005, Vol. 1(1), p. 42-45. 
+    %the correction removes the each subjects mean from their own data and
+    %rescales by adding the grand mean back in 
+
+    nS = size(GND.indiv_erps, 4); %number of conditions
+    nC = size(GND.indiv_erps, 3); %number of subjects
+
+    sMean = mean(GND.indiv_erps, 3); %mean within subject (across conditions)
+    gMean = mean(sMean, 4); %grand mean across subject and condition
+
+    sMean = repmat(sMean, 1, 1, nC, 1); %scale them back up to original size to make subtraction easier
     gMean = repmat(gMean, 1, 1, nC, nS);
-    normMean = GND.indiv_erps - sMean + gMean;
+ 
+    %from Couisineau Y = Xij - MXi + GMX
+    %where  Y is the new data
+    %       Xij is the data from the ith subject and jth condition
+    %       MXi is the mean of the ith subject
+    %       GM is the grand mean
+    normMean = GND.indiv_erps - sMean + gMean; 
     normSD = squeeze(std(normMean, 0,4)); %new SD across subjects
     %this is the standard error within
+    %I know the variable say Confidence interval, but I decided to just
+    %show the std error isntead of confiudence interval.
     GND.grands_within_CI = normSD/sqrt(nS) * sqrt(nC/(nC-1));
-    %this is the 95% confidence interval within
+
+    %Uncomment the next line to show 95% CI instead
     %GND.grands_within_CI = tinv(.975, nS-1) * normSD / sqrt(nS) * sqrt(nC/(nC-1));
 
 %**************************************************************************
