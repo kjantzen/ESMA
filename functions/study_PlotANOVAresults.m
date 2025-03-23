@@ -1,9 +1,9 @@
-%study_PlotANOVAresults(r)
+%study_PlotANOVAresults(stat)
 %   plots the results of an GLM test based on the information in the 
-%   structure r
+%   structure stat
 %
-% r should be a statistics structure passed from an ERP bin file created
-% within the esma environment
+%   Stat should be a statistics structure passed from an ERP bin file (GND)
+%   created within the esma environment
 %
 function study_PlotANOVAresults(r)
 
@@ -191,18 +191,20 @@ d = r.within;
 
 %add a column that holds the name of the file associated with each
 %condition
-if contains(r.factors(end).Factor, 'Channel')
+nchan = length(unique(r.chans_used));
+if nchan > 1
+%if contains(r.factors(end).Factor, 'Channel')
     %if there are channels we have to do this once for each channel
     r.has_chans = true;
-    r.nchan = length(r.factors(end).Levels);
+    r.nchan = nchan;
     r.nfactors = length(r.factors);% -1;
-    d.Conditions = repmat(r.conditions', r.nchan,1);
+%    d.Conditions = repmat(r.conditions', r.nchan,1);
  %   d.Channel = r.chans_used';
 else
     %if not, once is enough
     r.has_chans = false;
     r.nfactors = length(r.factors);
-    d.Conditions = r.conditions';
+%    d.Conditions = r.conditions';
 end
 
 %initialize the plotting drop downs
@@ -226,7 +228,7 @@ if exist('violinplot.m', 'file') ~= 2
     h.check_violin.Value = false;
 end
 
-d = movevars(d, 'Conditions', 'Before', d.Properties.VariableNames{1});
+%d = movevars(d, 'Conditions', 'Before', d.Properties.VariableNames{1});
 d.Mean = num2cell(d.Mean);
 d.StdDev = num2cell(d.StdDev);
 d.StdErr = num2cell(d.StdErr);
@@ -286,7 +288,7 @@ if length(temp) ~= length(var)
 end
 
 %it is easier to work with the data if it is not in a table
-within = table2cell(r.within);
+within = r.level_matrix;
 %calculate within subject confidence intervals
 CI = withinCI(r.data);
 
@@ -304,9 +306,11 @@ else
 end
 
 if r.nfactors > 2
-    [~, id, ~] = unique(r.within(:,var(3)));
-    nPlots = length(id);
-    plotLabel = within(sort(id), var(3));
+%    [~, id, ~] = unique(r.within(:,var(3)));
+    nPlots = length(r.factors(var(3)).Levels);
+    %nPlots = length(id);
+    plotLabel = r.factors(var(3)).Levels;
+    %plotLabel = within(sort(id), var(3));
 else
     nPlots = 1;
     plotLabel = {'Data'};
@@ -340,8 +344,8 @@ for ii = 1:nPlots
         if nColors == 1
             indx = temp_table(:, var(1)) == string(axisLabel{jj});
             rows = temp_table(indx,:);
-            data(ii).Mean(jj,1) = mean([rows{:, r.nfactors+1}]);
-            data(ii).StdErr(jj,1) = mean([rows{:,r.nfactors+3}]);
+            data(ii).Mean(jj,1) = mean([rows{:, r.nfactors+1}], 'omitnan');
+            data(ii).StdErr(jj,1) = mean([rows{:,r.nfactors+3}], 'omitnan');
             data(ii).CI(jj,1) = CI(indx);
             %use rows as a column index into the raw data.
             data(ii).RawValues(jj, 1, :) = table2array(temp_raw_data(:, indx));
@@ -350,13 +354,16 @@ for ii = 1:nPlots
             for kk = 1:nColors %loop over color variable
                 indx = temp_table(:, var(1)) == string(axisLabel{jj}) & temp_table(:, var(2)) == string(colorLabel{kk});
                 rows = temp_table(indx,:);
+                data(ii).RawValues(jj, kk, :) = table2array(temp_raw_data(:, indx));
+                data(ii).Mean(jj,kk) = mean(data(ii).RawValues(jj, kk, :), 'omitnan');
+                data(ii).StdErr(jj,kk) = std(data(ii).RawValues(jj, kk,:),  1,'omitnan')/sqrt(sum(~isnan(data(ii).RawValues(jj,kk,:))));
+
                 %calculating the mean allows for more than one row entry
                 %to be combined.  This will take care of the fact that
                 %there may be more than 3 variables.
-                data(ii).Mean(jj,kk) = mean([rows{:, r.nfactors + 1}]);
-                data(ii).StdErr(jj,kk) = mean([rows{:, r.nfactors + 3}]);
+   %             data(ii).Mean(jj,kk) = mean([rows{:, r.nfactors + 1}], 'omitnan');
+  %              data(ii).StdErr(jj,kk) = mean([rows{:, r.nfactors + 3}], 'omitnan');
                 data(ii).CI(jj,kk) = CI(indx);
-                data(ii).RawValues(jj, kk, :) = table2array(temp_raw_data(:, indx));
             end
         end
     end
@@ -375,10 +382,10 @@ arguments
 end
 d = table2array(dTable);
 [ns, nc] = size(d);
-sMean = repmat(mean(d, 2), 1, nc); %subject mean
-gMean = repmat(mean(mean(d)), ns,nc); %grand mean
+sMean = repmat(mean(d, 2, 'omitnan'), 1, nc); %subject mean
+gMean = repmat(mean(d,'all','omitnan'), ns,nc); %grand mean
 nd = d-sMean+gMean; %remove subject mean and add grand mean back
-sd = std(nd);
+sd = std(nd, 'omitNaN');
 CI = tinv(1-alpha/tails, ns-1) * sd / sqrt(ns) * sqrt(nc/(nc-1));
 
 %**************************************************************************
@@ -508,28 +515,61 @@ function rNew = arrangeData(r)
 %in future, it will organize the data to allow for plotting of both between
 %and within variables.
 
-    rNew = r;
-    if r.hasBetween
-        %find out how many between variables there are
-        nBetween = size(r.betweenVars,2);
+rNew = r;
+if r.hasBetween
+    %find out how many between variables there are
+    nBetween = size(r.betweenVars,2);
+    if nBetween ==1
+        nWithinLevels = size(r.within,1);
+        nWithinFactors = length(r.factors);
+        betweenLevels = unique(r.betweenVars);
+        nInEach = groupcounts(r.betweenVars);
+        newTableHeight = max(nInEach); %account for the fact that groups can have different n
 
+        %increase the size of the matrix to account for the new
+        %between variable.
+        rNew.level_matrix = repmat(r.level_matrix, length(betweenLevels), 1);
+        %add the new between factor to the end
+        rNew.data = [];
+        
+        for ii = 1:length(betweenLevels)
+            indx = (ii-1) * nWithinLevels +1;
+            rNew.level_matrix(indx:indx + nWithinLevels -1,nWithinFactors+1) = betweenLevels(ii);
+            tRow = matches(r.data.between1, betweenLevels{ii});
+            temp = r.data(tRow,2:end);
+            temp.Properties.VariableNames = sprintfc('Var%i', indx:indx+nWithinLevels-1);
+            %add new empty rows if necessary
+            missing = newTableHeight - height(temp);
+            if missing > 0
+                temp(end+1:end+missing,:) = repmat({NaN},missing,nWithinLevels);%temp(1:missing,:);
+                %temp(end-missing+1:end,:) = NaN(missing,nWithinLevels);
+            end
+            rNew.data = [rNew.data, temp];
+        end
+        %now rearange the data so that between factors are also in columns
+    
+        rNew.factors(end+1).Factor = 'Between';
+        rNew.factors(end).Levels = betweenLevels';
+        %
+    else
         %strip off the between columns that were necessary for running the
         %stats. The betweencondition data still in the r.betweenVars
         %variable
         rNew.data = removevars(rNew.data,1:nBetween);
+    end
 
-    end
-    rNew.nlevels = cellfun(@length, {r.factors.Levels});
-    
-    %add some measures to teh data table
-    if r.hasBetween
-        tempdata = r.data(:,2:end);
-    else
-        tempdata = r.data;
-    end
-    rNew.within.StdDev = table2array(std(tempdata))';
-    rNew.within.StdErr = rNew.within.StdDev ./ sqrt(height(r.within));
-    rNew.within.Median = table2array(median(tempdata))';
+end
+rNew.nlevels = cellfun(@length, {r.factors.Levels});
+
+rNew.within = cell2table(rNew.level_matrix);
+rNew.within.Properties.VariableNames = {rNew.factors.Factor};
+%add some measures to the data table
+rNew.within.Mean =  table2array(mean(rNew.data, 'omitnan'))';
+rNew.within.StdDev = table2array(std(rNew.data, 1, 'omitnan'))';
+rNew.within.StdErr = rNew.within.StdDev ./ sqrt(height(r.within));
+rNew.within.Median = table2array(median(rNew.data, 'omitnan'))';
+
+
 
 %*************************************************************************
 function [H,W,L,B] =  setFigureSizeAndPosition(scheme)
