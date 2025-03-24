@@ -1662,12 +1662,21 @@ end
 if useParent
     ghandle = ghandle.Parent;
 end
-
 scheme = eeg_LoadScheme;
+if matches(ghandle.Tag, 'ERP')
+    ContentType =   'vector';
+    BColor = 'none';
+else
+    ContentType = 'image';
+    BColor = scheme.Panel.BackgroundColor.Value;
+end
 
+paramsToResore = preparePlotForExport(ghandle);
 copygraphics(ghandle,...
-    "ContentType","image",...
-    'BackgroundColor', scheme.Panel.BackgroundColor.Value);
+    "ContentType",ContentType,...
+    'BackgroundColor', BColor);
+ghandle = restorePlotAfterExport(ghandle, paramsToResore);
+
 % *************************************************************************
 function callback_savePlot(~, ~, objHandle, useParent)
 if nargin < 4 
@@ -1682,52 +1691,62 @@ if useParent
     ghandle = ghandle.Parent;
 end
 
+if matches(ghandle.Tag, 'ERP')
+    ContentType =   'vector';
+else
+    ContentType = 'image';
+end
+
 %get a filename from the user
 [file, path ] = uiputfile({'*.png';'*.jpeg';'*.tif'; '*.pdf'; '*.eps'});
 if file == 0
     return
 end
+paramsToResore = preparePlotForExport(ghandle);
+saveFileName = fullfile(path, file);
 
-%adjust font size and background color if possible
-%this makes the figure look better and will save it with a transparent
-%backgrouund depending on filetype
-fs = ghandle.FontSize;
-ghandle.FontSize = fs * 1.5;
+exportgraphics(ghandle, saveFileName, 'ContentType', ContentType, 'BackgroundColor', 'none');
+ghandle = restorePlotAfterExport(ghandle, paramsToResore);
+
+% ************************************************************************
+function oldParams = preparePlotForExport(ghandle)
+
+oldParams = [];
+
+oldParams.FontSize = ghandle.FontSize;
+ghandle.FontSize = oldParams.FontSize * 1.5;
 if isprop(ghandle, 'Color')
-    bc = ghandle.Color;
+    oldParams.Color = ghandle.Color;
     ghandle.Color = 'none';
 end
 %do the same to any children - this is for saving multi maps
 if ~isempty(ghandle.Children)
-    hasChildren = true;
     for ii  = 1:length(ghandle.Children)
         if isprop(ghandle.Children(ii), 'FontSize')
-            old_fs(ii) = ghandle.Children(ii).FontSize;
-            ghandle.Children(ii).FontSize = old_fs(ii) * 1.5;
+            oldParams.Children_FontSize(ii) = ghandle.Children(ii).FontSize;
+            ghandle.Children(ii).FontSize = oldParams.Children_FontSize(ii) * 1.5;
         else
-            old_fs(ii) = -1;
+            oldParams.Children_FontSize(ii) = -1;
         end
     end
-else
-    hasChildren = false;
 end
-drawnow;
-saveFileName = fullfile(path, file);
-exportgraphics(ghandle, saveFileName, 'ContentType', 'vector', 'BackgroundColor', 'none');
 
+
+% ************************************************************************
+function ghandle = restorePlotAfterExport(ghandle, oldParams)
 %put the axis back the way we found them
-ghandle.FontSize = fs;
-if isprop(ghandle, 'Color')
-    ghandle.Color = bc;
-end
-if hasChildren
-   for ii  = 1:length(ghandle.Children)
-       if old_fs > -1
-            ghandle.Children(ii).FontSize = old_fs(ii);
-       end
-   end
-end
 
+ghandle.FontSize = oldParams.FontSize;
+if isprop(ghandle, 'Color')
+    ghandle.Color = oldParams.Color;
+end
+if ~isempty(ghandle.Children)
+    for ii  = 1:length(ghandle.Children)
+        if oldParams.Children_FontSize(ii) > -1
+            ghandle.Children(ii).FontSize = oldParams.Children_FontSize(ii);
+        end
+    end
+end
 
 %% CREATION STUFF
 % ************************************************************************
@@ -1925,7 +1944,8 @@ handles.axis_erp = uiaxes(...
     'XColor', scheme.Axis.AxisColor.Value,...
     'YColor',scheme.Axis.AxisColor.Value,...
     'FontName',scheme.Axis.Font.Value,...
-    'FontSize', scheme.Axis.FontSize.Value);
+    'FontSize', scheme.Axis.FontSize.Value,...
+    'Tag','ERP');
 %handles.axis_erp.Layout.Column = 2;
 %handles.axis_erp.Layout.Row = [2 4];
 handles.axis_erp.Toolbar.Visible = 'on';
