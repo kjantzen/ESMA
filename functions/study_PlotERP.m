@@ -1303,6 +1303,8 @@ if plot_GFP
 % plot the topographic maps indicated by the active cursors
 function plot_topos(h)
 
+scheme = eeg_LoadScheme;
+
 %set the resolution of the map
 gridscale = 32;
 for ii = 1:4
@@ -1380,31 +1382,30 @@ for ii = 1:n_maps
     for jj = 1:n_conds %this will be for comparing conditions        
         pcount = pcount + 1;
         v = d(:,ii,jj);
-        if scale_option ==2; map_scale = max(abs(v)); end
-           
+        if scale_option ==2; map_scale = max(abs(v)); end          
         if pcount <= length(my_h)
             my_h(pcount) = subplot(nrows, ncols, pcount, 'Parent', h.panel_topo);
         else
             if isempty(my_h)
                 my_h = subplot(nrows, ncols, pcount,'Parent', h.panel_topo);
-                my_h.Toolbar.Visible = 'off';
             else
                 my_h(pcount) = subplot(nrows, ncols, pcount,'Parent', h.panel_topo);
-                my_h(pcount).Toolbar.Visible = 'off';
             end
         end     
         cla(my_h(pcount));
+        my_h(pcount).FontSize = scheme.Axis.FontSize.Value;
+        my_h(pcount).LabelFontSizeMultiplier = 1;
+        my_h(pcount).Toolbar.Visible = 'off';
         eval_string = [];
         if jj==n_conds && has_stat %this is the statistical map
             ms = [0,max(max(d(:,:,n_conds))) * .8];
-            %ms = [0,max(abs(v))];
             if ms(2)==0; ms(2) = 1; end %just in case there are no stat sig results
             title_string = 'F-score';
             cmap = feval(p.study.Render.Map.StatPalette);
             eval_string = '''conv'', ''off''';
             extraChans = find(pv(:,ii));
         else
-            ms = [-map_scale; map_scale];
+            ms = [-map_scale; map_scale]; %#ok<*NASGU>
             title_string =  h.list_condition.Items{cond_num(jj)};
             cmap = feval(p.study.Render.Map.Palette);
             extraChans = ch_out;
@@ -1416,7 +1417,7 @@ for ii = 1:n_maps
         
         %change it based on the different options
         if length(extraChans) < length(p.GND.chanlocs)
-            mapstring = [mapstring, ',  ''emarker2'', {extraChans, ''o'', ''k'', msize, 1}'];
+            mapstring = [mapstring, ',  ''emarker2'', {extraChans, ''o'', ''k'', msize, 1}']; %#ok<*AGROW>
         end
         if ~isempty(eval_string)
             mapstring = [mapstring, ', ', eval_string, ');'];
@@ -1427,13 +1428,19 @@ for ii = 1:n_maps
         %evaluate the command string
         eval(mapstring)
         if scale_option == 2 
-            colorbar(my_h(pcount));
+            cb = colorbar(my_h(pcount));
+            cb.FontSize = scheme.Axis.FontSize.Value - 2;
+            cb.Color = h.axis_erp.XColor;
+            cb.Label.FontSize = scheme.Axis.FontSize.Value - 2;
         elseif jj==n_conds && has_stat 
             cb = colorbar(my_h(pcount));
             cb.Units = 'normalized';       
             cb.Position(1) = my_h(pcount).Position(1) + my_h(pcount).Position(3);
             cb.Label.String = 'F-score';
             cb.Color = h.axis_erp.XColor;
+            cb.Label.FontSize = scheme.Axis.FontSize.Value - 2;
+            cb.FontSize = scheme.Axis.FontSize.Value - 2;
+            
         end
         
         if ii==1  && comp_conds
@@ -1442,12 +1449,19 @@ for ii = 1:n_maps
             my_h(pcount).Title.Color = h.axis_erp.XColor;
         end
         if averageBetweenCursors
-            my_h(pcount).XLabel.String = sprintf('%5.1f-%5.1f ms', map_time(1),map_time(2));
+            my_h(pcount).XLabel.String = sprintf('%5.1f - %5.1f ms', map_time(1),map_time(2));
         else
             my_h(pcount).XLabel.String = sprintf('%5.1f ms', map_time(ii) );
         end
         my_h(pcount).XLabel.Visible = true;
-        my_h(pcount).XLabel.Color = h.axis_erp.XColor;     
+        my_h(pcount).XLabel.Color = h.axis_erp.XColor;   
+        my_h(pcount).XLabel.VerticalAlignment = 'bottom';
+        my_h(pcount).ContextMenu = h.map_cm;
+        my_h(pcount).PickableParts = 'all';
+        
+        for ch = 1:length(my_h(pcount).Children)
+            my_h(pcount).Children(ch).PickableParts = 'none';
+        end
     end
 end
 
@@ -1458,6 +1472,8 @@ if scale_option ~=2
     cb.Position = [40, 20, 16, ht-40];
     cb.Label.String = '\muV';
     cb.Color = h.axis_erp.XColor;
+    cb.Label.FontSize = scheme.Axis.FontSize.Value - 2;
+    cb.FontSize = scheme.Axis.FontSize.Value - 2;    
 end
 
 
@@ -1480,6 +1496,7 @@ mnAmp = h.spinner_minamp.Value;
 mxAmp = h.spinner_maxamp.Value;
 ANOVAStyle = h.check_plotANOVAStyle.Value;
 
+scheme = eeg_LoadScheme;
 
 p = h.figure.UserData;
 [d, se,~,s,labels,~,cond_sel, ~] = getdatatoplot(p.study, p.GND, h);
@@ -1517,6 +1534,7 @@ end
 
 %main plotting loop - plot the time series for each condition
 cla(h.axis_erp);
+
 hold(h.axis_erp, 'on');
 for ii = 1:size(d,3)
     %assign colors and styles to allow user to better figure out which
@@ -1601,7 +1619,7 @@ h.axis_erp.XGrid = 'on'; h.axis_erp.YGrid = 'on';
 h.axis_erp.XLim = [mnTime, mxTime];
 h.axis_erp.XLabel.String = 'Time (ms)';
 h.axis_erp.YDir = 'normal';
-h.axis_erp.FontSize = 14;
+h.axis_erp.FontSize = scheme.Axis.FontSize.Value;
 
 
 %draw a vertical line at 0 ms;
@@ -1629,7 +1647,7 @@ lg = legend(h.axis_erp, legend_handles, legend_names, 'box', 'off', 'Location', 
 lg.Color ='none';
 lg.TextColor = h.axis_erp.XColor;
 lg.LineWidth = 2;
-lg.FontSize = 14;
+lg.FontSize = scheme.Axis.FontSize.Value;
 
 %rebuild and plot existing cursors to fit the currently scaled data
 rebuild_cursors(h)
@@ -1641,7 +1659,74 @@ function callback_togglestatspanel(hObject, ~, h)
         h.tab_stats(ii).Visible = false;
     end
     h.tab_stats(currentTab).Visible = true;
-%%
+% *************************************************************************
+function callback_copyPlot(~, ~, objHandle, useParent)
+if nargin < 4 
+    useParent = false;
+end
+if isstruct(objHandle) 
+    ghandle = gco(objHandle.figure);
+else
+    ghandle = objHandle;
+end
+if useParent
+    ghandle = ghandle.Parent;
+end
+
+scheme = eeg_LoadScheme;
+
+copygraphics(ghandle,...
+    "ContentType","image",...
+    'BackgroundColor', scheme.Panel.BackgroundColor.Value);
+% *************************************************************************
+function callback_savePlot(~, ~, objHandle, useParent)
+if nargin < 4 
+    useParent = false;
+end
+if isstruct(objHandle) 
+    ghandle = gco(objHandle.figure);
+else
+    ghandle = objHandle;
+end
+if useParent
+    ghandle = ghandle.Parent;
+end
+
+scheme = eeg_LoadScheme;
+
+[file, path ] = uiputfile({'*.png';'*.jpeg';'*.tif'; '*.pdf'; '*.eps'});
+if file == 0
+    return
+end
+fs = ghandle.FontSize;
+ghandle.FontSize = fs * 1.5;
+if ~isempty(ghandle.Children)
+    hasChildren = true;
+    for ii  = 1:length(ghandle.Children)
+        if isfield(ghandle.Children(ii), 'FontSize')
+            old_fs(ii) = ghandle.Children(ii).FontSize;
+            ghandle.Children(ii).FontSize = old_fs(ii) * 1.5;
+        else
+            old_fs(ii) = -1;
+        end
+    end
+else
+    hasChildren = false;
+end
+drawnow;
+saveFileName = fullfile(path, file);
+exportgraphics(ghandle, saveFileName, BackgroundColor = scheme.Panel.BackgroundColor.Value);
+ghandle.FontSize = fs;
+if hasChildren
+   for ii  = 1:length(ghandle.Children)
+       if old_fs > -1
+            ghandle.Children(ii).FontSize = old_fs(ii);
+       end
+   end
+end
+
+
+%% CREATION STUFF
 % ************************************************************************
 function initialize_gui(handles, GND)
 
@@ -1661,6 +1746,7 @@ handles.edit_massunivend.Value = GND.time_pts(end);
 
 %**************************************************************************
 function handles = assign_callbacks(handles)
+
 %assign callbacks to the uicontrols and menu items
 handles.figure.WindowButtonDownFcn = {@callback_handlemouseevents, handles};
 handles.figure.WindowButtonUpFcn = {@callback_handlemouseevents, handles};
@@ -1709,6 +1795,21 @@ handles.menu_GFP.MenuSelectedFcn = {@callback_toggleautoscale, handles};
 handles.menu_cursoradd.MenuSelectedFcn = {@callback_managecursors, handles};
 handles.menu_cursorsub.MenuSelectedFcn = {@callback_managecursors, handles};
 handles.menu_cursormean.MenuSelectedFcn = {@callback_toggleAverageBetweenCursors, handles};
+
+handles.menu_copyERP.MenuSelectedFcn = {@callback_copyPlot, handles.axis_erp};
+handles.menu_copyMap.MenuSelectedFcn = {@callback_copyPlot, handles.panel_topo};
+handles.menu_exportERP.MenuSelectedFcn = {@callback_savePlot, handles.axis_erp};
+handles.menu_exportMap.MenuSelectedFcn = {@callback_savePlot, handles.panel_topo};
+
+handles.cmenu_copyerp.MenuSelectedFcn = {@callback_copyPlot, handles, false};
+handles.cmenu_copymap.MenuSelectedFcn = {@callback_copyPlot, handles, false};
+handles.cmenu_copyallmap.MenuSelectedFcn = {@callback_copyPlot, handles, true};
+handles.cmenu_exporterp.MenuSelectedFcn = {@callback_savePlot, handles, false};
+handles.cmenu_exportmap.MenuSelectedFcn = {@callback_savePlot, handles, false};
+handles.cmenu_exportallmap.MenuSelectedFcn = {@callback_savePlot, handles, true};
+
+handles.axis_erp.ContextMenu = handles.erp_cm;
+handles.axis_topo.ContextMenu = handles.map_cm;
 
 for ii = 1:4
     handles.menu_mapquality(ii).MenuSelectedFcn = {@callback_togglemapoption, handles};
@@ -1823,7 +1924,7 @@ handles.axis_erp = uiaxes(...
     'FontSize', scheme.Axis.FontSize.Value);
 %handles.axis_erp.Layout.Column = 2;
 %handles.axis_erp.Layout.Row = [2 4];
-handles.axis_erp.Toolbar.Visible = 'off';
+handles.axis_erp.Toolbar.Visible = 'on';
 handles.axis_erp.Title.Color = scheme.Axis.AxisColor.Value;
 handles.axis_erp.Title.BackgroundColor = 'none';
 %**************************************************************************
@@ -2335,11 +2436,19 @@ handles.button_massuniv = uibutton(...
 % create menus
 %*************************************************************************
 handles.menu_file = uimenu('Parent', handles.figure, 'Label', 'File');
+handles.menu_opennew = uimenu('Parent',handles.menu_file, 'Label', 'Open New');
 handles.menu_refresh = uimenu('Parent', handles.menu_file, 'Label', 'Refresh Study and ERP');
-handles.menu_conditions = uimenu('Parent', handles.menu_file, 'Label', '&Delete selected condition', 'Separator', 'on', 'Tag', 'bin', 'Accelerator', 'D');
-handles.menu_stats = uimenu('Parent', handles.menu_file, 'Label', 'Delete selected Mass &Univ Test', 'Tag', 'MU', 'Accelerator', 'U');
-handles.menu_ANOVA = uimenu('Parent', handles.menu_file, 'Label', 'Delete selected &GLM Test', 'Tag', 'ANOVA', 'Accelerator', 'G');
-handles.menu_editcond = uimenu('Parent', handles.menu_file, 'Label', 'Edit Conditions', 'Separator', 'on');
+handles.menu_exportERP = uimenu('Parent', handles.menu_file, 'Label', 'Export ERP plot', 'Separator', 'on');
+handles.menu_exportMap = uimenu('Parent', handles.menu_file, 'Label', 'Export Topo plot');
+
+
+handles.menu_edit = uimenu('Parent', handles.figure, 'Label', 'Edit');
+handles.menu_copyERP = uimenu('Parent', handles.menu_edit, "Label", 'Copy ERP plot to clipboard');
+handles.menu_copyMap = uimenu('Parent', handles.menu_edit, "Label", 'Copy Topo plots to clipboard');
+handles.menu_editcond = uimenu('Parent', handles.menu_edit, 'Label', 'Edit Conditions', 'Separator', 'on');
+handles.menu_conditions = uimenu('Parent', handles.menu_edit, 'Label', '&Delete selected condition', 'Separator', 'on', 'Tag', 'bin', 'Accelerator', 'D');
+handles.menu_stats = uimenu('Parent', handles.menu_edit, 'Label', 'Delete selected Mass &Univ Test', 'Tag', 'MU', 'Accelerator', 'U');
+handles.menu_ANOVA = uimenu('Parent', handles.menu_edit, 'Label', 'Delete selected &GLM Test', 'Tag', 'ANOVA', 'Accelerator', 'G');
 
 handles.menu_plot = uimenu('Parent', handles.figure, 'Label', 'ERP Options');
 handles.menu_autoscale = uimenu('Parent', handles.menu_plot, 'Label', 'Auto scale amplitude', 'Checked', true);
@@ -2364,3 +2473,12 @@ handles.menu_mapscale(1) = uimenu('Parent', handles.menu_scale, 'Label', 'ALl ma
 handles.menu_mapscale(2) = uimenu('Parent', handles.menu_scale, 'Label', 'Scale individually', 'Checked', 'off', 'Tag', 'Always');
 handles.menu_mapscale(3) = uimenu('Parent', handles.menu_scale, 'Label', 'Fixed Scale', 'Checked', 'off', 'Tag', 'Fixed');
 
+%make context menus
+handles.erp_cm = uicontextmenu(handles.figure);
+handles.cmenu_copyerp = uimenu(handles.erp_cm, "Text",'Copy ERP to clipboard');
+handles.cmenu_exporterp = uimenu(handles.erp_cm, "Text",'Export ERP');
+handles.map_cm = uicontextmenu(handles.figure);
+handles.cmenu_copymap =  uimenu(handles.map_cm, "Text",'Copy selected map to clipboard');
+handles.cmenu_copyallmap =  uimenu(handles.map_cm, "Text",'Copy all maps to clipboard');
+handles.cmenu_exportmap = uimenu(handles.map_cm, 'Text',"Export selected map");
+handles.cmenu_exportallmap = uimenu(handles.map_cm, 'Text',"Export all maps");
