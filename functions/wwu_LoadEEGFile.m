@@ -11,11 +11,9 @@ if nargin < 1
     help wwu_LoadEEGFile;
     return
 end
-
 if nargin < 2
     field = '';
 end
-
 if ~isfile(filename)
     warning('File %s does not exist\n', filename);
     return

@@ -1701,7 +1701,7 @@ end
 if ~isempty(ghandle.Children)
     hasChildren = true;
     for ii  = 1:length(ghandle.Children)
-        if isprop(ghandle.Children(ii), 'FontSize')
+        if isfield(ghandle.Children(ii), 'FontSize')
             old_fs(ii) = ghandle.Children(ii).FontSize;
             ghandle.Children(ii).FontSize = old_fs(ii) * 1.5;
         else
