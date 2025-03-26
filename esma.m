@@ -700,10 +700,10 @@ for ii = 1:study.nsubjects
     end
 end
 
-FileTypes = {'Biosemi Files', 'Continuous EEG', 'Epoched Trial Data', 'ERP (Average)', 'FFT (Average)', 'ERSP (Average)', 'EEGLab Files', 'Other'};
-Included_Extensions = {'.bdf', '.cnt', '.epc', '.GND', '.FFTGND', '.ersp', '.set'};
+FileTypes = {'Biosemi Files', 'Continuous EEG', 'Epoched Trial Data', 'ERP (Average)', 'ERP (Between Subj)', 'FFT (Average)', 'ERSP (Average)', 'EEGLab Files', 'Other'};
+Included_Extensions = {'.bdf', '.cnt', '.epc', '.GND', 'GRP', '.FFTGND', '.ersp', '.set'};
 Excluded_Extensions = {'.fdt'};
-Acrosssubj_Extensions = {'.GND', '.FFTGND', '.ersp'};
+Acrosssubj_Extensions = {'.GND', 'GRP', '.FFTGND', '.ersp'};
 
 %get the top level treen nodes
 Nodes = h.tree_filetree.Children;
@@ -862,6 +862,8 @@ try
             study_PlotEPC(study, files);
         case '.GND' %averaged subject and grand average data
             study_PlotERP(study, files);
+        case '.GRP'
+            study_PlotGRP(files);
         case '.FFTGND'
             study_PlotFFT(study, files);
         case '.ersp'
@@ -910,7 +912,7 @@ cntr = 0;
 n_uniquefiles = 0;
 
 %this is an average file not stored in the subject folders
-if contains(fext,'GND') || contains(fext, '.ersp')
+if contains(fext,'GND') || contains(fext, '.ersp') || contains(fext, '.GRP')
     for jj = 1:length(fnames)
         temp = eeg_BuildPath(eeg_path, study.path, 'across subject', fnames{jj});
         if exist(temp, 'file') > 0

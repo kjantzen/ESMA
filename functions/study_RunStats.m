@@ -24,7 +24,7 @@ function fighandle = study_RunStats(GND, stats)
 %   stats.winstart - the time (in ms) for the start of the time window that 
 %       defines the data used for analysis
 %   
-%   stats.windend - the time (in ms) for the end of the time window that
+%   stats.winend - the time (in ms) for the end of the time window that
 %       defines the data used for analysis
 %
 %   stats.freqwinstart - the frequency (Hz) of the start of the frequency
@@ -205,6 +205,10 @@ outfile = eeg_BuildPath(GND.filepath, GND.filename);
 if isfield(GND, 'freqs')
     TFData = GND;
     save(outfile, 'TFData', '-mat');
+elseif isfield(GND, 'group_desc')
+    GRP = GND;
+    save(outfile, 'GRP', '-mat');
+    wwu_msgdlg('Between subject mass univariate statistics it stored in GRP files.  Please use the GRP file viewer to see the results of your test.', 'MU Between Stats', {'OK'});
 else
     save(outfile, 'GND', '-mat');
 end
@@ -539,52 +543,55 @@ function GND = do_MassUniv(h,GND,stats)
 %   4. Run the stats
 
 cond_info = h.list_model.ItemsData;
-cond_order = cellfun(@str2num, cond_info);
+stats.cond_order = cellfun(@str2num, cond_info);
 
 %set some parameters for the call to the FMUT functions
 if stats.meanwindow
-    winmean = 'yes';
+    stats.winmean = 'yes';
 else
-    winmean = 'no';
+    stats.winmean = 'no';
 end
 
 %figure out which method will be used to correct for multiple comparisons.
 if contains(stats.test, 'fdr')
-    q_or_alpha = 'q';
+    stats.q_or_alpha = 'q';
 else
-    q_or_alpha = 'alpha';
+    stats.q_or_alpha = 'alpha';
 end
 
 if contains(stats.test, 'clust')
     %figure out a good neighborhood
-    head_radius = sprintf('''head_radius'', %f,', GND.chanlocs(1).sph_radius * 2 * pi / 10);
-    ch_hood = sprintf('''chan_hood'', %f,', GND.chanlocs(1).sph_radius/2);
+    stats.head_radius = sprintf('''head_radius'', %f,', GND.chanlocs(1).sph_radius * 2 * pi / 10);
+    stats.ch_hood = sprintf('''chan_hood'', %f,', GND.chanlocs(1).sph_radius/2);
 else
-    ch_hood = '';
-    head_radius = '';
+    stats.ch_hood = '';
+    stats.head_radius = '';
 end
 
-flevels = length(stats.factors);
-clevels = zeros(1, flevels);
-for ii = 1:flevels
-    clevels(ii) = length(stats.factors(ii).Levels);
+stats.flevels = length(stats.factors);
+stats.clevels = zeros(1, stats.flevels);
+for ii = 1:stats.flevels
+    stats.clevels(ii) = length(stats.factors(ii).Levels);
 end
 %clevels = cellfun(@str2double, stats.levels);
-factors = {stats.factors.Factor};
-%factors = cellfun(@strtrim, stats.factors, 'UniformOutput', false);
-factors = cellfun(@(x) replace(x,' ', '_'), factors, 'UniformOutput', false);
-factors = fliplr(factors);  %flip the order becuase FMUT wants them in fastes to slowest moving order
-clevels = fliplr(clevels);
+stats.factors = {stats.factors.Factor};
+stats.factors = cellfun(@(x) replace(x,' ', '_'), stats.factors, 'UniformOutput', false);
+stats.factors = fliplr(stats.factors);  %flip the order becuase FMUT wants them in fastes to slowest moving order
+stats.clevels = fliplr(stats.clevels);
 
-%build the command string for a within subject design
-command_str = [stats.test, '( GND, ''bins'', cond_order, ''factor_names'', factors, ''factor_levels'', clevels,' ch_hood head_radius];
-command_str = [command_str, '''time_wind'', [stats.winstart stats.winend], ''',q_or_alpha,''', stats.alpha, ''plot_raster'', ''no'','];
-command_str = [command_str, '''include_chans'', stats.eegchans, ''mean_wind'', winmean, ''save_GND'', ''no'');'];
+if stats.useBetween
+    GND = study_RunFMUTBetween(GND, stats);
+else
+    %build the command string for a within subject design
+    command_str = [stats.test, '( GND, ''bins'', stats.cond_order, ''factor_names'', stats.factors, ''factor_levels'', stats.clevels,' stats.ch_hood stats.head_radius];
+    command_str = [command_str, '''time_wind'', [stats.winstart stats.winend], ''',stats.q_or_alpha,''', stats.alpha, ''plot_raster'', ''no'','];
+    command_str = [command_str, '''include_chans'', stats.eegchans, ''mean_wind'', stats.winmean, ''save_GND'', ''no'');'];
 
-GND = eval(command_str);
-
+    GND = eval(command_str);
+end
 cnt = length(GND.F_tests);
 GND.F_test_names{cnt} = getTestName();
+
 %**************************************************************************
 function statsName = getTestName()
 %get a name for the stats test
