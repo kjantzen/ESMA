@@ -700,7 +700,7 @@ for ii = 1:study.nsubjects
     end
 end
 
-FileTypes = {'Biosemi Files', 'Continuous EEG', 'Epoched Trial Data', 'ERP (Average)', 'ERP (Between Subj)', 'FFT (Average)', 'ERSP (Average)', 'EEGLab Files', 'Other'};
+FileTypes = {'Biosemi Files', 'Continuous EEG', 'Epoched Trial Data', 'ERP (Average)', 'ERP Group Stats', 'FFT (Average)', 'ERSP (Average)', 'EEGLab Files', 'Other'};
 Included_Extensions = {'.bdf', '.cnt', '.epc', '.GND', 'GRP', '.FFTGND', '.ersp', '.set'};
 Excluded_Extensions = {'.fdt'};
 Acrosssubj_Extensions = {'.GND', 'GRP', '.FFTGND', '.ersp'};

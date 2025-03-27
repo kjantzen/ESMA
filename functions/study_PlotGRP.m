@@ -146,6 +146,30 @@ function callback_handle_mouseclicks(hObject, event, h)
     moveCursor(h, time_pt);
     drawTopo(h, time_pt);
 % ***********************************************************************
+function callback_handle_keypresses(hObject, event, h)
+    
+if matches(event.Key, 'rightarrow') || matches(event.Key, 'leftarrow')
+    GRP = h.figure.UserData;
+    cursor = h.axis_raster.UserData;
+    [~, cpnt] = min(abs(cursor.time - GRP.time_pts));
+    if matches(event.Key, 'rightarrow')
+        cpnt = cpnt + 1;
+        if cpnt > length(GRP.time_pts)
+            cpnt = length(GRP.time_pts);
+        end
+    else
+        cpnt = cpnt - 1;
+        if cpnt < 1
+            cpnt = 1;
+        end
+    end
+    cursor.time = GRP.time_pts(cpnt);
+    cursor.line.XData = [cursor.time, cursor.time];
+    h.axis_raster.UserData = cursor;
+    drawTopo(h, cursor.time);
+end
+
+% ***********************************************************************
 function drawCursor(h, time)
     %redraws a cursor so lets make sure there are no existing cursors
     %already
@@ -290,3 +314,4 @@ h.bg_effect.SelectionChangedFcn = {@callback_replot, h};
 h.axis_raster.ButtonDownFcn = {@callback_handle_mouseclicks, h};
 h.dropdown_test.ValueChangedFcn = {@callback_newtest, h};
 h.dropdown_effect.ValueChangedFcn = {@callback_replot, h};
+h.figure.KeyPressFcn = {@callback_handle_keypresses, h};
