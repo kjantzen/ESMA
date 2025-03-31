@@ -116,13 +116,16 @@ filename = fnames{snum};
 
 %make sure something was passed
 if isempty(filename)
-    uialert(h.figure, 'No data to load and plot!');
+    wwu_msgdlg('Not sure what happened, but no file information was found!',...
+     'No file found', {'OK'}, isError=true);
     status = false;
     return
 end
 
 %make sure it is a file that exists
 if exist(filename, 'file') ~= 2
+    wwu_msgdlg('The selected file cannot be found!  Please double check the file location.',...
+     'No file found', {'OK'}, isError=true);
     uialert(h.figure, 'The selected file does not seem to exist.  Please double check the file location.');
     status = false;
     return
@@ -159,13 +162,17 @@ pb.Message = 'Loading new subject file';
 EEG = wwu_LoadEEGFile(filename);
 %make sure there are components
 if ~isfield(EEG, "icasphere") || isempty(EEG.icasphere)
-    uialert(h.figure, 'No ICA components found','Load Error');
-    status = false
+ %   dummy = uiconfirm(h.figure, 'No ICA components were found.  Please decompose and classify your data first'...
+ %       ,'Load Error', 'Icon', 'warning', 'Options', "OK");
+ wwu_msgdlg('No ICA components were found!  Please decompose and classify your data first.',...
+     'No ICA found', {'OK'}, isError=true);
+    status = false;
     return
 end
 %make sure the classification has been completed
 if ~isfield(EEG.etc, 'ic_classification')
-    uialert(h.figure, 'No ICA classification has been completed','Load Error');
+    wwu_msgdlg('No ICA classifications were found!  Please classify your data first.',...
+     'No classifications found', {'OK'}, isError=true);
     status = false;
     return
 end    
