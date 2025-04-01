@@ -57,7 +57,7 @@ for ii = 1:nFiles
     pb.Message = 'loading subject data...';
     pb.Value = curpbVal/maxpbVal;
 
-    EEG = wwu_LoadEEGFile(dirtyfiles{ii});
+    EEG = eeg_LoadEEGFile(dirtyfiles{ii});
     fprintf('working on %i. %s\n', ii, dirtyfiles{ii});
     
     curpbVal = curpbVal + 1;

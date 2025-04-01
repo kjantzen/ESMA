@@ -259,7 +259,7 @@ pb = uiprogressdlg(h.figure, 'Title', 'Marking bad trials', 'Message', 'starting
  
         
         [fpath,fname,fext] = fileparts(fnames{jj});        
-        EEG = wwu_LoadEEGFile(fnames{jj});
+        EEG = eeg_LoadEEGFile(fnames{jj});
         
         if trend_winsize > EEG.pnts || trend_winsize==0
             trend_winpnts = EEG.pnts;

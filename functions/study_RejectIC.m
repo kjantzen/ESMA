@@ -23,7 +23,7 @@ fprintf('getting IC information from first file\n');
 
 [fpath, fname, fext] = fileparts(filelist{1});
 try
-    EEGhead = wwu_LoadEEGFile(filelist{1}, {'icasphere', 'etc'});
+    EEGhead = eeg_LoadEEGFile(filelist{1}, {'icasphere', 'etc'});
 catch me
     if contains(me.message, 'Unrecognized field name')
         error('study_RejectIC:NoICA', 'Your data files do not appear to have ICA components calculated');
@@ -74,9 +74,7 @@ for ii = 1:length(files)
     
     pb.Message = sprintf('Marking components for data file %i of %i', ii, length(files));
     pb.Value = ii/length(files);
-    [fpath, fname, fext] = fileparts(files{ii});
-  %  EEG = pop_loadset('filename', [fname, fext], 'filepath', fpath);
-    EEG = wwu_LoadEEGFile(files{ii});
+    EEG = eeg_LoadEEGFile(files{ii});
     
     if ~isfield(EEG.etc, 'ic_classification')
         fprintf('No classifications found.  Skipping file.\n')

@@ -195,7 +195,7 @@ function callback_filter(hObject, eventdata, h, filenames, study)
                 end
             end
             
-            EEGIn = wwu_LoadEEGFile(filenames{jj});
+            EEGIn = eeg_LoadEEGFile(filenames{jj});
             fprintf('Filtering the data\n');
             
             fprintf('lowcutoff %f, highcutoff %f, revfilt %f\n', ledge, hedge, revfilt)

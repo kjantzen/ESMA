@@ -1,14 +1,39 @@
-%EEG = wwu_LoadEEGFile(filename, field) - loads the fields specified in
-%FIELD from the file specified in filename.  If field is not specified, the
-%entire file is loaded.
-%INPUTS - 
-% filename -    a string containing the name of the file to load
-% field    -    a cell array of field names to load
-%HDNC EEG function to load EEG data files
-function EEG = wwu_LoadEEGFile(filename, field)
+%EEG = eeg_LoadEEGFile(filename, field)
+% 
+%   INPUTS 
+%   filename -    a string containing the name of the file to load
+%   field    -    an optional  cell array of field names to load or
+%   'header' to load all fields except .data and .icaact
+%
+%   OUTPUT 
+%   EEG     -   an EEG file structure.  The structure can be either an
+%   eeglab structure which in ESMA are either .cnt or .epc files, or a Mass
+%   Univeriate toolsbox GND file format which ESMA uses for ERP files.  If
+%   loading fails, EEG will be empty.
+%   
+%   ESMA EEG function to load EEG data files
+%   If the FIELD input is included, only data from the specific fields in the 
+%   in the data structure will be loaded.  For example:
+%   
+%   EEG = eeg_LoadEEGFIle('test.cnt', {'chanlocs'}) 
+%   
+%   would return an EEG structure that contains only
+%   the field chanlocs with all the channel locations from the data file.  
+%   
+%    
+%   This function
+%   can speed up loading when only specific limited information is desired.
+%   If a field argument is not included the entire data strucure is loaded
+%   and returned.  If the requested field does not exist, the entire
+%   contents of the file is return.
+%
+%   NOTE - this function will also recalalculate ica activations when
+%   loading a file.
+function EEG = eeg_LoadEEGFile(filename, field)
 
+EEG = [];
 if nargin < 1
-    help wwu_LoadEEGFile;
+    help eeg_LoadEEGFile;
     return
 end
 if nargin < 2
@@ -18,7 +43,6 @@ if ~isfile(filename)
     warning('File %s does not exist\n', filename);
     return
 end
-
 [fpath,fname,fileext] = fileparts(filename);
 
 %check to see if the user wishes to load only a subset of the data fields
@@ -38,7 +62,7 @@ if ~isempty(field)
         EEG = eval(cmd);
         %if the field does not exist, revert to the default
         if ~isfield(EEG, field)
-            EEG = wwu_LoadEEGFile(filename);
+            EEG = eeg_LoadEEGFile(filename);
             return;
         end
     end

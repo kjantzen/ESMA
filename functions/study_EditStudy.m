@@ -47,12 +47,10 @@ study.filename = [];
 study.name = [];
 study.description = [];
 study.path = [];
-study.nfactors = 0;
 study.nsubjects = 0;
-study.nconditions = 0;
 study.history = [];
 study.subject = [];
-study.version = 2;
+study.version = eeg_GetESMAVersion();
 
 map = orderedcolors('gem12');
 study.Render.ERP.Palette = map(1:8, :);

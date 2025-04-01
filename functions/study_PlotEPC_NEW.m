@@ -611,7 +611,7 @@ if study_checkForUnsavedData(h.figure)
         return
     end
 
-    EEG = wwu_LoadEEGFile(filename);
+    EEG = eeg_LoadEEGFile(filename);
 end
 %***************************************************************************
 function callback_loadnewfile(hObject, eventdata, study, h)
@@ -663,7 +663,7 @@ end
 pb.Message = 'Loading new subject file';
 
 %load the data
-EEG = wwu_LoadEEGFile(filename);
+EEG = eeg_LoadEEGFile(filename);
 
 if isempty(EEG.reject.rejmanual)
     EEG.reject.rejmanual = zeros(1, EEG.trials);

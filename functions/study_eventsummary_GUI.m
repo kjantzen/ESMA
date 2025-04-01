@@ -1,4 +1,4 @@
-function study_eventsummary_GUI(study, filenames)
+function study_eventsummary_GUI(study, filenames, sList)
  
 %p = plot_params;
 scheme = eeg_LoadScheme;
@@ -35,7 +35,7 @@ handles.tab2 = uitab('Parent', handles.tabgrp,...
     'BackgroundColor',scheme.Panel.BackgroundColor.Value);
 
 drawnow;
-[eTable, pTable] = load_eventdata(handles, study, filenames);
+[eTable, pTable] = load_eventdata(handles, study, filenames, sList);
 handles.allTable = uitable('Parent', handles.tab1, 'Data', eTable,...
     'RowStriping','off');
 
@@ -44,7 +44,7 @@ if ~isempty(pTable)
 end
 
 %**************************************************************************
-function [eventsTable, epochsTable] = load_eventdata(h, study, filenames)
+function [eventsTable, epochsTable] = load_eventdata(h, study, filenames, sList)
 
      pbar = uiprogressdlg(h.figure,...
             'Title', 'loading event data ',...
@@ -59,14 +59,14 @@ function [eventsTable, epochsTable] = load_eventdata(h, study, filenames)
         [~, fname, fext] = fileparts(filenames{ii});
         fname = [fname, fext];
         fprintf('Loading event data for file %s\n', filenames{ii});
-        EEG = wwu_LoadEEGFile(filenames{ii}, {'event', 'trials', 'epoch'});
+        EEG = eeg_LoadEEGFile(filenames{ii}, {'event', 'trials', 'epoch'});
         fprintf('getting all event types from the EEG structure...\n')
         allTypes = {EEG.event.type};
         
         %convert numeric events to strings
         allTypes = cellfun(@(x) num2str(x), allTypes, 'UniformOutput',false);
 
-        columnName{ii}= study.subject(ii).ID;
+        columnName{ii}= study.subject(sList(ii)).ID;
         cevents = unique(allTypes, 'sorted');
         if ii == 1
             all_gevents = cevents;

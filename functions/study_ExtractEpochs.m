@@ -45,7 +45,7 @@ p.Events = split(p.Events);
 if isempty(p.ExcludeBad)
     %get an idea of what kind of data this is
     [fpath, fname, fext] = fileparts(selfiles{1});
-    EEGHead = wwu_LoadEEGFile(selfiles{1});
+    EEGHead = eeg_LoadEEGFile(selfiles{1});
 
     %EEGHead = pop_loadset('filename', [fname, fext], 'filepath', fpath, 'loadmode', 'info');
     if EEGHead.trials>1  && isempty(p.ExcludeBad)
@@ -84,7 +84,7 @@ for kk = 1:length(selfiles)
         end
     end
     
-    EEGraw = wwu_LoadEEGFile(selfiles{kk});
+    EEGraw = eeg_LoadEEGFile(selfiles{kk});
     badtrial_list = study_GetBadTrials(EEGraw);
     bad_comps = EEGraw.reject.gcompreject;  %store the bad component list so it can be restored to the new epochs
     if(check_for_events(EEGraw, p.Events))

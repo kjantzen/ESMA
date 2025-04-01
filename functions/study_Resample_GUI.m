@@ -8,7 +8,7 @@ handles.figure = uifigure;
 h = handles.figure;
 
 %
-EEG = wwu_LoadEEGFile(filenames{1});
+EEG = eeg_LoadEEGFile(filenames{1}, {'header'});
 
 set(handles.figure,...
     'Color', scheme.Window.BackgroundColor.Value, ...
@@ -132,7 +132,7 @@ function callback_resample(hObject, eventdata, h, filenames, study)
                 end
             end
             
-            EEGIn = wwu_LoadEEGFile(filenames{jj});
+            EEGIn = eeg_LoadEEGFile(filenames{jj});
             fprintf('Resampling the data from %i to %i Hz\n', EEGIn.srate, newFs);
             
             reportValues{jj,end} = outfilename;
