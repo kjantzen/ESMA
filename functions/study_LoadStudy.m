@@ -37,4 +37,5 @@ if isfield(s, 'study')
 else
     study = s;
 end
+study = study_CheckStudy(study);
 
