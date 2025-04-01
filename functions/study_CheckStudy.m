@@ -25,9 +25,9 @@ if ~isfield(study, 'version')
 end
 
 %make sure #of subjects is correct
-if study.nsubjects ~= length(study.subjects)
-    fprintf('The number of subjects does not match the subject information. Updating to %i\n', length(study.subjects));
-    study.nsubjects = length(study.subjects);
+if study.nsubjects ~= length(study.subject)
+    fprintf('The number of subjects does not match the subject information. Updating to %i\n', length(study.subject));
+    study.nsubjects = length(study.subject);
 end
 
 %check to make sure all ID's are unique
