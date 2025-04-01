@@ -22,7 +22,7 @@ drawnow();
 pb.Message = 'Loading Data...';
 [~,fname,~] = fileparts(filename{:});
 handles.figure.Name = sprintf('ERP Tool: %s', fname);
-GND = wwu_LoadEEGFile(filename{1});
+GND = eeg_LoadEEGFile(filename{1});
 
 %calculate the within subject confidence interval
 GND = addWithinCI(GND);
@@ -574,7 +574,7 @@ if reload_flag
     %update with the most recent data file and the most recent study file
         erp_filename =fullfile(p.GND.filepath, p.GND.filename);
     end
-    GND = wwu_LoadEEGFile(erp_filename);
+    GND = eeg_LoadEEGFile(erp_filename);
 %    load(erp_filename, '-mat');
     %calculate the within subject confidence interval
     GND = addWithinCI(GND);

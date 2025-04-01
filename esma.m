@@ -258,8 +258,8 @@ close(msg);
 
 %%
 %Start of function definitions
+%**************************************************************************
 function callback_contextMenu(hObject, event, h)
-
 nodeIsSelected = false;
 for selNode = h.tree_filetree.SelectedNodes
     if isequal(event.ContextObject, selNode)
@@ -286,7 +286,6 @@ switch hObject.Text
     otherwise
         warning('Unsupported menu option');
 end
-
 %**************************************************************************
 function callback_copypastecomponents(hObject, ~, h)
 
@@ -295,8 +294,13 @@ if study.nsubjects < 1
     uialert(h.figure, 'No subjects are listed in your study','Conversion Error');
     return
 end
-flist = getselectedfiles(study,h);
+flist = getselectedfiles(study,h, 'Unstacked', true);
 if isempty(flist)
+    return
+end
+if ~eeg_ValidateFileTypes(flist, {'.cnt', '.epc'})
+    wwu_msgdlg('The files you selected do no support cutting and pasting of ICA components', 'Wrong file type'...
+        , {'OK'}, 'isError',true);
     return
 end
 pg = uiprogressdlg(h.figure, 'Message', '', 'Title', 'Copy Paste', 'Indeterminate', 'on');
@@ -311,8 +315,7 @@ switch hObject.Tag
             h.menu_icapaste.Enable = 'off';
             delete(pg);
             return
-        end
-        
+        end        
         for fn = flist
             t = load(fn{:}, '-mat');
             if isfield(t, 'EEG')
@@ -328,8 +331,7 @@ switch hObject.Tag
                 delete(pg);
                 return
             end
-        end
-        
+        end       
         copy_info.flist = flist;
         copy_info.copy_time = datetime('now');
         h.menu_icacopy.UserData = copy_info;
@@ -342,15 +344,13 @@ switch hObject.Tag
             h.menu_icapaste.Enable = 'off';
             delete(pg);
             return
-        end
-        
+        end       
         if length(flist) ~= length(copy_info.flist)
             uialert('The number of files selected is different than the number of originating files')
             h.menu_icapaste.Enable = 'off';
             delete(pg);
             return
-        end
-        
+        end        
         %check names
         for ii = 1:length(flist)
             if ~strcmp(fileparts(flist{ii}), fileparts(copy_info.flist{ii}))
@@ -361,7 +361,6 @@ switch hObject.Tag
                 return
             end
         end
-        
         %now finally do the copying
         for ii = 1:length(flist)
             destEEG = wwu_LoadEEGFile(flist{ii});
@@ -372,15 +371,12 @@ switch hObject.Tag
             EEG = eeg_checkset(destEEG);
             
             wwu_SaveEEGFile(EEG, flist{ii});
-        end
-        
-        
+        end        
         h.menu_icacopy.UserData = [];
         h.menu_icacopy.Enable = 'off';
         
         fprintf('Components copied')
         delete(pg);
-        
 end
 %*********************************************************************
 %refresh the display after updating information
@@ -388,14 +384,14 @@ function callback_refresh(~, ~, h)
 
 h.figure.Pointer = 'watch';
 populate_studylist(h)
-callback_loadstudy(0,0,h)
+callback_loadstudy(0,0,h);
 h.figure.Pointer = 'arrow';
 
 %**************************************************************************
 function callback_changeFilenames(hObject, event, h)
 
     study = getstudy(h);
-    filestorename = getselectedfiles(study, h, true);
+    filestorename = getselectedfiles(study, h, 'Unstacked', true);
     if isempty(filestorename)
         return
     end
@@ -467,7 +463,7 @@ function callback_changeFilenames(hObject, event, h)
 function callback_exportfiles(~, ~, h, ~)
 
 study = getstudy(h);
-filestoexport = getselectedfiles(study, h);
+filestoexport = getselectedfiles(study, h, 'Unstacked', true);
 alert = false;
 
 if isempty(filestoexport)
@@ -505,12 +501,12 @@ function callback_copyfiles(~, ~, h)
 
 h.figure.Pointer = 'watch';
 study = getstudy(h);
-filestodelete = getselectedfiles(study, h);
+filestocopy = getselectedfiles(study, h, 'Unstacked', false);
 
-if isempty(filestodelete)
+if isempty(filestocopy)
     uialert(h.figure, 'No files have been selected')
 else
-    for ff = filestodelete
+    for ff = filestocopy
         [p, f, e] = fileparts(ff{1});
         copyfile(ff{1}, fullfile(p, [f, '_copy', e]));
     end
@@ -535,13 +531,7 @@ else
     if(matches(uiconfirm(h.figure, msgstr, 'Confirm file deletion'), 'OK'))
         cellfun(@delete, filestodelete);
         populate_filelist(study,h);
-   %     study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Delete Files', 'function', 'callback_deletefiles', 'paramstring', filestodelete, 'fileID', '');
-   %     study = study_SaveStudy(study);
-   %     setstudy(study,h);
-       % populate_studyinfo(study,h)
-    end
-    
-    
+    end    
 end
 %************************************************************************
 %populates the study tree with all the studies found in the "STUDIES"
@@ -605,7 +595,11 @@ if isempty(dir(study_name))
     h.figure.Pointer = 'arrow';
     return
 else
-    temp = load(study_name, '-mat'); study = temp.study; clear temp;
+    study = study_LoadStudy(study_name);
+    if isempty(study)
+        uialert('The study failed to load!')
+        return
+    end
     setstudy(study,h);
 end
 
@@ -628,11 +622,8 @@ h.figure.Pointer = 'arrow';
 %main screen
 function populate_studyinfo(study, h)
 
-
 colorNum = rgb2hex(h.label_info.UserData);
-
 if isempty(study)
-
     msg = ['<body style="font-family:arial;font-size:14px;color:#', num2str(colorNum),'"><p style="line-height:115%">', ...
         '<b>NO STUDIES FOUND IN CURRENT DATA FOLDER</b></p>'];
     msg = [msg, '<p style="line-height:115%">Please choose a different data folder or create a new study.</p>'];
@@ -756,8 +747,6 @@ else
         end
     end
 end
-
-
 %*************************************************************************
 function callback_newstudy(~, ~, h, editMode)
  
@@ -845,31 +834,30 @@ if isempty(study)
     return
 end
 
-files = getselectedfiles(study, h);
-if isempty(files)
-    uialert(h.figure, 'Please select files to plot', 'Plotting');
+[fileList,~, sIndxList] = getselectedfiles(study, h, 'Unstacked', true);
+if isempty(fileList)
     return
 end
 
 h.figure.Pointer = 'watch';
 %check the first file to see what type it is
 try
-    [~, ~, ext] = fileparts(files{1});
+    [~, ~, ext] = fileparts(fileList{1});
     switch ext
         case '.cnt' %continuous data plotting
-            study_PlotCNT(study, files)
+            study_PlotCNT(study, fileList, sIndxList)
         case '.epc' %epoched time series data plotting
-            study_PlotEPC(study, files);
+            study_PlotEPC(study, fileList, sIndxList);
         case '.GND' %averaged subject and grand average data
-            study_PlotERP(study, files);
+            study_PlotERP(study, fileList);
         case '.GRP'
-            study_PlotGRP(files);
+            study_PlotGRP(fileList);
         case '.FFTGND'
-            study_PlotFFT(study, files);
+            study_PlotFFT(study, fileList);
         case '.ersp'
-            study_PlotERSP_NEW(study, files);
+            study_PlotERSP_NEW(study, fileList);
         otherwise
-            uialert(h.figure, 'Other files types are not supported, but I am working on it!', 'Plot Data');
+            uialert(h.figure, 'Other files types are not supported, but I may be working on it!', 'Plot Data');
             return
     end
 catch ME
@@ -880,36 +868,42 @@ h.figure.Pointer = 'arrow';
 
 %**************************************************************************
 %returns the files selected in the main file list
-function [filelist, n_uniquefiles] = getselectedfiles(study,h, stacked)
-
-if nargin < 3
-    stacked = 0;
+function [filelist, n_uniquefiles, subjlist] = getselectedfiles(study,handles, args)
+% this function will return the variable filelist which is a cell array
+% of size [n,m] where n is the number of files selected from the interface and m is the
+% number of participants,  If unstacked is true then a vector  of size [1,
+% n*m] will be returned instead.
+%
+arguments
+    study 
+    handles 
+    args.Unstacked = false
 end
 
 eeg_path = study_GetEEGPath;
-n = h.tree_filetree.SelectedNodes;
-
+n = handles.tree_filetree.SelectedNodes;
 filelist = [];
+n_uniquefiles = [];
+subjlist = [];
 
 %make sure something is selected
 if isempty(n)
-    uialert(h.figure, 'Please select files to process from the main file window.', 'Select Files');
+    uialert(handles.figure, 'Please select files to process from the main file window.', 'Select Files');
     return
 end
-
 %get the names of the files to select
 fnames = {n.NodeData};
 
 %if there are actually no files selected
 if sum(cellfun(@isempty,fnames)) == length(fnames)
-    uialert(h.figure, 'You may have selected a category rather than an actual file. Please expand the category to find the files', 'Select Files')
+    uialert(handles.figure, 'You may have selected a category rather than an actual file. Please expand the category to find the files', 'Select Files')
     return
 end
 
 
 [~,~,fext] = fileparts(fnames{1});
 cntr = 0;
-n_uniquefiles = 0;
+n_uniquefiles = length(fnames);
 
 %this is an average file not stored in the subject folders
 if contains(fext,'GND') || contains(fext, '.ersp') || contains(fext, '.GRP')
@@ -918,26 +912,28 @@ if contains(fext,'GND') || contains(fext, '.ersp') || contains(fext, '.GRP')
         if exist(temp, 'file') > 0
             cntr = cntr + 1;
             filelist{cntr} = temp;
+            subjlist = [];
         end
     end
 else
-
-for ii = 1:study.nsubjects
-    for jj = 1:length(fnames)
-        temp = eeg_BuildPath(eeg_path, study.path,  study.subject(ii).path, fnames{jj});
-        if (exist(temp)>0)
-            cntr = cntr + 1;
-            if stacked
-                filelist{jj,ii} = temp;
-            else
-                filelist{cntr} = temp;
+    for ii = 1:study.nsubjects
+        for jj = 1:length(fnames)
+            temp = eeg_BuildPath(eeg_path, study.path,  study.subject(ii).path, fnames{jj});
+            if exist(temp, "file")
+                cntr = cntr + 1;
+                if args.Unstacked
+                    filelist{jj,cntr} = temp;
+                    subjlist(jj,cntr) = ii;
+                else
+                    filelist{cntr} = temp;
+                    subjlist(cntr) = ii;
+                end
             end
         end
     end
 end
-end
 if isempty(filelist)
-    uialert(h.figure, 'None of the selected items are valid files.', 'Select Files');
+    uialert(handles.figure, 'None of the selected items are valid files.', 'Select Files');
 end
 
 %**************************************************************************
@@ -953,7 +949,7 @@ if study.nsubjects < 1
     return
 end
 
-fnames = getselectedfiles(study,h);
+fnames = getselectedfiles(study, h, 'Unstacked', true);
 if isempty(fnames)
     return
 end
@@ -989,7 +985,7 @@ callback_refresh(hObject, eventdata, h)
 function callback_resample(hObject, eventdata, h)
 
 study = getstudy(h);
-fnames = getselectedfiles(study, h);
+fnames = getselectedfiles(study, h, 'Unstacked', true);
 
 if isempty(fnames); return; end
 if ~eeg_ValidateFileTypes(fnames, {'cnt', 'epc'})
@@ -1009,7 +1005,7 @@ callback_refresh(hObject, eventdata, h)
 function callback_filter(hObject, eventdata, h)
 
 study = getstudy(h);
-fnames = getselectedfiles(study, h);
+fnames = getselectedfiles(study, h, 'Unstacked', true);
 
 if isempty(fnames); return; end
 if ~eeg_ValidateFileTypes(fnames, {'cnt', 'epc'})
@@ -1029,7 +1025,7 @@ function callback_reref(hObject, eventdata, h)
 file_id = '_ref';
 option = 0;
 study = getstudy(h);
-fnames = getselectedfiles(study, h);
+fnames = getselectedfiles(study,h, 'Unstacked', true);
 if isempty(fnames)
     return
 end
@@ -1093,7 +1089,7 @@ callback_refresh(hObject, eventdata, h)
 function callback_cleanline(hObject, eventdata, h)
 
 study = getstudy(h);
-fnames = getselectedfiles(study, h);
+fnames = getselectedfiles(study, h, 'Unstacked', true);
 file_id = '_line';
 option = 0;
 
@@ -1153,8 +1149,7 @@ end
 gnum = info.gnum;
 cnum = info.cnum;
 
-selfiles = getselectedfiles(study, h);
-
+selfiles = getselectedfiles(study, h, 'Unstacked', true);
 if isempty(selfiles)
     uialert(h.figure, 'Please select the file(s) from which to create epochs.', 'Create Epoch files');
     return
@@ -1252,14 +1247,16 @@ function callback_filesummary(~, ~, h)
 %*************************************************************************
 function callback_evtsummary(~, ~, h)
     study = getstudy(h);
-    filelist = getselectedfiles(study, h);
+    [filelist,~, slist] = getselectedfiles(study, h, 'Unstacked', true);
     if isempty(filelist); return; end
-    [~,~,ext] = fileparts(filelist{1});
-    if ~strcmp(ext, '.cnt') && ~strcmpi(ext, '.epc');
-        uialert(h.figure, 'Event summaries are available only for continuous (.cnt) and epoch (.epc) filetypes', 'Event Summary');
-        return
+    if ~eeg_ValidateFileTypes(filelist, {'.cnt', '.epc'})
+        msg = 'Event summaries are available only for continous and epoch file types.';
+        title = 'File Type Error';
+        options ={'OK'};
+        wwu_msgdlg(msg, title, options);
+        return    
     end
-    study_eventsummary_GUI(study, filelist);
+    study_eventsummary_GUI(study, filelist, slist);
 %%
 %*************************************************************************
 function callback_detectBadChannels(hObject, eventdata, h)
@@ -1371,6 +1368,13 @@ file_id = '_rtime';
 selfiles = getselectedfiles(study, h);
 if isempty(selfiles)
     return
+end
+if ~eeg_ValidateFileTypes(filelist, {'.cnt'})
+    msg = 'Bad segment removal is only available for continous data file types.';
+    title = 'File Type Error';
+    options ={'OK'};
+    wwu_msgdlg(msg, title, options);
+    return    
 end
 pb = uiprogressdlg(h.figure,'Message', 'Removing highlights time segments', 'Value',0,'Title','Remove segments');
 maxpbVal= length(selfiles) * 4;

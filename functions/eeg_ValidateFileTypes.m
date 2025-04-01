@@ -5,7 +5,7 @@ function isValid = eeg_ValidateFileTypes(fileList, validTypes)
         validTypes (1,:) cell {mustBeVector(validTypes)}
     end
 
-    %extract teh filetypes from the filelist
+    %extract the filetypes from the filelist
     [~,~,ftypes] = cellfun(@fileparts, fileList, 'UniformOutput', false);
     r = zeros(size(ftypes));
     for ii = 1:length(validTypes)

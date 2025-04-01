@@ -181,7 +181,7 @@ function callback_exit(hObject, eventdata, h)
 function populateStartEndTimes(h, filenames)
 
     %load a file to get time ranges
-    EEG = wwu_LoadEEGFile(filenames{1}, 'times');
+    EEG = eeg_LoadEEGFile(filenames{1}, 'times');
     h.edit_timeStart.Value = EEG.times(1);
     h.edit_timeEnd.Value = EEG.times(end);
     h.edit_timeStart.Limits = [EEG.times(1), EEG.times(end)];
@@ -286,7 +286,7 @@ for ii = 1:size(p.filenames,1)
         end
         
         %load the data
-        EEG = wwu_LoadEEGFile(p.filenames{ii,jj});
+        EEG = eeg_LoadEEGFile(p.filenames{ii,jj});
         EEG.subject = study.subject(snum).ID;
         
         %initialize cell data for reporting averaging results to the process

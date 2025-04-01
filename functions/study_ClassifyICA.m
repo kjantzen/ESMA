@@ -22,7 +22,7 @@ for f = filenames
     end
     
     try
-        EEG = wwu_LoadEEGFile(f{:});
+        EEG = eeg_LoadEEGFile(f{:});
     catch ME
         fprintf(ME.identifier)
         rethrow ME

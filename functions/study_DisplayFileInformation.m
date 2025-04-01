@@ -71,7 +71,7 @@ for ii = 1:nFiles
     n = uitreenode('Parent', h.uitree, 'Text', fileEntry);
     switch lower(e)
         case {'.cnt', '.gnd', '.epc', '.erp', '.set'}
-            data = wwu_LoadEEGFile(fnames{1}, 'header');
+            data = eeg_LoadEEGFile(fnames{1}, 'header');
             addFields(n,data);
         otherwise
             msg = sprintf('Cannot display information for file type %s.', e);

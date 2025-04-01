@@ -84,7 +84,7 @@ if study_checkForUnsavedData(h.figure)
         return
     end
 
-    EEG = wwu_LoadEEGFile(filename);
+    EEG = eeg_LoadEEGFile(filename);
 end   
 %*************************************************************************
 function callback_togglestatus(jObject, eventdata,h)
@@ -159,7 +159,7 @@ pb.Message = 'Loading new subject file';
 
 %load the data
 [path, name, ext] = fileparts(filename);
-EEG = wwu_LoadEEGFile(filename);
+EEG = eeg_LoadEEGFile(filename);
 %make sure there are components
 if ~isfield(EEG, "icasphere") || isempty(EEG.icasphere)
  %   dummy = uiconfirm(h.figure, 'No ICA components were found.  Please decompose and classify your data first'...

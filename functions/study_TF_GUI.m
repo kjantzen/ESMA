@@ -9,10 +9,8 @@ Btn_Width = 80;
 handles.figure = uifigure;
 h = handles.figure;
 
-%load an eegfile and delete the data just so it does not require as much
-%spce in memory  We only need the header information
-EEG = wwu_LoadEEGFile(filenames{1});
-EEG.data = [];
+%load the header information from an  eeg file
+EEG = eeg_LoadEEGFile(filenames{1}, {'header'});
 handles.EEG = EEG;  %store this so we have access to sample rate etc.
 
 DEFAULT_CYCLES = [3,1];
@@ -302,7 +300,7 @@ try
         'Title', 'computing ersp',...
         'ShowPercentage', 'on');
     if runTest
-        EEGIn = wwu_LoadEEGFile(filenames{1});
+        EEGIn = eeg_LoadEEGFile(filenames{1});
         fprintf('converting data to time frequency\n');
         ersp = wwu_tf(p, EEGIn);
     else

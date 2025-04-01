@@ -18,13 +18,13 @@
 %TODO list
 %   
 % Update 5/11/23 KJ Jantzen
-function study_PlotCNT(study, filenames)
+function study_PlotCNT(study, filenames, subjIndxList)
 
 try
     %build the figure
     handles = build_gui();
     handles = setCallbacks(handles, study);
-    handles = initializeControls(handles, study, filenames);
+    handles = initializeControls(handles, study, filenames, subjIndxList);
     callback_loadnewfile([], [], study, handles);
 catch me
     if exist('handles', 'var') && ~isempty(handles)
@@ -164,7 +164,7 @@ if exist(filename, 'file') ~= 2
     uialert(h.figure, 'The selected file does not seem to exist.  Please double check the file location.');
     return
 end
-EEG = wwu_LoadEEGFile(filename);
+EEG = eeg_LoadEEGFile(filename);
 
 if EEG.trials > 1
     uialert(h.figure, 'The file may contain epoched data. Please use the trial viewer instead.');
@@ -830,10 +830,13 @@ handles.menu_previoussegment.MenuSelectedFcn = {@callback_moveToSelectedRect, ha
 handles.menu_clearsegment.MenuSelectedFcn = {@callback_clearAllRects, handles};
 
 % ************************************************************************
-function handles = initializeControls(handles, study, filenames)
-%do a more sophisticated check later to make sure this information matches
-handles.dropdown_subjselect.Items   = {study.subject.ID};
-handles.dropdown_subjselect.ItemsData = 1:length(study.subject);
+function handles = initializeControls(handles, study, filenames, sList)
+%the sList array is an index of which subjects have files in the filelist
+%it is meant to account for the fact that a file may be missing from one
+%subject, in which case the subject ID data and the filename data can be
+%mismatched.
+handles.dropdown_subjselect.Items   = {study.subject(sList).ID};
+handles.dropdown_subjselect.ItemsData = 1:length(study.subject(sList));
 handles.dropdown_subjselect.UserData = filenames;
 [~, n, e] = fileparts(filenames{1});
 handles.figure.Name = [n, e];

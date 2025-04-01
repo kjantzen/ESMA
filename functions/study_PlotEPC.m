@@ -1,8 +1,9 @@
-function study_PlotEPC(study, filenames)
+function study_PlotEPC(study, fileList, sIndxList)
 
 arguments
     study (1,1) struct
-    filenames (1,:)
+    fileList (1,:)
+    sIndxList
 end
 
 scheme = eeg_LoadScheme;
@@ -347,9 +348,9 @@ handles.figure.WindowButtonMotionFcn = {@callback_mouseoverplot, handles};
 handles.button_clearstatus.ButtonPushedFcn = {@callback_cleartrialstatus, handles};
 
 %do a more sophisticated check later to make sure this information matches
-handles.dropdown_subjselect.Items   = {study.subject.ID};
-handles.dropdown_subjselect.ItemsData = 1:length(study.subject);
-handles.dropdown_subjselect.UserData = filenames;
+handles.dropdown_subjselect.Items   = {study.subject(sIndxList).ID};
+handles.dropdown_subjselect.ItemsData = 1:length(sIndxList);
+handles.dropdown_subjselect.UserData = fileList;
 
 plot.scrollevent = 'scale';
 plot.projectopt = 0; %this is the "include" state
@@ -618,7 +619,7 @@ if study_checkForUnsavedData(h.figure)
         return
     end
 
-    EEG = wwu_LoadEEGFile(filename);
+    EEG = eeg_LoadEEGFile(filename);
 end
 %***************************************************************************
 function callback_loadnewfile(hObject, eventdata, study, h)
@@ -670,7 +671,7 @@ end
 pb.Message = 'Loading new subject file';
 
 %load the data
-EEG = wwu_LoadEEGFile(filename);
+EEG = eeg_LoadEEGFile(filename);
 
 if isempty(EEG.reject.rejmanual)
     EEG.reject.rejmanual = zeros(1, EEG.trials);

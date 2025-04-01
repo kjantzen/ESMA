@@ -25,7 +25,7 @@ handles = build_gui(handles);
 pb.Message = 'Loading Data...';
 [~,fname,~] = fileparts(filename{1});
 handles.figure.Name = sprintf('FFT Tool: %s', fname);
-GND = wwu_LoadEEGFile(filename{1});
+GND = eeg_LoadEEGFile(filename{1});
 
 pb.Message = 'Initializing display with data values...';
 initialize_gui(handles, GND);
@@ -569,7 +569,7 @@ p = h.figure.UserData;
 if reload_flag
     %update with the most recent data file and the most recent study file
     fft_filename =fullfile(p.GND.filepath, p.GND.filename);    
-    GND = wwu_LoadEEGFile(fft_filename);% load(erp_filename, '-mat');
+    GND = eeg_LoadEEGFile(fft_filename);
     %calculate the within subject confidence interval
  %   if isfield(GND, 'F_tests')
  %       if ~isempty(GND.F_tests)

@@ -1,5 +1,5 @@
 %this function is under revision and does not work perfectly.
-function study_PlotERSP(study, filename)
+function study_PlotERSP(study, fileList)
 
 if nargin < 2
     msg = 'Not enough input arguments. This funciton requires a valid ESMA study and filename list!';
@@ -7,7 +7,7 @@ if nargin < 2
     error('Not enough input arguments.')
 end
 
-if isempty(filename)
+if isempty(fileList)
     wwu_msgdlg('No valid file was found', 'Invalid Inputs to wwu_PlotERSP', {'OK'}, 'isError',true);
     error('Invalid input arguments.')
 end
@@ -18,9 +18,9 @@ scheme = eeg_LoadScheme;
 p.study = study;
 
 fprintf('...loading the data file.  This may takes several seconds...');
-load(filename{1}, '-mat');
+load(fileList{1}, '-mat');
 TFData.saved = 'yes';
-[fpath, fname, fileext] = fileparts(filename{1});
+[fpath, fname, fileext] = fileparts(fileList{1});
 TFData.filename = [fname, fileext];
 TFData.filepath = fpath;
 

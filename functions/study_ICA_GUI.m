@@ -148,7 +148,7 @@ reportColumnNames = {'Written to file', 'N Trials Removed'};
 for jj = 1:length(fnames)
 
     [fpath, fname, fext] = fileparts(fnames{jj});
-    Header = wwu_LoadEEGFile(fnames{jj}, {'icaweights'});
+    Header = eeg_LoadEEGFile(fnames{jj}, {'icaweights'});
 
     %check if components exist.
     if ~isempty(Header.icaweights) && ~OverWrite
@@ -159,7 +159,7 @@ for jj = 1:length(fnames)
         reportValues{jj,1} = true;
     end
 
-    EEG = wwu_LoadEEGFile(fnames{jj});
+    EEG = eeg_LoadEEGFile(fnames{jj});
 
     %filter the data just for the purpose of PCA, then apply the components
     %to the unfiltered data at the end
