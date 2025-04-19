@@ -40,11 +40,15 @@ function callback_MakeBin(hObject, event, h)
     GND.grands(:,:,maxBins + 1) = mean(newBinData, 4);
     GND.grands_stder(:,:,maxBins+1) = std(newBinData, 1, 4)./sqrt(GND.sub_ct(1));
     GND.grands_t(:,:,maxBins+1) = GND.grands(:,:,maxBins + 1)./GND.grands_stder(:,:,maxBins+1);
+    GND.indiv_bin_ct(:, maxBins + 1) = NaN;
+    GND.indiv_bin_raw_ct(:, maxBins + 1) = NaN;
+
 
     GND.sub_ct(maxBins + 1) = GND.sub_ct(1);
     GND.bin_info(maxBins+1).bindesc = binName;
     GND.bin_info(maxBins+1).equation = binFormula;
 
+    
     outfile = fullfile(GND.filepath, GND.filename);
     if isempty(outfile) || isempty(dir(outfile))
         outfile = uiputfile();

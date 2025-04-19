@@ -265,6 +265,14 @@ writecell(fac_names, excelFilename,'Range',range, 'Sheet', 'Data');
 %default next write column is 'B' - which is ascii 66
 colNum = 66;
 
+%check to see if there is subject folder information 
+%not all stats results will have this depending on version
+if isfield(r, 'subj_used')
+  range = sprintf('%s%i', char(colNum), rowNum);
+  writecell('Subject Folders', excelFilename, 'Range', range, 'Sheet', 'Data');
+  colNum = colNum + 1;
+end
+
 %shift writing by the number of between variables so the rows indicating
 % condition numbers line up.
 if r.hasBetween
@@ -282,15 +290,11 @@ range = sprintf('%s%i',char(colNum), rowNum+nFacs);
 writecell(r.conditions, excelFilename,'Range',range, 'Sheet', 'Data')
 
 %write the raw data
-range = sprintf('B%i',rowNum+nFacs+2);
-writetable(r.data, excelFilename, 'Range', range,'WriteMode','inplace','WriteVariableNames', false, 'WriteRowNames', false, 'Sheet', 'Data');
-
-%consider writing the mean and standard deviations
+range = sprintf('B%i',rowNum+nFacs+Offset);
+dwritetable(r.data, excelFilename, 'Range', range,'WriteMode','inplace','WriteVariableNames', false, 'WriteRowNames', false, 'Sheet', 'Data');
 
 %write the source table
 writetable(r.source_table, excelFilename, 'Sheet', 'ANOVA','Range', 'A1', 'WriteRowNames', true);
-
-
 
 %************************************************************************
 function callback_togglestatsoption(hObject, event, h)
@@ -321,8 +325,9 @@ switch event.Source.Tag
             uialert(h.figure, 'You must have at least one condition per file', 'Delete Error');
             return
         end
-        response = uiconfirm(h.figure, sprintf('Are you sure you want to delete %s?', GND.bin_info(c_bin).bindesc), 'Confirm Delete');
-        if contains(response, 'OK')
+        response = uiconfirm(h.figure, sprintf('Are you sure you want to delete %s?', GND.bin_info(c_bin).bindesc), 'Confirm Delete', 'Icon','question',...
+            'Options', ["Yes", "No"]);
+        if contains(response, "Yes")
             GND = rm_bins(GND, c_bin);
             GND = wwu_SaveEEGFile(GND);
             callback_relfreshDisplay([],[],h, true, false);
@@ -592,15 +597,17 @@ if reload_flag
     
     study = study_LoadStudy(p.study.filename);
     p.study = study;
-    
+
     h.figure.UserData = p;
     h.figure.Name = p.GND.filename;
-    callback_ploterp({},{},h);
-    %callback_toggleallchannel([],h.check_allchans,h);
 
 end
 
 cname = {p.GND.bin_info.bindesc};
+cv = h.list_condition.ValueIndex;
+if cv>length(cname)
+    h.list_condition.ValueIndex = length(cname);
+end
 h.list_condition.Items = cname;
 h.list_condition.ItemsData = 1:length(cname);
 
@@ -718,6 +725,7 @@ else
     h.dropdown_ANOVAtest.Enable = true;
     h.tree_ANOVA.Enable = true;
 end
+if reload_flag; callback_ploterp({},{},h); end
 
 h.figure.Pointer = 'arrow';
 
@@ -1872,6 +1880,8 @@ handles.gl = uigridlayout('Parent', handles.figure,...
 % more efficient to create them all at once and then execute a single drawnow
 % commaind than to create them in sequence and use several draw commands.
 %panel for holding the topo plot
+drawnow
+pause(1)
 handles.panel_topo = uipanel(...
     'Parent', handles.gl,...
     'AutoResizeChildren', false,...

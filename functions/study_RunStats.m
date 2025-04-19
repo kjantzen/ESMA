@@ -520,6 +520,7 @@ GND.ANOVA(indx).pntwindow = [stats.winstartpt, stats.winendpt];
 GND.ANOVA(indx).chans_used = lnames;
 GND.ANOVA(indx).conditions = {GND.bin_info(cond_order).bindesc};
 GND.ANOVA(indx).factors  = stats.factors;
+GND.ANOVA(indx).subj_used = getSbjFolders(GND);
 %GND.ANOVA(indx).levels  = stats.levels;
 GND.ANOVA(indx).level_matrix = cond_name_matrix;
 GND.ANOVA(indx).hasBetween = stats.useBetween;
@@ -608,6 +609,24 @@ while statsName == ""
         statsName = replace(statsName.input, ' ', '_');
     end
 end
+%**************************************************************************
+function subj_path = getSbjFolders(GND)
+%allocation memory    
+subj_path = cell(1, length(GND.indiv_fnames));
+
+for ii = 1:length(GND.indiv_fnames)
+    [fpath, ~, ~] = fileparts(GND.indiv_fnames{ii});
+    indx = strfind(fpath, '/');  %may have to do some system wide changes to harmonize file seperator
+    if isempty(indx)
+        indx = strfind(fpath, '\');  %for now just try the alternative
+    end
+    if isempty(indx)
+        subj_path{ii} = fpath;
+    else
+        subj_path{ii} = fpath(indx(end):end);
+    end
+end
+
 %**************************************************************************
 function callback_assignconditions(~, event, h)
         

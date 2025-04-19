@@ -1524,7 +1524,7 @@ function callback_average(hObject, ~, h)
     study = getstudy(h);
     if isempty(study); return; end
     
-    files = getselectedfiles(study, h, 1); %get the stacked list of files so we can handle them separately if necessary
+    files = getselectedfiles(study, h, 'Unstacked', true); %get the stacked list of files so we can handle them separately if necessary
     
     [n_rows, n_cols] = size(files);
      for ii = n_rows
