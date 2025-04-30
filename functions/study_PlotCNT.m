@@ -804,7 +804,9 @@ function handles = setCallbacks(handles, study)
 
 badSbjStyle = uistyle('BackgroundColor',[1, .5, .5]);
 badSbj = matches({study.subject.status}, 'bad');
-addStyle(handles.dropdown_subjselect, badSbjStyle, 'item', find(badSbj));
+if ~isempty(find(badSbj))
+    addStyle(handles.dropdown_subjselect, badSbjStyle, 'item', find(badSbj));
+end
 
 handles.figure.CloseRequestFcn = {@local_close_request, handles};
 handles.figure.WindowButtonDownFcn = {@callback_mouseeventhandler, handles};

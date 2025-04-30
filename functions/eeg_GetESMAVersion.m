@@ -13,5 +13,5 @@
 %   updating.
 %
 function version = eeg_GetESMAVersion()
-    version = '3.0.1-beta';
+    version = '3.0.2-beta';
 
