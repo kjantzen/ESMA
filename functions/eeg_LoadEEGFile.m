@@ -33,64 +33,64 @@ function EEG = eeg_LoadEEGFile(filename, field)
 
 EEG = [];
 if nargin < 1
-    help eeg_LoadEEGFile;
-    return
+help eeg_LoadEEGFile;
+return
 end
 if nargin < 2
-    field = '';
+field = '';
 end
 if ~isfile(filename)
-    warning('File %s does not exist\n', filename);
-    return
+warning('File %s does not exist\n', filename);
+return
 end
 [fpath,fname,fileext] = fileparts(filename);
 
 %check to see if the user wishes to load only a subset of the data fields
 if ~isempty(field)
-    if strcmp(field, 'header')
-        EEG = load(filename, '-mat', '-regexp', '^(?!data$|icaact$).');
-    else
-        cmd = sprintf('load(''%s'', ''-mat''', filename);
-        if iscell(field)
-            for ii = 1:length(field)
-                cmd = [cmd, ',''',field{ii}, ''''];
-            end
-            cmd = [cmd, ')'];
-        else
-            cmd = [cmd, ',''', field, ''')'];
-        end
-        EEG = eval(cmd);
-        %if the field does not exist, revert to the default
-        if ~isfield(EEG, field)
-            EEG = eeg_LoadEEGFile(filename);
-            return;
-        end
-    end
+if strcmp(field, 'header')
+EEG = load(filename, '-mat', '-regexp', '^(?!data$|icaact$).');
 else
-    EEG = load(filename, '-mat');
-    %handles version differences since previously files were not saved with the
-    % struct option
-    if isfield(EEG, 'EEG')
-        EEG = EEG.EEG;
-    elseif isfield(EEG, 'GND')  %allow for using this function to open GND files as well
-        EEG = EEG.GND;
-    end
+cmd = sprintf('load(''%s'', ''-mat''', filename);
+if iscell(field)
+for ii = 1:length(field)
+cmd = [cmd, ',''',field{ii}, ''''];
+end
+cmd = [cmd, ')'];
+else
+cmd = [cmd, ',''', field, ''')'];
+end
+EEG = eval(cmd);
+%if the field does not exist, revert to the default
+if ~isfield(EEG, field)
+EEG = eeg_LoadEEGFile(filename);
+return;
+end
+end
+else
+EEG = load(filename, '-mat');
+%handles version differences since previously files were not saved with the
+% struct option
+if isfield(EEG, 'EEG')
+EEG = EEG.EEG;
+elseif isfield(EEG, 'GND')  %allow for using this function to open GND files as well
+EEG = EEG.GND;
+end
 
-    %continuous and epoched files are faithful to the eeglab format so they can
-    %be checked using eeglab tools
-    if strcmp(fileext, '.cnt') || strcmp(fileext, '.epc')
-        EEG = eeg_checkset(EEG);
-    end
+%continuous and epoched files are faithful to the eeglab format so they can
+%be checked using eeglab tools
+if strcmp(fileext, '.cnt') || strcmp(fileext, '.epc')
+EEG = eeg_checkset(EEG);
+end
 
-    %check to see if there are some ICA components in the file and if there
-    %are recompute the icaacts - this is done because depnding on version
-    %an platform, the file may or may not be saved withe the ica
-    %activations
-    if isfield(EEG, 'icaweights')  && isfield(EEG, 'icasphere') && isfield(EEG, 'icaact') && ~isempty(EEG.icaweights)
-        for ii = 1:EEG.trials
-            EEG.icaact(:,:,ii) = icaact(EEG.data(:,:,ii), EEG.icaweights * EEG.icasphere);
-        end
-    end
+%check to see if there are some ICA components in the file and if there
+%are recompute the icaacts - this is done because depnding on version
+%an platform, the file may or may not be saved withe the ica
+%activations
+if isfield(EEG, 'icaweights')  && isfield(EEG, 'icasphere') && isfield(EEG, 'icaact') && ~isempty(EEG.icaweights)
+for ii = 1:EEG.trials
+EEG.icaact(:,:,ii) = icaact(EEG.data(:,:,ii), EEG.icaweights * EEG.icasphere);
+end
+end
 end
 %set default file and saved values
 EEG.saved = 'yes';

@@ -28,19 +28,19 @@ VersionNumber = eeg_GetESMAVersion();
 fprintf('Starting EEG Study Management and Analysis V%s....\n', VersionNumber);
 
 try
-    addSubFolderPaths
+addSubFolderPaths
 catch me
-    wwu_msgdlg(me.message, 'Fatal Error!', {"OK"}, 'isError', true);  
-    return
+wwu_msgdlg(me.message, 'Fatal Error!', {"OK"}, 'isError', true);  
+return
 end
 
 EEGPath = study_GetEEGPath;
 if isempty(EEGPath)
-    Message = sprintf('No valid experiment path was identified.\nPlease restart ESMA and identify an experiment folder when prompted');
-    Title = 'Missing path file';
-    options = {"OK"}; 
-    wwu_msgdlg(Message, Title, options, 'isError', true);
-    return
+Message = sprintf('No valid experiment path was identified.\nPlease restart ESMA and identify an experiment folder when prompted');
+Title = 'Missing path file';
+options = {"OK"}; 
+wwu_msgdlg(Message, Title, options, 'isError', true);
+return
 end
 
 fprintf('...building GUI\n');
@@ -55,60 +55,60 @@ VERSION = ['ESMA', VersionNumber];
 %restart the display if it is already loaded
 existingFigure = findall(groot,'Type', 'Figure', 'Tag', VERSION);
 if ~isempty(existingFigure)
-    handles.figure = existingFigure;
-    clf(handles.figure);
-    fprintf('hcnd_eeg is already running.  Reinitialiing display\n');
+handles.figure = existingFigure;
+clf(handles.figure);
+fprintf('hcnd_eeg is already running.  Reinitialiing display\n');
 else    
-    %setup the main figure window
-    handles.figure = uifigure;
+%setup the main figure window
+handles.figure = uifigure;
 end
 
 
 set(handles.figure,...
-    'Color', scheme.Window.BackgroundColor.Value, ...
-    'name', sprintf('EEG Study Management and Analysis V%s', VersionNumber),...
-    'NumberTitle', 'off',...
-    'Position', FIGPOS,...
-    'Resize', 'off',...
-    'menubar', 'none',...
-    'Tag', VERSION);
+'Color', scheme.Window.BackgroundColor.Value, ...
+'name', sprintf('EEG Study Management and Analysis V%s', VersionNumber),...
+'NumberTitle', 'off',...
+'Position', FIGPOS,...
+'Resize', 'off',...
+'menubar', 'none',...
+'Tag', VERSION);
 
 msg = uiprogressdlg(handles.figure, 'Message', 'Building GUI', 'Cancelable',false);
 drawnow
 
 handles.dropdown_study = uidropdown(...
-    'Parent', handles.figure,...
-    'Position', [10,H-30,W-20,scheme.Dropdown.Height.Value],...
-    'Editable', 'off',...
-    'BackgroundColor', scheme.Dropdown.BackgroundColor.Value,...
-    'FontColor', scheme.Dropdown.FontColor.Value,...
-    'FontName', scheme.Dropdown.Font.Value,...
-    'FontSize', scheme.Dropdown.FontSize.Value);
+'Parent', handles.figure,...
+'Position', [10,H-30,W-20,scheme.Dropdown.Height.Value],...
+'Editable', 'off',...
+'BackgroundColor', scheme.Dropdown.BackgroundColor.Value,...
+'FontColor', scheme.Dropdown.FontColor.Value,...
+'FontName', scheme.Dropdown.Font.Value,...
+'FontSize', scheme.Dropdown.FontSize.Value);
 
 handles.tree_filetree = uitree(...
-    'Parent', handles.figure,...
-    'Multiselect', 'on',...
-    'Editable', 'off',...
-    'Position', [10,H-260,W-20,225],...
-    'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
-    'FontColor', scheme.Edit.FontColor.Value,...
-    'FontName', scheme.Edit.Font.Value,...
-    'FontSize', scheme.Edit.FontSize.Value);
+'Parent', handles.figure,...
+'Multiselect', 'on',...
+'Editable', 'off',...
+'Position', [10,H-260,W-20,225],...
+'BackgroundColor', scheme.Edit.BackgroundColor.Value,...
+'FontColor', scheme.Edit.FontColor.Value,...
+'FontName', scheme.Edit.Font.Value,...
+'FontSize', scheme.Edit.FontSize.Value);
 
 handles.panel_info = uipanel(...
-    'Parent', handles.figure,...
-    'Title','Study Information', ...
-    'BackgroundColor', scheme.Panel.BackgroundColor.Value,...
-    'FontName', scheme.Panel.Font.Value,...
-    'FontSize', scheme.Panel.FontSize.Value,...
-    'ForegroundColor', scheme.Panel.FontColor.Value,...
-    'HighlightColor', scheme.Panel.BorderColor.Value,...
-    'BorderType', 'line',...
-    'Position',[10,H-490, W-20,225]);
+'Parent', handles.figure,...
+'Title','Study Information', ...
+'BackgroundColor', scheme.Panel.BackgroundColor.Value,...
+'FontName', scheme.Panel.Font.Value,...
+'FontSize', scheme.Panel.FontSize.Value,...
+'ForegroundColor', scheme.Panel.FontColor.Value,...
+'HighlightColor', scheme.Panel.BorderColor.Value,...
+'BorderType', 'line',...
+'Position',[10,H-490, W-20,225]);
 
 handles.label_info = uihtml(handles.panel_info,...
-    'Position', [10,10,W-40,190],...
-    'UserData', scheme.Panel.FontColor.Value);
+'Position', [10,10,W-40,190],...
+'UserData', scheme.Panel.FontColor.Value);
 
 msg.Message = 'Creating menus';
 drawnow
@@ -121,10 +121,10 @@ handles.menu_appearance = uimenu(handles.menu_esma, 'Label', 'Appearance');
 handles.menu_editappeanace = uimenu(handles.menu_appearance, 'Label', 'Edit appearance');
 handles.menu_scheme = uimenu(handles.menu_appearance, 'Label', 'Themes');
 for ii = 1:length(list)
-    [~,themeName,~] = fileparts(list(ii).name);
-    handles.menu_selScheme(ii) = uimenu('Parent', handles.menu_scheme, 'Label',themeName,...
-        'UserData', fullfile(list(ii).folder, list(ii).name),...
-        'Callback', {@callback_changeScheme});
+[~,themeName,~] = fileparts(list(ii).name);
+handles.menu_selScheme(ii) = uimenu('Parent', handles.menu_scheme, 'Label',themeName,...
+'UserData', fullfile(list(ii).folder, list(ii).name),...
+'Callback', {@callback_changeScheme});
 end
 handles.menu_exit = uimenu(handles.menu_esma, 'Label', 'Quit', 'Separator', 'on', 'callback', {@callback_exit, handles});
 
@@ -191,7 +191,7 @@ handles.scm(4) = uimenu(handles.cm, "Text", "Duplicate");
 handles.scm(5) = uimenu(handles.cm, "Text", "Export");
 
 for ii = 1:5
-    set(handles.scm(ii), 'Callback', {@callback_contextMenu, handles});
+set(handles.scm(ii), 'Callback', {@callback_contextMenu, handles});
 end
 
 
@@ -262,121 +262,121 @@ close(msg);
 function callback_contextMenu(hObject, event, h)
 nodeIsSelected = false;
 for selNode = h.tree_filetree.SelectedNodes
-    if isequal(event.ContextObject, selNode)
-        nodeIsSelected = true;
-        break
-    end
+if isequal(event.ContextObject, selNode)
+nodeIsSelected = true;
+break
+end
 end
 if ~nodeIsSelected
-    h.tree_filetree.SelectedNodes(end+1) = event.ContextObject;
+h.tree_filetree.SelectedNodes(end+1) = event.ContextObject;
 end
 
 switch hObject.Text
-    case 'Plot'
-        h.tree_filetree.SelectedNodes = event.ContextObject;
-        callback_trialplot(hObject, event, h);
-    case 'Rename'
-        callback_changeFilenames(hObject, event, h);
-    case 'Delete'
-        callback_deletefiles(hObject, event, h);
-    case 'Duplicate'
-        callback_copyfiles(hObject, event, h);
-    case 'Export'
-        callback_exportfiles(hObject, event, h);
-    otherwise
-        warning('Unsupported menu option');
+case 'Plot'
+h.tree_filetree.SelectedNodes = event.ContextObject;
+callback_trialplot(hObject, event, h);
+case 'Rename'
+callback_changeFilenames(hObject, event, h);
+case 'Delete'
+callback_deletefiles(hObject, event, h);
+case 'Duplicate'
+callback_copyfiles(hObject, event, h);
+case 'Export'
+callback_exportfiles(hObject, event, h);
+otherwise
+warning('Unsupported menu option');
 end
 %**************************************************************************
 function callback_copypastecomponents(hObject, ~, h)
 
 study = getstudy(h);
 if study.nsubjects < 1
-    uialert(h.figure, 'No subjects are listed in your study','Conversion Error');
-    return
+uialert(h.figure, 'No subjects are listed in your study','Conversion Error');
+return
 end
 flist = getselectedfiles(study,h, 'Unstacked', true);
 if isempty(flist)
-    return
+return
 end
 if ~eeg_ValidateFileTypes(flist, {'.cnt', '.epc'})
-    wwu_msgdlg('The files you selected do no support cutting and pasting of ICA components', 'Wrong file type'...
-        , {'OK'}, 'isError',true);
-    return
+wwu_msgdlg('The files you selected do no support cutting and pasting of ICA components', 'Wrong file type'...
+, {'OK'}, 'isError',true);
+return
 end
 pg = uiprogressdlg(h.figure, 'Message', '', 'Title', 'Copy Paste', 'Indeterminate', 'on');
 copy_info = [];
 switch hObject.Tag
-    case 'copy'
-        pg.Message = 'Copying ICA components';
-        %check to see if the number of files is greater than the number of participants
-        if length(flist) > study.nsubjects
-            uialert(h.figure, 'ICA components can only be copied from one file group', 'Copy ICA');
-            hObject.UserData = copy_info;
-            h.menu_icapaste.Enable = 'off';
-            delete(pg);
-            return
-        end        
-        for fn = flist
-            t = load(fn{:}, '-mat');
-            if isfield(t, 'EEG')
-                EEG = t.EEG;
-            else
-                EEG = t;
-            end
-             clear t;
-            if isempty(EEG.icasphere)
-                uialert(h.figure, 'At least one of the selected files does not have ICA components', 'Copy ICA');
-                hObject.UserData = copy_info;
-                h.menu_icapaste.Enable = 'off';
-                delete(pg);
-                return
-            end
-        end       
-        copy_info.flist = flist;
-        copy_info.copy_time = datetime('now');
-        h.menu_icacopy.UserData = copy_info;
-        h.menu_icapaste.Enable = 'on';
-        fprintf('Components from %i files save to the clipboard\n', length(flist));
-    case 'paste'
-        pg.Message = 'Pasting ICA components';
-        copy_info = h.menu_icacopy.UserData;
-        if isempty(copy_info)
-            h.menu_icapaste.Enable = 'off';
-            delete(pg);
-            return
-        end       
-        if length(flist) ~= length(copy_info.flist)
-            uialert('The number of files selected is different than the number of originating files')
-            h.menu_icapaste.Enable = 'off';
-            delete(pg);
-            return
-        end        
-        %check names
-        for ii = 1:length(flist)
-            if ~strcmp(fileparts(flist{ii}), fileparts(copy_info.flist{ii}))
-                uialert(h.figure, 'At least one of the source and destination paths do not match', 'Copy ICA');
-                h.menu_icacopy.UserData = [];
-                h.menu_icapaste.Enable = 'off';
-                delete(pg);
-                return
-            end
-        end
-        %now finally do the copying
-        for ii = 1:length(flist)
-            destEEG = wwu_LoadEEGFile(flist{ii});
-            sourceEEG = wwu_LoadEEGFile(copy_info.flist{ii});
-            
-            destEEG.icasphere = sourceEEG.icasphere;
-            destEEG.icaweights = sourceEEG.icaweights;
-            EEG = eeg_checkset(destEEG);
-            
-            wwu_SaveEEGFile(EEG, flist{ii});
-        end        
-        h.menu_icacopy.UserData = [];
-        h.menu_icacopy.Enable = 'off';
-        
-        fprintf('Components copied')
-        delete(pg);
+case 'copy'
+pg.Message = 'Copying ICA components';
+%check to see if the number of files is greater than the number of participants
+if length(flist) > study.nsubjects
+uialert(h.figure, 'ICA components can only be copied from one file group', 'Copy ICA');
+hObject.UserData = copy_info;
+h.menu_icapaste.Enable = 'off';
+delete(pg);
+return
+end        
+for fn = flist
+t = load(fn{:}, '-mat');
+if isfield(t, 'EEG')
+EEG = t.EEG;
+else
+EEG = t;
+end
+clear t;
+if isempty(EEG.icasphere)
+uialert(h.figure, 'At least one of the selected files does not have ICA components', 'Copy ICA');
+hObject.UserData = copy_info;
+h.menu_icapaste.Enable = 'off';
+delete(pg);
+return
+end
+end       
+copy_info.flist = flist;
+copy_info.copy_time = datetime('now');
+h.menu_icacopy.UserData = copy_info;
+h.menu_icapaste.Enable = 'on';
+fprintf('Components from %i files save to the clipboard\n', length(flist));
+case 'paste'
+pg.Message = 'Pasting ICA components';
+copy_info = h.menu_icacopy.UserData;
+if isempty(copy_info)
+h.menu_icapaste.Enable = 'off';
+delete(pg);
+return
+end       
+if length(flist) ~= length(copy_info.flist)
+uialert('The number of files selected is different than the number of originating files')
+h.menu_icapaste.Enable = 'off';
+delete(pg);
+return
+end        
+%check names
+for ii = 1:length(flist)
+if ~strcmp(fileparts(flist{ii}), fileparts(copy_info.flist{ii}))
+uialert(h.figure, 'At least one of the source and destination paths do not match', 'Copy ICA');
+h.menu_icacopy.UserData = [];
+h.menu_icapaste.Enable = 'off';
+delete(pg);
+return
+end
+end
+%now finally do the copying
+for ii = 1:length(flist)
+destEEG = eeg_LoadEEGFile(flist{ii});
+sourceEEG = eeg_LoadEEGFile(copy_info.flist{ii});
+
+destEEG.icasphere = sourceEEG.icasphere;
+destEEG.icaweights = sourceEEG.icaweights;
+EEG = eeg_checkset(destEEG);
+
+wwu_SaveEEGFile(EEG, flist{ii});
+end        
+h.menu_icacopy.UserData = [];
+h.menu_icacopy.Enable = 'off';
+
+fprintf('Components copied')
+delete(pg);
 end
 %*********************************************************************
 %refresh the display after updating information
@@ -390,74 +390,74 @@ h.figure.Pointer = 'arrow';
 %**************************************************************************
 function callback_changeFilenames(hObject, event, h)
 
-    study = getstudy(h);
-    filestorename = getselectedfiles(study, h, 'Unstacked', true);
-    if isempty(filestorename)
-        return
-    end
-    
-    tic
-    parameters.operation = {'Operation', 'Rename files'};
-    parameters.date = datetime('now');
+study = getstudy(h);
+filestorename = getselectedfiles(study, h, 'Unstacked', true);
+if isempty(filestorename)
+return
+end
 
-    dims = size(filestorename);
-    if dims(1) > 1 && dims(2) > 1
-        uialert(h.figure, 'You cannot change more than one filename at a time.  Please select only a single file entry', 'Ooops!');
-        return
-    end
-    nFiles = length(filestorename);
-    columnName = {'New Filename'};
-    reportValues = cell(nFiles, 1);
+tic
+parameters.operation = {'Operation', 'Rename files'};
+parameters.date = datetime('now');
 
-    if ~isempty(filestorename)
-        cfg.msg = 'Enter a new name for the files. Do not include the file path or extension.';
-        cfg.title = 'Rename files';
-        cfg.options = {'Accept', 'Cancel'};
-        [~,fname,~] = fileparts(filestorename{1});
-        cfg.default = fname;
-        try
-            resp = wwu_inputdlg(cfg);
-            if strcmp(resp.option, 'Accept') && ~isempty(resp.input)
-                pb = uiprogressdlg(h.figure, "Cancelable","off", "icon", "info",...
-                    'Message', 'Checking files for duplicates', 'Title', 'Rename Files', 'Value', 0);
-                % check to see if there are already files with the selected
-                % name 
-                checking = true;
-                while checking
-                    newFile{nFiles} = [];
-                    for ii = 1:nFiles
-                        pb.Value = ii/nFiles;
-                        [path, ~, ext] = fileparts(filestorename{ii});
-                        newFile{ii} = fullfile(path, [resp.input, ext]);
-                        if isfile(newFile{ii})
-                            resp.input = [resp.input, '_1'];
-                            break
-                        end
-                    end
-                    checking = false;
-                end
-                %now loop through again and change the name
-                pb.Message = sprintf('Renamining files to %s', resp.input);
-                for ii = 1:nFiles
-                    pb.Value = ii/nFiles;
-                    movefile(filestorename{ii}, newFile{ii})
-                    reportValues{ii} = newFile{ii};
-                end
-                parameters.duration = {'Duration', toc};
-                wwu_UpdateProcessLog(study, "ColumnNames",columnName, ...
-                    'RowNames',filestorename, 'Parameters',parameters,...
-                    'Values',reportValues, 'SheetName','rename');
-                close(pb);
-                callback_refresh(hObject, event, h)
+dims = size(filestorename);
+if dims(1) > 1 && dims(2) > 1
+uialert(h.figure, 'You cannot change more than one filename at a time.  Please select only a single file entry', 'Ooops!');
+return
+end
+nFiles = length(filestorename);
+columnName = {'New Filename'};
+reportValues = cell(nFiles, 1);
 
-            else
-                fprintf('User pressed Cancel or the filename was empty\n');
-            end
-        catch me
-            uialert(h.figure, me.message, me.identifier);
-            return;
-        end
-    end
+if ~isempty(filestorename)
+cfg.msg = 'Enter a new name for the files. Do not include the file path or extension.';
+cfg.title = 'Rename files';
+cfg.options = {'Accept', 'Cancel'};
+[~,fname,~] = fileparts(filestorename{1});
+cfg.default = fname;
+try
+resp = wwu_inputdlg(cfg);
+if strcmp(resp.option, 'Accept') && ~isempty(resp.input)
+pb = uiprogressdlg(h.figure, "Cancelable","off", "icon", "info",...
+'Message', 'Checking files for duplicates', 'Title', 'Rename Files', 'Value', 0);
+% check to see if there are already files with the selected
+% name 
+checking = true;
+while checking
+newFile{nFiles} = [];
+for ii = 1:nFiles
+pb.Value = ii/nFiles;
+[path, ~, ext] = fileparts(filestorename{ii});
+newFile{ii} = fullfile(path, [resp.input, ext]);
+if isfile(newFile{ii})
+resp.input = [resp.input, '_1'];
+break
+end
+end
+checking = false;
+end
+%now loop through again and change the name
+pb.Message = sprintf('Renamining files to %s', resp.input);
+for ii = 1:nFiles
+pb.Value = ii/nFiles;
+movefile(filestorename{ii}, newFile{ii})
+reportValues{ii} = newFile{ii};
+end
+parameters.duration = {'Duration', toc};
+wwu_UpdateProcessLog(study, "ColumnNames",columnName, ...
+'RowNames',filestorename, 'Parameters',parameters,...
+'Values',reportValues, 'SheetName','rename');
+close(pb);
+callback_refresh(hObject, event, h)
+
+else
+fprintf('User pressed Cancel or the filename was empty\n');
+end
+catch me
+uialert(h.figure, me.message, me.identifier);
+return;
+end
+end
 %**************************************************************************
 %exports files to the eeglab set format
 function callback_exportfiles(~, ~, h, ~)
@@ -467,33 +467,33 @@ filestoexport = getselectedfiles(study, h, 'Unstacked', true);
 alert = false;
 
 if isempty(filestoexport)
-    uialert(h.figure, 'No files have been selected for export.', 'File Export')
+uialert(h.figure, 'No files have been selected for export.', 'File Export')
 else
 
-    pb = uiprogressdlg(h.figure,'Message','Exporting selected files');
-    totalEvents = length(filestoexport) * 2;
-    for ii = 1:length(filestoexport)
-        enum = (ii * 2 -1);
-        pb.Value = enum/totalEvents;
-        pb.Message = sprintf('Loading file #%i of %i',ii,totalEvents/2);
-        [p, f, e] = fileparts(filestoexport{ii});
-        switch e
-            case {'.cnt', '.epc'}
-                EEG = wwu_LoadEEGFile(filestoexport{ii});
-                enum = (ii * 2);
-                pb.Value = enum/totalEvents;
-                pb.Message = sprintf('Saving file #%i of %i',ii, totalEvents/2) ;
-                EEG = pop_saveset(EEG, 'filepath', p, 'filename', f);
-            otherwise
-                fprintf('the file %s cannot be exported to eeglab format\n', filestoexport{ii})
-                alert = true;
-        end
-    end
-    if alert 
-        uialert(h.figure, 'Not all files were exported.  Please see the MATLAB console for more informaiton', 'File Export');
-    end
-    populate_filelist(study,h);
-   
+pb = uiprogressdlg(h.figure,'Message','Exporting selected files');
+totalEvents = length(filestoexport) * 2;
+for ii = 1:length(filestoexport)
+enum = (ii * 2 -1);
+pb.Value = enum/totalEvents;
+pb.Message = sprintf('Loading file #%i of %i',ii,totalEvents/2);
+[p, f, e] = fileparts(filestoexport{ii});
+switch e
+case {'.cnt', '.epc'}
+EEG = eeg_LoadEEGFile(filestoexport{ii});
+enum = (ii * 2);
+pb.Value = enum/totalEvents;
+pb.Message = sprintf('Saving file #%i of %i',ii, totalEvents/2) ;
+EEG = pop_saveset(EEG, 'filepath', p, 'filename', f);
+otherwise
+fprintf('the file %s cannot be exported to eeglab format\n', filestoexport{ii})
+alert = true;
+end
+end
+if alert 
+uialert(h.figure, 'Not all files were exported.  Please see the MATLAB console for more informaiton', 'File Export');
+end
+populate_filelist(study,h);
+
 end
 %**************************************************************************
 %deletes selected files from the disk
@@ -504,13 +504,13 @@ study = getstudy(h);
 filestocopy = getselectedfiles(study, h, 'Unstacked', false);
 
 if isempty(filestocopy)
-    uialert(h.figure, 'No files have been selected')
+uialert(h.figure, 'No files have been selected')
 else
-    for ff = filestocopy
-        [p, f, e] = fileparts(ff{1});
-        copyfile(ff{1}, fullfile(p, [f, '_copy', e]));
-    end
-    populate_filelist(study,h);
+for ff = filestocopy
+[p, f, e] = fileparts(ff{1});
+copyfile(ff{1}, fullfile(p, [f, '_copy', e]));
+end
+populate_filelist(study,h);
 end
 h.figure.Pointer = 'watch';
 
@@ -523,15 +523,15 @@ filestodelete = getselectedfiles(study, h);
 
 
 if isempty(filestodelete)
-    uialert(h.figure, 'No files have been selected')
+uialert(h.figure, 'No files have been selected')
 else
-    start = clock;
-    msgstr = sprintf(...
-        'Are you sure you want to delete these %i files? This action cannot be undone!', length(filestodelete));
-    if(matches(uiconfirm(h.figure, msgstr, 'Confirm file deletion'), 'OK'))
-        cellfun(@delete, filestodelete);
-        populate_filelist(study,h);
-    end    
+start = clock;
+msgstr = sprintf(...
+'Are you sure you want to delete these %i files? This action cannot be undone!', length(filestodelete));
+if(matches(uiconfirm(h.figure, msgstr, 'Confirm file deletion'), 'OK'))
+cellfun(@delete, filestodelete);
+populate_filelist(study,h);
+end    
 end
 %************************************************************************
 %populates the study tree with all the studies found in the "STUDIES"
@@ -543,7 +543,7 @@ function nStudies = populate_studylist(h, selected_study)
 %filled.  If selectedStudy is not provided, the first study is selected by
 %default.
 if nargin < 2
-    selected_study = [];
+selected_study = [];
 end
 
 EEGPath = study_GetEEGPath;
@@ -557,19 +557,19 @@ studyinfo = cellfun(@(x,y) fullfile(x, y), {d.folder}, {d.name}, 'UniformOUtput'
 nStudies = length(d);
 studyNames = cell(1,nStudies);
 for ii = 1:nStudies
-    study = study_LoadStudy(studylist{ii});
-    studyNames{ii} = study.name;
+study = study_LoadStudy(studylist{ii});
+studyNames{ii} = study.name;
 end
 
 h.dropdown_study.Items = studyNames;
 h.dropdown_study.ItemsData = studyinfo;
 
 if  ~isempty(selected_study)
-    selitem = studyinfo{contains(studylist, selected_study)};
-    if ~isempty(selitem)
-        h.dropdown_study.Value = selitem;
-        callback_loadstudy([],[],h);
-    end
+selitem = studyinfo{contains(studylist, selected_study)};
+if ~isempty(selitem)
+h.dropdown_study.Value = selitem;
+callback_loadstudy([],[],h);
+end
 end
 
 h.figure.Pointer = 'arrow';
@@ -585,22 +585,22 @@ t.delete;
 study_name = h.dropdown_study.Value;
 
 if isempty(study_name)
-    populate_studyinfo([], h);
-    return;
+populate_studyinfo([], h);
+return;
 end
 
 
 if isempty(dir(study_name))
-    uialert(h.figure,sprintf('The specified study %s does not exist.', study_name));
-    h.figure.Pointer = 'arrow';
-    return
+uialert(h.figure,sprintf('The specified study %s does not exist.', study_name));
+h.figure.Pointer = 'arrow';
+return
 else
-    study = study_LoadStudy(study_name);
-    if isempty(study)
-        uialert('The study failed to load!')
-        return
-    end
-    setstudy(study,h);
+study = study_LoadStudy(study_name);
+if isempty(study)
+uialert('The study failed to load!')
+return
+end
+setstudy(study,h);
 end
 
 populate_studyinfo(study, h);
@@ -613,29 +613,29 @@ function populate_studyinfo(study, h)
 
 colorNum = rgb2hex(h.label_info.UserData);
 if isempty(study)
-    msg = ['<body style="font-family:arial;font-size:14px;color:#', num2str(colorNum),'"><p style="line-height:115%">', ...
-        '<b>NO STUDIES FOUND IN CURRENT DATA FOLDER</b></p>'];
-    msg = [msg, '<p style="line-height:115%">Please choose a different data folder or create a new study.</p>'];
-    h.label_info.HTMLSource = msg;
-    return
+msg = ['<body style="font-family:arial;font-size:14px;color:#', num2str(colorNum),'"><p style="line-height:115%">', ...
+'<b>NO STUDIES FOUND IN CURRENT DATA FOLDER</b></p>'];
+msg = [msg, '<p style="line-height:115%">Please choose a different data folder or create a new study.</p>'];
+h.label_info.HTMLSource = msg;
+return
 end    
 
 if isempty(study.description)
-    descr = {''};
+descr = {''};
 else
-    descr = study.description;
+descr = study.description;
 end
 
 
 msg = ['<body style="font-family:arial;font-size:12px;color:#', num2str(colorNum),'"><p style="line-height:115%"><b>Study:</b>',...
-     '<span style=padding-left:40>',study.name,'</span></p>'];
+'<span style=padding-left:40>',study.name,'</span></p>'];
 msg = [msg,'<p style="line-height:115%"><b>Folder:</b>',...
-     '<span style=padding-left:37>',study.path,'</span></p>'];
+'<span style=padding-left:37>',study.path,'</span></p>'];
 msg = [msg,'<p style="line-height:115%"><b>Subjects:</b>',...
-     '<span style=padding-left:28>',num2str(study.nsubjects),'</span></p>'];
+'<span style=padding-left:28>',num2str(study.nsubjects),'</span></p>'];
 msg = [msg,'<p style="line-height:115%"><b>Description:</b></span></p>'];
 for ii = 1:length(descr)
-    msg = [msg,'<p style="line-height:115%; padding-left: 20">',descr{ii},'</span></p>'];
+msg = [msg,'<p style="line-height:115%; padding-left: 20">',descr{ii},'</span></p>'];
 end
 
 h.label_info.HTMLSource = msg;
@@ -649,35 +649,35 @@ function populate_filelist(study, h)
 EEGPath = study_GetEEGPath;
 flist = [];
 for ii = 1:study.nsubjects
-    searchpath = eeg_BuildPath(EEGPath, study.path, study.subject(ii).path, '*.*');
-    d = dir(searchpath);
-    temp = flist;
-    
-    if ~isempty(d)      %make sure there are files in the directiory
-        for ff = 1:length(d)       %loop through each one
-            switch d(ff).name(1)              %make sure they are not '.' or '..'
-                case {'.'}
-                    continue
-                otherwise
-                    if isempty(temp)    %if this is the first time through, just assign file names
-                        nentries = length(flist)+1;
-                        flist(nentries).name = d(ff).name;
-                        flist(nentries).count = 1;
-                    else                %otherwise check for duplicates
-                        slist = {flist.name};
-                        ismatch = strcmp(slist, d(ff).name);
-                        indx = find(ismatch==1);
-                        if indx>0
-                            flist(indx).count = flist(indx).count + 1;
-                        else
-                            nentries = length(flist)+1;
-                            flist(nentries).name = d(ff).name;
-                            flist(nentries).count = 1;
-                        end
-                    end
-            end
-        end
-    end
+searchpath = eeg_BuildPath(EEGPath, study.path, study.subject(ii).path, '*.*');
+d = dir(searchpath);
+temp = flist;
+
+if ~isempty(d)      %make sure there are files in the directiory
+for ff = 1:length(d)       %loop through each one
+switch d(ff).name(1)              %make sure they are not '.' or '..'
+case {'.'}
+continue
+otherwise
+if isempty(temp)    %if this is the first time through, just assign file names
+nentries = length(flist)+1;
+flist(nentries).name = d(ff).name;
+flist(nentries).count = 1;
+else                %otherwise check for duplicates
+slist = {flist.name};
+ismatch = strcmp(slist, d(ff).name);
+indx = find(ismatch==1);
+if indx>0
+flist(indx).count = flist(indx).count + 1;
+else
+nentries = length(flist)+1;
+flist(nentries).name = d(ff).name;
+flist(nentries).count = 1;
+end
+end
+end
+end
+end
 end
 
 FileTypes = {'Biosemi Files', 'Continuous EEG', 'Epoched Trial Data', 'ERP (Average)', 'ERP Group Stats', 'FFT (Average)', 'ERSP (Average)', 'EEGLab Files', 'Other'};
@@ -688,131 +688,131 @@ Acrosssubj_Extensions = {'.GND', 'GRP', '.FFTGND', '.ersp'};
 %get the top level treen nodes
 Nodes = h.tree_filetree.Children;
 if ~isempty(Nodes)
-    %delete children of each
-    ch = {Nodes.Children};
-    for nn = ch
-        if ~isempty(nn{1})
-            nn{1}.delete
-        end
-    end
+%delete children of each
+ch = {Nodes.Children};
+for nn = ch
+if ~isempty(nn{1})
+nn{1}.delete
+end
+end
 else
-    Nodes = gobjects(1,length(FileTypes));
-    for ii = 1:length(FileTypes)
-        Nodes(ii) = uitreenode(h.tree_filetree, 'Text', FileTypes{ii});
-        Nodes(ii).Tag = 'uneditable';
-    end
+Nodes = gobjects(1,length(FileTypes));
+for ii = 1:length(FileTypes)
+Nodes(ii) = uitreenode(h.tree_filetree, 'Text', FileTypes{ii});
+Nodes(ii).Tag = 'uneditable';
+end
 end
 
 for ii = 1:length(flist)
-    %get the file extension used for categorization
-    [~,fname,ext] = fileparts(flist(ii).name);
-    if ~isempty(find(strcmp(Excluded_Extensions, ext),1))
-        continue
-    end
-    %figure out which category it is
-    category = find(strcmp(Included_Extensions,ext));
-    if isempty(category); category = length(FileTypes); end
-    [~,fNameOnly,~] = fileparts(flist(ii).name);
-    node_name = sprintf('(%i)\t%s', flist(ii).count,fNameOnly);
-    uitreenode(Nodes(category),'Text', node_name, 'NodeData', flist(ii).name, 'Tag', 'editable', 'ContextMenu', h.cm);
+%get the file extension used for categorization
+[~,fname,ext] = fileparts(flist(ii).name);
+if ~isempty(find(strcmp(Excluded_Extensions, ext),1))
+continue
+end
+%figure out which category it is
+category = find(strcmp(Included_Extensions,ext));
+if isempty(category); category = length(FileTypes); end
+[~,fNameOnly,~] = fileparts(flist(ii).name);
+node_name = sprintf('(%i)\t%s', flist(ii).count,fNameOnly);
+uitreenode(Nodes(category),'Text', node_name, 'NodeData', flist(ii).name, 'Tag', 'editable', 'ContextMenu', h.cm);
 end
 
 %now get the average files from the across subect folder
 searchpath = eeg_BuildPath(EEGPath, study.path, 'across subject');
 
 if ~exist(searchpath, 'dir')
-    return
+return
 else
-    for ee = 1:length(Acrosssubj_Extensions)
-        flist = dir(fullfile(searchpath,filesep, ['*',Acrosssubj_Extensions{ee}]));
-        for ii = 1:length(flist)       
-            [~,fname,ext] = fileparts(flist(ii).name);
-             category = find(strcmp(Included_Extensions,Acrosssubj_Extensions{ee}));
-             if isempty(category); category = length(FileTypes); end
-             [~,fNameOnly,~] = fileparts(flist(ii).name);
-             node_name = sprintf('(%i)\t%s', 1 ,fNameOnly);
-             uitreenode(Nodes(category),'Text', node_name, 'NodeData', flist(ii).name, 'Tag', 'editable');
-             
-        end
-    end
+for ee = 1:length(Acrosssubj_Extensions)
+flist = dir(fullfile(searchpath,filesep, ['*',Acrosssubj_Extensions{ee}]));
+for ii = 1:length(flist)       
+[~,fname,ext] = fileparts(flist(ii).name);
+category = find(strcmp(Included_Extensions,Acrosssubj_Extensions{ee}));
+if isempty(category); category = length(FileTypes); end
+[~,fNameOnly,~] = fileparts(flist(ii).name);
+node_name = sprintf('(%i)\t%s', 1 ,fNameOnly);
+uitreenode(Nodes(category),'Text', node_name, 'NodeData', flist(ii).name, 'Tag', 'editable');
+
+end
+end
 end
 %*************************************************************************
 function callback_newstudy(~, ~, h, editMode)
- 
+
 study = getstudy(h);
 if isempty(study)
-    editMode = false;
+editMode = false;
 else
-    currentStudy = study.name;
-    oldStudies = h.dropdown_study.Items;
+currentStudy = study.name;
+oldStudies = h.dropdown_study.Items;
 end
 if editMode %editing an existing study
-    fh = study_EditStudy(study);
-    waitfor(fh);
-    populate_studylist(h, currentStudy);
+fh = study_EditStudy(study);
+waitfor(fh);
+populate_studylist(h, currentStudy);
 else
-    fh = study_EditStudy();
-    waitfor(fh);
-    populate_studylist(h);
-    newStudies = h.dropdown_study.Items;
-    
-    if isempty(oldStudies) %this is the first study created
-        if ~isempty(newStudies)
-            populate_studylist(h, newStudies{1})
-        end
-    else
-        c = setdiff(newStudies, oldStudies);
-        if isempty(c)
-            populate_studylist(h, currentStudy)
-        else
-            populate_studylist(h, c{1});
-        end
-    end
+fh = study_EditStudy();
+waitfor(fh);
+populate_studylist(h);
+newStudies = h.dropdown_study.Items;
+
+if isempty(oldStudies) %this is the first study created
+if ~isempty(newStudies)
+populate_studylist(h, newStudies{1})
+end
+else
+c = setdiff(newStudies, oldStudies);
+if isempty(c)
+populate_studylist(h, currentStudy)
+else
+populate_studylist(h, c{1});
+end
+end
 end
 %**************************************************************************
 function callback_archivestudy(~, ~, h, deleteStudy)
-  
-    study = getstudy(h);
-    EEGPath = study_GetEEGPath();
-    if deleteStudy
-        msg = sprintf('This action will permanantly delete "%s"! Data files will not be affected', study.name);
-        title = 'Delete Study';
-    else
-        msg = sprintf('This action will move "%s" to the archive folder!  ', study.name);
-        title = 'Archive Study';
-    end
-    msg = [msg, 'Are you sure you want to continue?'];
 
-    response = uiconfirm(h.figure, msg, title,'Options', {'Yes', 'No'}, 'CancelOption','No');
+study = getstudy(h);
+EEGPath = study_GetEEGPath();
+if deleteStudy
+msg = sprintf('This action will permanantly delete "%s"! Data files will not be affected', study.name);
+title = 'Delete Study';
+else
+msg = sprintf('This action will move "%s" to the archive folder!  ', study.name);
+title = 'Archive Study';
+end
+msg = [msg, 'Are you sure you want to continue?'];
 
-    if contains(response, 'Yes')
-        file = fullfile(EEGPath, 'STUDIES', [study.name, '.study']);
-        f = dir(file);
-        if isempty(f)
-            uialert(h.figure, sprintf('%s was not found on the disk',file), 'Error')
-            return
-        end
-        if deleteStudy
-            delete(file);
-        else
-            archiveFolder = fullfile(EEGPath, 'STUDIES', 'ARCHIVE');
-            if ~isfolder(archiveFolder)
-                status = mkdir(archiveFolder);
-                if ~status
-                    uialert('Failed to create the ARCHIVE folder');
-                    return
-                end
-            end
-           status = movefile(file, archiveFolder);
-           if ~status
-               uialert('File failed to move.  You may want to move it manually')
-               return
-           end
-        end
-        
-        populate_studylist(h);
-       
-    end
+response = uiconfirm(h.figure, msg, title,'Options', {'Yes', 'No'}, 'CancelOption','No');
+
+if contains(response, 'Yes')
+file = fullfile(EEGPath, 'STUDIES', [study.name, '.study']);
+f = dir(file);
+if isempty(f)
+uialert(h.figure, sprintf('%s was not found on the disk',file), 'Error')
+return
+end
+if deleteStudy
+delete(file);
+else
+archiveFolder = fullfile(EEGPath, 'STUDIES', 'ARCHIVE');
+if ~isfolder(archiveFolder)
+status = mkdir(archiveFolder);
+if ~status
+uialert('Failed to create the ARCHIVE folder');
+return
+end
+end
+status = movefile(file, archiveFolder);
+if ~status
+uialert('File failed to move.  You may want to move it manually')
+return
+end
+end
+
+populate_studylist(h);
+
+end
 
 %**************************************************************************
 %plot the data from different file formats
@@ -820,38 +820,38 @@ function callback_trialplot(~, ~, h)
 
 study = getstudy(h);
 if isempty(study)
-    return
+return
 end
 
 [fileList,~, sIndxList] = getselectedfiles(study, h, 'Unstacked', true);
 if isempty(fileList)
-    return
+return
 end
 
 h.figure.Pointer = 'watch';
 %check the first file to see what type it is
 try
-    [~, ~, ext] = fileparts(fileList{1});
-    switch ext
-        case '.cnt' %continuous data plotting
-            study_PlotCNT(study, fileList, sIndxList)
-        case '.epc' %epoched time series data plotting
-            study_PlotEPC(study, fileList, sIndxList);
-        case '.GND' %averaged subject and grand average data
-            study_PlotERP(study, fileList);
-        case '.GRP'
-            study_PlotGRP(fileList);
-        case '.FFTGND'
-            study_PlotFFT(study, fileList);
-        case '.ersp'
-            study_PlotERSP_NEW(study, fileList);
-        otherwise
-            uialert(h.figure, 'Other files types are not supported, but I may be working on it!', 'Plot Data');
-            return
-    end
+[~, ~, ext] = fileparts(fileList{1});
+switch ext
+case '.cnt' %continuous data plotting
+study_PlotCNT(study, fileList, sIndxList)
+case '.epc' %epoched time series data plotting
+study_PlotEPC(study, fileList, sIndxList);
+case '.GND' %averaged subject and grand average data
+study_PlotERP(study, fileList);
+case '.GRP'
+study_PlotGRP(fileList);
+case '.FFTGND'
+study_PlotFFT(study, fileList);
+case '.ersp'
+study_PlotERSP_NEW(study, fileList);
+otherwise
+uialert(h.figure, 'Other files types are not supported, but I may be working on it!', 'Plot Data');
+return
+end
 catch ME
-    h.figure.Pointer = 'arrow';
-    rethrow(ME)
+h.figure.Pointer = 'arrow';
+rethrow(ME)
 end
 h.figure.Pointer = 'arrow';
 
@@ -864,9 +864,9 @@ function [filelist, n_uniquefiles, subjlist] = getselectedfiles(study,handles, a
 % n*m] will be returned instead.
 %
 arguments
-    study 
-    handles 
-    args.Unstacked = false
+study 
+handles 
+args.Unstacked = false
 end
 
 eeg_path = study_GetEEGPath;
@@ -877,16 +877,16 @@ subjlist = [];
 
 %make sure something is selected
 if isempty(n)
-    uialert(handles.figure, 'Please select files to process from the main file window.', 'Select Files');
-    return
+uialert(handles.figure, 'Please select files to process from the main file window.', 'Select Files');
+return
 end
 %get the names of the files to select
 fnames = {n.NodeData};
 
 %if there are actually no files selected
 if sum(cellfun(@isempty,fnames)) == length(fnames)
-    uialert(handles.figure, 'You may have selected a category rather than an actual file. Please expand the category to find the files', 'Select Files')
-    return
+uialert(handles.figure, 'You may have selected a category rather than an actual file. Please expand the category to find the files', 'Select Files')
+return
 end
 
 
@@ -896,33 +896,33 @@ n_uniquefiles = length(fnames);
 
 %this is an average file not stored in the subject folders
 if contains(fext,'GND') || contains(fext, '.ersp') || contains(fext, '.GRP')
-    for jj = 1:length(fnames)
-        temp = eeg_BuildPath(eeg_path, study.path, 'across subject', fnames{jj});
-        if exist(temp, 'file') > 0
-            cntr = cntr + 1;
-            filelist{cntr} = temp;
-            subjlist = [];
-        end
-    end
+for jj = 1:length(fnames)
+temp = eeg_BuildPath(eeg_path, study.path, 'across subject', fnames{jj});
+if exist(temp, 'file') > 0
+cntr = cntr + 1;
+filelist{cntr} = temp;
+subjlist = [];
+end
+end
 else
-    for ii = 1:study.nsubjects
-        for jj = 1:length(fnames)
-            temp = eeg_BuildPath(eeg_path, study.path,  study.subject(ii).path, fnames{jj});
-            if exist(temp, "file")
-                cntr = cntr + 1;
-                if args.Unstacked
-                    filelist{jj,cntr} = temp;
-                    subjlist(jj,cntr) = ii;
-                else
-                    filelist{cntr} = temp;
-                    subjlist(cntr) = ii;
-                end
-            end
-        end
-    end
+for ii = 1:study.nsubjects
+for jj = 1:length(fnames)
+temp = eeg_BuildPath(eeg_path, study.path,  study.subject(ii).path, fnames{jj});
+if exist(temp, "file")
+cntr = cntr + 1;
+if args.Unstacked
+filelist{jj,cntr} = temp;
+subjlist(jj,cntr) = ii;
+else
+filelist{cntr} = temp;
+subjlist(cntr) = ii;
+end
+end
+end
+end
 end
 if isempty(filelist)
-    uialert(handles.figure, 'None of the selected items are valid files.', 'Select Files');
+uialert(handles.figure, 'None of the selected items are valid files.', 'Select Files');
 end
 
 %**************************************************************************
@@ -934,20 +934,20 @@ eeg_path = study_GetEEGPath;
 study = getstudy(h);
 
 if study.nsubjects < 1
-    uialtert(h.figure, 'No subjects are listed in your study','Conversion Error');
-    return
+uialtert(h.figure, 'No subjects are listed in your study','Conversion Error');
+return
 end
 
 fnames = getselectedfiles(study, h, 'Unstacked', true);
 if isempty(fnames)
-    return
+return
 end
 if ~eeg_ValidateFileTypes(fnames, {'bdf'})
-    msg = 'This conversion can only be completed on BIOSEMI files.';
-    title = 'File Type Error';
-    options ={'OK'};
-    wwu_msgdlg(msg, title,options);
-    return
+msg = 'This conversion can only be completed on BIOSEMI files.';
+title = 'File Type Error';
+options ={'OK'};
+wwu_msgdlg(msg, title,options);
+return
 end
 
 tic
@@ -956,13 +956,13 @@ parameters.date = {'Date and time', datetime('now')};
 columnNames = {'Save output?', 'Output filename'};
 start = clock;
 reportValues = wwu_Biosemi2EEGLab(fnames,'Chanlocs', study.chanlocs, ...
-    'AvgRef', 0, 'ApplyFilt', 0, 'Lpass', 0, 'Hpass', 0, 'OWrite', 2, ...
-    'FileExt', '.cnt', 'FigHandle', h.figure);
+'AvgRef', 0, 'ApplyFilt', 0, 'Lpass', 0, 'Hpass', 0, 'OWrite', 2, ...
+'FileExt', '.cnt', 'FigHandle', h.figure);
 
 
 parameters.duration = {'Duration', toc};
 wwu_UpdateProcessLog(study, 'ColumnNames',columnNames, 'RowNames', fnames,...
-    'SheetName','biosemi convert', 'Parameters',parameters, 'Values',reportValues);
+'SheetName','biosemi convert', 'Parameters',parameters, 'Values',reportValues);
 
 study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Conversion to EEGLAB format', 'function', 'wwu_Biosemi2EEGLab', 'paramstring', fnames, 'fileID', '.cnt');
 study = study_SaveStudy(study);
@@ -978,11 +978,11 @@ fnames = getselectedfiles(study, h, 'Unstacked', true);
 
 if isempty(fnames); return; end
 if ~eeg_ValidateFileTypes(fnames, {'cnt', 'epc'})
-    msg = 'At least some of the selected files formats cannot be resampled using this function';
-    title = 'File Type Error';
-    options ={'OK'};
-    wwu_msgdlg(msg, title, options);
-    return
+msg = 'At least some of the selected files formats cannot be resampled using this function';
+title = 'File Type Error';
+options ={'OK'};
+wwu_msgdlg(msg, title, options);
+return
 end
 
 fh = study_Resample_GUI(study, fnames);
@@ -998,11 +998,11 @@ fnames = getselectedfiles(study, h, 'Unstacked', true);
 
 if isempty(fnames); return; end
 if ~eeg_ValidateFileTypes(fnames, {'cnt', 'epc'})
-    msg = 'At least some of the selected files formats cannot be filtered using this function';
-    title = 'File Type Error';
-    options ={'OK'};
-    wwu_msgdlg(msg, title, options);
-    return
+msg = 'At least some of the selected files formats cannot be filtered using this function';
+title = 'File Type Error';
+options ={'OK'};
+wwu_msgdlg(msg, title, options);
+return
 end
 
 fh = study_Filter_GUI(study, fnames);
@@ -1016,14 +1016,14 @@ option = 0;
 study = getstudy(h);
 fnames = getselectedfiles(study,h, 'Unstacked', true);
 if isempty(fnames)
-    return
+return
 end
 if ~eeg_ValidateFileTypes(fnames, {'cnt', 'epc'})
-    msg = 'At least some of the selected files formats cannot be rereferenced using this function';
-    title = 'File Type Error';
-    options ={'OK'};
-    wwu_msgdlg(msg, title, options);
-    return
+msg = 'At least some of the selected files formats cannot be rereferenced using this function';
+title = 'File Type Error';
+options ={'OK'};
+wwu_msgdlg(msg, title, options);
+return
 end
 
 
@@ -1040,29 +1040,29 @@ reportColumnNames = {'Previous Reference','New Reference', 'New filename'};
 reportValues = cell(length(fnames), length(reportColumnNames));
 
 for ii = 1:length(fnames)
-    [path, file, ext] = fileparts(fnames{ii});
-    [file_id, option, writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
-    if option == 3 && ~writeflag
-        fprintf('skipping existing file...\n')
-        continue;
-    else
-        newfile = [file, file_id];
-    end
-    EEG = wwu_LoadEEGFile(fnames{ii});
-    reportValues{ii,1} = EEG.ref;
-    
-    EEG = pop_reref(EEG, []);
-    reportValues{ii,2} = EEG.ref;
+[path, file, ext] = fileparts(fnames{ii});
+[file_id, option, writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
+if option == 3 && ~writeflag
+fprintf('skipping existing file...\n')
+continue;
+else
+newfile = [file, file_id];
+end
+EEG = eeg_LoadEEGFile(fnames{ii});
+reportValues{ii,1} = EEG.ref;
 
-    reportValues{ii,end} = [newfile,ext];
-    wwu_SaveEEGFile(EEG, fullfile(path, [newfile, ext]));
-    pb.Value = ii/length(fnames);
+EEG = pop_reref(EEG, []);
+reportValues{ii,2} = EEG.ref;
+
+reportValues{ii,end} = [newfile,ext];
+wwu_SaveEEGFile(EEG, fullfile(path, [newfile, ext]));
+pb.Value = ii/length(fnames);
 end
 
 parameters.duration = {'Duration', toc};
 wwu_UpdateProcessLog(study,"ColumnNames",reportColumnNames,...
-    'Parameters',parameters,'RowNames',fnames,'SheetName','Rereference',...
-    'Values',reportValues);
+'Parameters',parameters,'RowNames',fnames,'SheetName','Rereference',...
+'Values',reportValues);
 study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Average Reference', 'function', 'callback_reref', 'paramstring', fnames, 'fileID',file_id);
 study = study_SaveStudy(study);
 setstudy(study,h);
@@ -1083,8 +1083,8 @@ file_id = '_line';
 option = 0;
 
 if isempty(fnames)
-    uialert(h.figure, 'Select files to clean.');
-    return
+uialert(h.figure, 'Select files to clean.');
+return
 end
 start  = clock;
 %include a progress bar for this process
@@ -1092,21 +1092,21 @@ pb = uiprogressdlg(h.figure, 'Title','Reducing 60 Hz noise.');
 pb.Message = sprintf('Cleaning all participants. This could take a while.');
 
 for ii = 1:length(fnames)
-    
-    [path, file, ext] = fileparts(fnames{ii});
-    [file_id, option, writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
-    if option == 3 && ~writeflag
-        fprintf('skipping existing file...\n')
-        continue;
-    else
-        newfile = [file, file_id, ext];
-    end
 
-    EEG = wwu_LoadEEGFile(fnames{ii});
-    %use the clealine function with the EEGLAB defaults
-    EEG = pop_cleanline(EEG, 'bandwidth',2,'chanlist',1:EEG.nbchan ,'computepower',1,'linefreqs',60,'newversion',0,'normSpectrum',0,'p',0.01,'pad',2,'plotfigures',0,'scanforlines',0,'sigtype','Channels','taperbandwidth',2,'tau',100,'verb',1,'winsize',4,'winstep',1);
-    wwu_SaveEEGFile(EEG, fullfile(path, newfile));
-    pb.Value = ii/length(fnames);
+[path, file, ext] = fileparts(fnames{ii});
+[file_id, option, writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
+if option == 3 && ~writeflag
+fprintf('skipping existing file...\n')
+continue;
+else
+newfile = [file, file_id, ext];
+end
+
+EEG = eeg_LoadEEGFile(fnames{ii});
+%use the clealine function with the EEGLAB defaults
+EEG = pop_cleanline(EEG, 'bandwidth',2,'chanlist',1:EEG.nbchan ,'computepower',1,'linefreqs',60,'newversion',0,'normSpectrum',0,'p',0.01,'pad',2,'plotfigures',0,'scanforlines',0,'sigtype','Channels','taperbandwidth',2,'tau',100,'verb',1,'winsize',4,'winstep',1);
+wwu_SaveEEGFile(EEG, fullfile(path, newfile));
+pb.Value = ii/length(fnames);
 end
 
 study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'Clean 60 Hz noise', 'function', 'callback_cleanline', 'paramstring', fnames, 'fileID', file_id);
@@ -1127,62 +1127,62 @@ study = getstudy(h);
 if isempty(study); return; end
 
 if ~isfield(study, 'bingroup')
-    uialert(h.figure, 'Please create an Bin Group that contains epoch extraction information.', 'Create Epoch files');
-    return
+uialert(h.figure, 'Please create an Bin Group that contains epoch extraction information.', 'Create Epoch files');
+return
 end
 
 info = study_SelectBinGroup(study);
 if isempty(info) || isempty(info.gnum) || contains(info.option, 'Cancel')
-    return
+return
 end
 gnum = info.gnum;
 cnum = info.cnum;
 
 selfiles = getselectedfiles(study, h, 'Unstacked', true);
 if isempty(selfiles)
-    uialert(h.figure, 'Please select the file(s) from which to create epochs.', 'Create Epoch files');
-    return
+uialert(h.figure, 'Please select the file(s) from which to create epochs.', 'Create Epoch files');
+return
 end
 
 if cnum==0 && ~isempty(study.bingroup(gnum).bins)
-    cnum = 1:length(study.bingroup(gnum).bins);
-    fprintf('Extracting all %i conditions in %s.', length(cnum), study.bingroup(gnum).name);
+cnum = 1:length(study.bingroup(gnum).bins);
+fprintf('Extracting all %i conditions in %s.', length(cnum), study.bingroup(gnum).name);
 else
-    wwu_msgdlg('There is no Bin information in the Bin Group', 'Extract Error', {'OK'});
-    return
+wwu_msgdlg('There is no Bin information in the Bin Group', 'Extract Error', {'OK'});
+return
 end
 
 %create a temporary bin list file
 bin_list_file = fullfile(eeg_BuildPath(study_GetEEGPath, study.path), 'bin_list_file.txt');
 f = fopen(bin_list_file, 'w');
 if f==-1
-    uialert(h.figure, 'Error creating temporary bin file', 'Extract Epochs');
-    return
+uialert(h.figure, 'Error creating temporary bin file', 'Extract Epochs');
+return
 end
 
 %combine the events from the differnt bins since the routine wants to have
 %them in a single vector.
 events = [];
 for ii = 1:length(study.bingroup(gnum).bins)
-    for jj = 1:length(study.bingroup(gnum).bins(ii).events)
-        fprintf(f, '%i) %s=%s\n', ii, study.bingroup(gnum).bins(ii).events{jj}, study.bingroup(gnum).bins(ii).name);
-        events = strcat(events,{' '}, study.bingroup(gnum).bins(ii).events{jj});
-    end
+for jj = 1:length(study.bingroup(gnum).bins(ii).events)
+fprintf(f, '%i) %s=%s\n', ii, study.bingroup(gnum).bins(ii).events{jj}, study.bingroup(gnum).bins(ii).name);
+events = strcat(events,{' '}, study.bingroup(gnum).bins(ii).events{jj});
+end
 end
 fclose(f);
 
 pg = uiprogressdlg(h.figure,...
-    'Message','Extracting Epochs',...
-    'Title', 'Create Epoch files',...
-    'Indeterminate', 'on');
+'Message','Extracting Epochs',...
+'Title', 'Create Epoch files',...
+'Indeterminate', 'on');
 
 start = clock;
 eb = [];
 cond = study.bingroup(gnum);
 [status, eb] = study_ExtractEpochs(selfiles, 'Outfile', cond.filename, 'Events', events, ...
-        'EpochStart', cond.interval(1), 'EpochEnd', cond.interval(2), 'Overwrite', 2,...
-        'FileExt', '.epc', 'FigHandle', h.figure, 'ExcludeBad', eb, 'BinFile', bin_list_file);
-   
+'EpochStart', cond.interval(1), 'EpochEnd', cond.interval(2), 'Overwrite', 2,...
+'FileExt', '.epc', 'FigHandle', h.figure, 'ExcludeBad', eb, 'BinFile', bin_list_file);
+
 %now apply the bin information
 close(pg);
 
@@ -1200,7 +1200,7 @@ study = getstudy(h);
 filenames = getselectedfiles(study, h);
 
 if isempty(filenames)
-    return
+return
 end
 study_TrialReject(filenames);
 %**********************************************************************
@@ -1220,32 +1220,32 @@ if isempty(study); return; end
 filelist = getselectedfiles(study, h);
 if isempty(filelist); return; end
 try
-    fh = study_RunScript(study, filelist);
-    waitfor(fh);
+fh = study_RunScript(study, filelist);
+waitfor(fh);
 catch me
-    uialert(h.figure, me.message, me.identifier);
-    return
+uialert(h.figure, me.message, me.identifier);
+return
 end
 callback_loadstudy(hObject, eventdata, h)
 %*************************************************************************
 function callback_filesummary(~, ~, h)
-    study = getstudy(h);
-    filelist = getselectedfiles(study, h);
-    study_DisplayFileInformation(study, filelist);
+study = getstudy(h);
+filelist = getselectedfiles(study, h);
+study_DisplayFileInformation(study, filelist);
 
 %*************************************************************************
 function callback_evtsummary(~, ~, h)
-    study = getstudy(h);
-    [filelist,~, slist] = getselectedfiles(study, h, 'Unstacked', true);
-    if isempty(filelist); return; end
-    if ~eeg_ValidateFileTypes(filelist, {'.cnt', '.epc'})
-        msg = 'Event summaries are available only for continous and epoch file types.';
-        title = 'File Type Error';
-        options ={'OK'};
-        wwu_msgdlg(msg, title, options);
-        return    
-    end
-    study_eventsummary_GUI(study, filelist, slist);
+study = getstudy(h);
+[filelist,~, slist] = getselectedfiles(study, h, 'Unstacked', true);
+if isempty(filelist); return; end
+if ~eeg_ValidateFileTypes(filelist, {'.cnt', '.epc'})
+msg = 'Event summaries are available only for continous and epoch file types.';
+title = 'File Type Error';
+options ={'OK'};
+wwu_msgdlg(msg, title, options);
+return    
+end
+study_eventsummary_GUI(study, filelist, slist);
 %%
 %*************************************************************************
 function callback_detectBadChannels(hObject, eventdata, h)
@@ -1256,11 +1256,11 @@ fnames = getselectedfiles(study, h);
 
 if isempty(fnames); return; end
 if ~eeg_ValidateFileTypes(fnames, {'cnt'})
-    msg = 'Channel removal and ASR cleaning can only be performed on continuous data files';
-    title = 'File Type Error';
-    options ={'OK'};
-    wwu_msgdlg(msg, title, options);
-    return
+msg = 'Channel removal and ASR cleaning can only be performed on continuous data files';
+title = 'File Type Error';
+options ={'OK'};
+wwu_msgdlg(msg, title, options);
+return
 end
 
 fh = study_CleanArtifacts(study, fnames);
@@ -1281,7 +1281,7 @@ option = 0;
 file_id = '_rchan';
 selfiles = getselectedfiles(study, h);
 if isempty(selfiles)
-    return
+return
 end
 pb = uiprogressdlg(h.figure,'Message', 'Removing bad channels', 'Value',0,'Title','Remove bad channels');
 maxpbVal= length(selfiles) * 4;
@@ -1290,63 +1290,63 @@ nFiles = length(selfiles);
 reportData = cell(length(selfiles), 3);
 
 for ii = 1:nFiles
-    curpbVal = curpbVal + 1;
-    pb.Message = 'building output filename...';
-    pb.Value = curpbVal/maxpbVal;
+curpbVal = curpbVal + 1;
+pb.Message = 'building output filename...';
+pb.Value = curpbVal/maxpbVal;
 
-    [path, file, ext] = fileparts(selfiles{ii});
-    [file_id, option,writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
-    if option == 3 && ~writeflag
-        fprintf('skipping existing file...\n');
-        reportData{ii,3} = 'not saved';
-        continue;
-    else
-        outfilename = fullfile(path,[file, file_id, ext]);
-        reportData{ii,3} = outfilename;
-    end
+[path, file, ext] = fileparts(selfiles{ii});
+[file_id, option,writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
+if option == 3 && ~writeflag
+fprintf('skipping existing file...\n');
+reportData{ii,3} = 'not saved';
+continue;
+else
+outfilename = fullfile(path,[file, file_id, ext]);
+reportData{ii,3} = outfilename;
+end
 
-    curpbVal = curpbVal + 1;
-    pb.Message = 'loading subject data...';
-    pb.Value = curpbVal/maxpbVal;
+curpbVal = curpbVal + 1;
+pb.Message = 'loading subject data...';
+pb.Value = curpbVal/maxpbVal;
 
-    EEG = wwu_LoadEEGFile(selfiles{ii});
+EEG = eeg_LoadEEGFile(selfiles{ii});
 
-    curpbVal = curpbVal + 1;
-    pb.Message = 'finding and interpolating bad channels...';
-    pb.Value = curpbVal/maxpbVal;
+curpbVal = curpbVal + 1;
+pb.Message = 'finding and interpolating bad channels...';
+pb.Value = curpbVal/maxpbVal;
 
-    if ~isfield(EEG.chaninfo, 'badchans') || sum(EEG.chaninfo.badchans)==0
-        fprintf('No bad channels found for subject #%i\n', ii)
-        reportData{ii,1} = 0;
-        reportData{ii,2} = 'none';   
-    else
-        bchans = EEG.chaninfo.badchans;
-        ch_names = join({EEG.chanlocs(find(bchans)).labels});
-        fprintf('Removing channels\n%s.\n', ch_names{1});
+if ~isfield(EEG.chaninfo, 'badchans') || sum(EEG.chaninfo.badchans)==0
+fprintf('No bad channels found for subject #%i\n', ii)
+reportData{ii,1} = 0;
+reportData{ii,2} = 'none';   
+else
+bchans = EEG.chaninfo.badchans;
+ch_names = join({EEG.chanlocs(find(bchans)).labels});
+fprintf('Removing channels\n%s.\n', ch_names{1});
 
-        EEG = pop_select(EEG, 'rmchannel', find(bchans));
-        EEG.chaninfo.badchans(:) = 0;
-        reportData{ii,1} = sum(bchans);
-        reportData{ii,2} = ch_names{1};
-    end
-    curpbVal = curpbVal + 1;
-    pb.Message = 'saving data...';
-    pb.Value = curpbVal/maxpbVal;
-    fprintf('saving data file with %i channels to %s\n', EEG.nbchan, outfilename);
-    wwu_SaveEEGFile(EEG, outfilename);
+EEG = pop_select(EEG, 'rmchannel', find(bchans));
+EEG.chaninfo.badchans(:) = 0;
+reportData{ii,1} = sum(bchans);
+reportData{ii,2} = ch_names{1};
+end
+curpbVal = curpbVal + 1;
+pb.Message = 'saving data...';
+pb.Value = curpbVal/maxpbVal;
+fprintf('saving data file with %i channels to %s\n', EEG.nbchan, outfilename);
+wwu_SaveEEGFile(EEG, outfilename);
 end
 parameters.duration = {'Duration (seconds)', toc};
 
 wwu_UpdateProcessLog(study,'SheetName', 'rem chans', ...
-    'ColumnNames',{'# removed', 'Channels removed', 'Ouput File'},...
-    'RowNames',selfiles, 'Values', reportData, 'Parameters',parameters)
+'ColumnNames',{'# removed', 'Channels removed', 'Ouput File'},...
+'RowNames',selfiles, 'Values', reportData, 'Parameters',parameters)
 study_AddHistory(study, 'start', stime, 'finish', clock, 'event', 'Removed bad channels', 'paramstring', selfiles);
 populate_filelist(study, h);
 msgbox("Note - removing channels may result in unequal channel numbers.  You should select interpolate missing channels when computing ERPs");
 
 %*************************************************************************
 function callback_removeDataSegments(~, ~, h)
-    
+
 tic
 parameters.Operation = {'Operation', 'Remove continuous segments'};
 parameters.date = {'Date and time', datetime("now");};
@@ -1356,14 +1356,14 @@ option = 0;
 file_id = '_rtime';
 selfiles = getselectedfiles(study, h);
 if isempty(selfiles)
-    return
+return
 end
 if ~eeg_ValidateFileTypes(filelist, {'.cnt'})
-    msg = 'Bad segment removal is only available for continous data file types.';
-    title = 'File Type Error';
-    options ={'OK'};
-    wwu_msgdlg(msg, title, options);
-    return    
+msg = 'Bad segment removal is only available for continous data file types.';
+title = 'File Type Error';
+options ={'OK'};
+wwu_msgdlg(msg, title, options);
+return    
 end
 pb = uiprogressdlg(h.figure,'Message', 'Removing highlights time segments', 'Value',0,'Title','Remove segments');
 maxpbVal= length(selfiles) * 4;
@@ -1373,133 +1373,133 @@ reportData = cell(length(selfiles), 3);
 
 %loop through each of the selected files
 for ii = 1:nFiles
-    curpbVal = curpbVal + 1;
-    pb.Message = 'building output filename...';
-    pb.Value = curpbVal/maxpbVal;
+curpbVal = curpbVal + 1;
+pb.Message = 'building output filename...';
+pb.Value = curpbVal/maxpbVal;
 
-    [path, file, ext] = fileparts(selfiles{ii});
-    [file_id, option,writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
-    if option == 3 && ~writeflag
-        fprintf('skipping existing file...\n');
-        reportData{ii,3} = 'not saved';
-        continue;
-    else
-        outfilename = fullfile(path,[file, file_id, ext]);
-        reportData{ii,3} = outfilename;
-    end
+[path, file, ext] = fileparts(selfiles{ii});
+[file_id, option,writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
+if option == 3 && ~writeflag
+fprintf('skipping existing file...\n');
+reportData{ii,3} = 'not saved';
+continue;
+else
+outfilename = fullfile(path,[file, file_id, ext]);
+reportData{ii,3} = outfilename;
+end
 
-    curpbVal = curpbVal + 1;
-    pb.Message = 'loading subject data...';
-    pb.Value = curpbVal/maxpbVal;
+curpbVal = curpbVal + 1;
+pb.Message = 'loading subject data...';
+pb.Value = curpbVal/maxpbVal;
 
-    EEG = wwu_LoadEEGFile(selfiles{ii});
+EEG = eeg_LoadEEGFile(selfiles{ii});
 
-    curpbVal = curpbVal + 1;
-    pb.Message = 'finding and removing highlights time segments...';
-    pb.Value = curpbVal/maxpbVal;
+curpbVal = curpbVal + 1;
+pb.Message = 'finding and removing highlights time segments...';
+pb.Value = curpbVal/maxpbVal;
 
-    %assume there is something to renmove
-    segmentRemoved = true;
-    if isfield(EEG, 'SelectedRects')
-        if isfield(EEG.SelectedRects, 'XData') && ~isempty(EEG.SelectedRects(1).XData)
-            rmTimes = [EEG.SelectedRects.XData];
-            rmTimes = sort(rmTimes(1:2,:))';        
-            EEG = pop_select(EEG,'rmtime',rmTimes);
-            EEG.save = 'no';
-            EEG.SelectedRects = [];
-            reportData{ii,1} = size(rmTimes,1);
-            reportData{ii,2} = join(cellstr(num2str(rmTimes)),';');
+%assume there is something to renmove
+segmentRemoved = true;
+if isfield(EEG, 'SelectedRects')
+if isfield(EEG.SelectedRects, 'XData') && ~isempty(EEG.SelectedRects(1).XData)
+rmTimes = [EEG.SelectedRects.XData];
+rmTimes = sort(rmTimes(1:2,:))';        
+EEG = pop_select(EEG,'rmtime',rmTimes);
+EEG.save = 'no';
+EEG.SelectedRects = [];
+reportData{ii,1} = size(rmTimes,1);
+reportData{ii,2} = join(cellstr(num2str(rmTimes)),';');
 
-        else
-            segmentRemoved = false;
-        end
-    else
-        segmentRemoved = false;
-    end
+else
+segmentRemoved = false;
+end
+else
+segmentRemoved = false;
+end
 
-    if segmentRemoved == false
-        fprintf("There were no selected segments to remove for subject %i.\n", ii);
-        reportData{ii,1} = 0;
-        reportData{ii,2} = 'none';
-    end
+if segmentRemoved == false
+fprintf("There were no selected segments to remove for subject %i.\n", ii);
+reportData{ii,1} = 0;
+reportData{ii,2} = 'none';
+end
 
-    curpbVal = curpbVal + 1;
-    pb.Message = 'saving data...';
-    pb.Value = curpbVal/maxpbVal;
-    fprintf('saving data file to %s\n', outfilename);
-    wwu_SaveEEGFile(EEG, outfilename);
+curpbVal = curpbVal + 1;
+pb.Message = 'saving data...';
+pb.Value = curpbVal/maxpbVal;
+fprintf('saving data file to %s\n', outfilename);
+wwu_SaveEEGFile(EEG, outfilename);
 end
 parameters.duration = {'Duration (seconds)', toc};
 
 wwu_UpdateProcessLog(study,'SheetName', 'rem time', ...
-    'ColumnNames',{'# removed', 'Time boundary', 'Ouput File'},...
-    'RowNames',selfiles, 'Values', reportData, 'Parameters',parameters)
+'ColumnNames',{'# removed', 'Time boundary', 'Ouput File'},...
+'RowNames',selfiles, 'Values', reportData, 'Parameters',parameters)
 %study_AddHistory(study, 'start', stime, 'finish', clock, 'event', 'Removed time segments', 'paramstring', selfiles);
 populate_filelist(study, h);
 
 
 
-        
+
 %*************************************************************************
 function callback_computeersp(~, ~, h)
-    study = getstudy(h);
-    filelist = getselectedfiles(study, h);
-    if isempty(filelist);return;end
-    
+study = getstudy(h);
+filelist = getselectedfiles(study, h);
+if isempty(filelist);return;end
 
-    [~,~,ext] = fileparts(filelist{1});
-    if ~strcmpi(ext, '.epc')
-        uialert(h.figure, 'ERSP is only available for epoch (.epc) filetypes', 'Compute ERSP ');
-        return
-    end
 
-    fh = study_TF_GUI(study, filelist);
-    waitfor(fh);
- 
+[~,~,ext] = fileparts(filelist{1});
+if ~strcmpi(ext, '.epc')
+uialert(h.figure, 'ERSP is only available for epoch (.epc) filetypes', 'Compute ERSP ');
+return
+end
+
+fh = study_TF_GUI(study, filelist);
+waitfor(fh);
+
 
 %*************************************************************************
 % classifies ICA components using IClabel
 function callback_classifyICA(~, ~, h)
-    
-    study = getstudy(h);
-    filelist = getselectedfiles(study, h);
-    if isempty(filelist); return; end
-  
-    try
-        study_ClassifyICA(filelist, 'WindowHandle', h.figure);
-    catch me
-        wwu_msgdlg(me.message, me.identifier, 'OK', 'isError',true);
-    end
+
+study = getstudy(h);
+filelist = getselectedfiles(study, h);
+if isempty(filelist); return; end
+
+try
+study_ClassifyICA(filelist, 'WindowHandle', h.figure);
+catch me
+wwu_msgdlg(me.message, me.identifier, 'OK', 'isError',true);
+end
 %**************************************************************************
 %provides an in depth GUI for reviewing ICA's and their classificaiton.
 %The focus is on identifying ICA's for removal, not for using ICA's for
 %data analysis
 function callback_inspectICA(~, ~, h)
-    
-    study = getstudy(h);
-    filelist = getselectedfiles(study, h);
-    if isempty(filelist); return; end
-    [~, ~, ext] = fileparts(filelist{1});
-    if ~strcmp(ext, '.cnt') && ~strcmpi(ext, '.epc');
-        uialert(h.figure, 'ICA compoent inspection is only available for continuous (.cnt) and epoch (.epc) filetypes', 'Inspect ICA');
-        return
-    end
-    
-    study_ICAClassInspect(study, filelist);
+
+study = getstudy(h);
+filelist = getselectedfiles(study, h);
+if isempty(filelist); return; end
+[~, ~, ext] = fileparts(filelist{1});
+if ~strcmp(ext, '.cnt') && ~strcmpi(ext, '.epc');
+uialert(h.figure, 'ICA compoent inspection is only available for continuous (.cnt) and epoch (.epc) filetypes', 'Inspect ICA');
+return
+end
+
+study_ICAClassInspect(study, filelist);
 
 %************************************************************************** 
 %reject labelled components
 function callback_rejectICA(~, ~,h)
-    study = getstudy(h);
-    filelist = getselectedfiles(study, h);
-    if isempty(filelist); return; end
-    
-    try
-        fh = study_RejectIC(filelist,[]);
-        waitfor(fh)
-    catch me
-        uialert(h.figure, me.message, me.identifier);
-    end
+study = getstudy(h);
+filelist = getselectedfiles(study, h);
+if isempty(filelist); return; end
+
+try
+fh = study_RejectIC(filelist,[]);
+waitfor(fh)
+catch me
+uialert(h.figure, me.message, me.identifier);
+end
 
 
 %**************************************************************************
@@ -1509,36 +1509,36 @@ if isempty(study); return; end
 
 files = getselectedfiles(study, h);
 if ~isempty(files)
-    
-    start = clock;
-    study_ICA_GUI(study, files);
-    
-    study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'ICA decomposition', 'function', 'callback_ICA', 'paramstring', files, 'fileID', '');
-    study = study_SaveStudy(study);
-    setstudy(study,h);
-    populate_filelist(study, h)
-    populate_studyinfo(study,h)
+
+start = clock;
+study_ICA_GUI(study, files);
+
+study = study_AddHistory(study, 'start', start, 'finish', clock,'event', 'ICA decomposition', 'function', 'callback_ICA', 'paramstring', files, 'fileID', '');
+study = study_SaveStudy(study);
+setstudy(study,h);
+populate_filelist(study, h)
+populate_studyinfo(study,h)
 end
 %**************************************************************************
 function callback_average(hObject, ~, h)
-    study = getstudy(h);
-    if isempty(study); return; end
-    
-    files = getselectedfiles(study, h, 'Unstacked', true); %get the stacked list of files so we can handle them separately if necessary
-    
-    [n_rows, n_cols] = size(files);
-     for ii = n_rows
-        for jj = n_cols
-            [~,~,fext] = fileparts(files{ii,jj});
-            if ~strcmp('.epc', fext)
-                uialert(h.figure, 'Only epoched data with a .epc extension can be averaged.', 'ERP Average');
-                return
-            end
-        end
-     end
-    fh = study_Averager_GUI(study, files, hObject.Tag);    
-    waitfor(fh);
-    populate_filelist(study, h);
+study = getstudy(h);
+if isempty(study); return; end
+
+files = getselectedfiles(study, h, 'Unstacked', true); %get the stacked list of files so we can handle them separately if necessary
+
+[n_rows, n_cols] = size(files);
+for ii = n_rows
+for jj = n_cols
+[~,~,fext] = fileparts(files{ii,jj});
+if ~strcmp('.epc', fext)
+uialert(h.figure, 'Only epoched data with a .epc extension can be averaged.', 'ERP Average');
+return
+end
+end
+end
+fh = study_Averager_GUI(study, files, hObject.Tag);    
+waitfor(fh);
+populate_filelist(study, h);
 %**************************************************************************
 function callback_exit(~, ~, h)
 close(h.figure)
@@ -1551,151 +1551,151 @@ set(h.figure, 'UserData', study);
 function study = getstudy(h)
 study = get(h.figure, 'UserData');
 if isempty(study)
-    warning('No study information is available');
-    return
+warning('No study information is available');
+return
 end
 %*************************************************************************
 %add paths to critical subfolders
 function addSubFolderPaths()
 
-    %check the path for esma
-    esma_path = fileparts(mfilename('fullpath'));
-    tfolder = fullfile(esma_path, 'config');
-    if ~contains(path,tfolder)
-        addpath(tfolder)
-    end
-    tfolder = fullfile(esma_path, 'functions');
-    if ~contains(path,tfolder)
-        addpath(tfolder)
-    end
-    tfolder = fullfile(esma_path, 'icons');
-    if ~contains(path,tfolder)
-        addpath(tfolder)
-    end
-    
-    %checking for eeglab installation and path
-    eeglabpath = which('eeglab.m');
-    if isempty(eeglabpath)
-        error('Could not find eeglab installation.  Please make sure eeglab is installed on this computer and is on the MATLAB path.');
-    else
-         [eeglabpath,~,~] = fileparts(eeglabpath);
-    end
-    
-    %make sure all the necessary plugins are installed in EEGLAB 
-    pluginsDir = fullfile(eeglabpath, 'plugins');
-    d = dir(pluginsDir);
-    if isempty(d)
-        error('Could not find the EEGLAB plugins folder.  Please check your EEGLAB installation.');
-    end
-    dn = {d.name};
-    toolboxFolders = {'Biosig', 'ICLabel', 'clean_rawdata', 'firfilt'};
-    for tb = toolboxFolders
-        indx = contains(dn, tb);
-        if sum(indx) == 0
-           error('Please make sure the %s plugin is installed using eeglab before continuing', tb);
-        else
-            tbPath = fullfile(d(indx).folder, d(indx).name);
-            addpath(tbPath);
-        end
-    end
-   
-    addpath(pluginsDir);
-    fp = genpath(fullfile(eeglabpath, 'functions'));
-    addpath(fp);
-    % addpath(fullfile(pluginsDir, 'Biosig'));
-    % addpath(fullfile(pluginsDir, 'ICLabel'));
-    % addpath(fullfile(pluginsDir, 'clean_rawdata'));
-    % 
+%check the path for esma
+esma_path = fileparts(mfilename('fullpath'));
+tfolder = fullfile(esma_path, 'config');
+if ~contains(path,tfolder)
+addpath(tfolder)
+end
+tfolder = fullfile(esma_path, 'functions');
+if ~contains(path,tfolder)
+addpath(tfolder)
+end
+tfolder = fullfile(esma_path, 'icons');
+if ~contains(path,tfolder)
+addpath(tfolder)
+end
+
+%checking for eeglab installation and path
+eeglabpath = which('eeglab.m');
+if isempty(eeglabpath)
+error('Could not find eeglab installation.  Please make sure eeglab is installed on this computer and is on the MATLAB path.');
+else
+[eeglabpath,~,~] = fileparts(eeglabpath);
+end
+
+%make sure all the necessary plugins are installed in EEGLAB 
+pluginsDir = fullfile(eeglabpath, 'plugins');
+d = dir(pluginsDir);
+if isempty(d)
+error('Could not find the EEGLAB plugins folder.  Please check your EEGLAB installation.');
+end
+dn = {d.name};
+toolboxFolders = {'Biosig', 'ICLabel', 'clean_rawdata', 'firfilt'};
+for tb = toolboxFolders
+indx = contains(dn, tb);
+if sum(indx) == 0
+error('Please make sure the %s plugin is installed using eeglab before continuing', tb);
+else
+tbPath = fullfile(d(indx).folder, d(indx).name);
+addpath(tbPath);
+end
+end
+
+addpath(pluginsDir);
+fp = genpath(fullfile(eeglabpath, 'functions'));
+addpath(fp);
+% addpath(fullfile(pluginsDir, 'Biosig'));
+% addpath(fullfile(pluginsDir, 'ICLabel'));
+% addpath(fullfile(pluginsDir, 'clean_rawdata'));
+% 
 %    end
 
- %     %check for FMUT installation
-    if isempty(which('FclustGND.m'))
-        error('Could not find FMUT installation.  Please make sure the FMUT toolbox is installed on this computer and is on the MATLAB path');
-    end
-    %check for MASS UNIVARIATE installation
-    if isempty(which('clustGND.m'))
-        msg = "Could not find Mass Univariate installation!";
-        msg = sprintf("%s\nPlease make sure the Mass Univariate ERP toolbox is installed on this comuputer and is on the MATLAB path", msg);
-        msg = sprintf("%s\nThe toolbox can be downloaded from https://github.com/dmgroppe/Mass_Univariate_ERP_Toolbox", msg);
-        error(msg); %#ok<SPERR>
-    end
+%     %check for FMUT installation
+if isempty(which('FclustGND.m'))
+error('Could not find FMUT installation.  Please make sure the FMUT toolbox is installed on this computer and is on the MATLAB path');
+end
+%check for MASS UNIVARIATE installation
+if isempty(which('clustGND.m'))
+msg = "Could not find Mass Univariate installation!";
+msg = sprintf("%s\nPlease make sure the Mass Univariate ERP toolbox is installed on this comuputer and is on the MATLAB path", msg);
+msg = sprintf("%s\nThe toolbox can be downloaded from https://github.com/dmgroppe/Mass_Univariate_ERP_Toolbox", msg);
+error(msg); %#ok<SPERR>
+end
 
-    %check for fieldtrip installation
-    ftripPath = fullfile(eeglabpath, 'plugins', 'Fieldtrip*');
-    ft = dir(ftripPath);
-    if isempty(ft)
-        error('Could not find Fieltrip plugin for eeglab.  Please make sure it is installed before proceeding');
-    else
-        isFolder = [ft.isdir];
-        ft = ft(isFolder==1);
-        if isempty(ft)
-            error('Could not find Fieltrip plugin for eeglab.  Please make sure it is installed before proceeding');
-        end
-        fDates = [ft.datenum];
-        [~, indx] = max(fDates);
-        ft = ft(indx);
-        addpath(fullfile(ft.folder, ft.name));
-    end
+%check for fieldtrip installation
+ftripPath = fullfile(eeglabpath, 'plugins', 'Fieldtrip*');
+ft = dir(ftripPath);
+if isempty(ft)
+error('Could not find Fieltrip plugin for eeglab.  Please make sure it is installed before proceeding');
+else
+isFolder = [ft.isdir];
+ft = ft(isFolder==1);
+if isempty(ft)
+error('Could not find Fieltrip plugin for eeglab.  Please make sure it is installed before proceeding');
+end
+fDates = [ft.datenum];
+[~, indx] = max(fDates);
+ft = ft(indx);
+addpath(fullfile(ft.folder, ft.name));
+end
 
-    %add the local folders
-    cPath = fileparts(mfilename("fullpath"));
-    subfolders = {'config', 'functions', 'toolboxes', 'icons'};
-    s = pathsep;
-    pathStr = [s, path, s];
-    for ii = subfolders
-        sFolderPath = fullfile(cPath, ii{1});
-        onPath  = contains(pathStr, [s, sFolderPath, s], 'IgnoreCase', ispc);
-        if ~onPath
+%add the local folders
+cPath = fileparts(mfilename("fullpath"));
+subfolders = {'config', 'functions', 'toolboxes', 'icons'};
+s = pathsep;
+pathStr = [s, path, s];
+for ii = subfolders
+sFolderPath = fullfile(cPath, ii{1});
+onPath  = contains(pathStr, [s, sFolderPath, s], 'IgnoreCase', ispc);
+if ~onPath
 
-            addpath(genpath(sFolderPath));
-        end
-    end
+addpath(genpath(sFolderPath));
+end
+end
 
 %**************************************************************************
 function hex =rgb2hex(rgb)
-    arguments
-        rgb (1,3) {mustBeFloat}
-    end
-    rgb = round(rgb * 255);
-    d = 0; pos = 1;
-    for ii = [4,2,0]
-        d = d + rgb(pos) * 16^ii;
-        pos = pos + 1;
-    end
-    hex = dec2hex(d);
+arguments
+rgb (1,3) {mustBeFloat}
+end
+rgb = round(rgb * 255);
+d = 0; pos = 1;
+for ii = [4,2,0]
+d = d + rgb(pos) * 16^ii;
+pos = pos + 1;
+end
+hex = dec2hex(d);
 
 %**************************************************************************
 function list = getSchemeList()
 
-    cp = mfilename('fullpath');
-    [cp,~,~] = fileparts(cp);
-    f = fullfile(cp, 'config','themes', '*.mat');
-    list = dir(f);
+cp = mfilename('fullpath');
+[cp,~,~] = fileparts(cp);
+f = fullfile(cp, 'config','themes', '*.mat');
+list = dir(f);
 
 %**************************************************************************
 function callback_changeScheme(~, src)
 
-    p.themeFile = src.Source.UserData;
-    eeg_WriteConfig(p)
-    
-    msg = 'Do you want to restart the main interface to use the new theme? Otherwise the theme will take effect on the next restart.';
-    response = wwu_msgdlg(msg, 'Restart request', {'Yes','No'});
-    if strcmp('Yes', response)
-        esma;
-    end
+p.themeFile = src.Source.UserData;
+eeg_WriteConfig(p)
+
+msg = 'Do you want to restart the main interface to use the new theme? Otherwise the theme will take effect on the next restart.';
+response = wwu_msgdlg(msg, 'Restart request', {'Yes','No'});
+if strcmp('Yes', response)
+esma;
+end
 %**************************************************************************
 function callback_editscheme(~,~,~)
 
-    options = eeg_ReadConfig('themeFile');
-    %load the  editor
-    f = wwu_ThemeEditor('SchemeFile', options.themeFile);
-    waitfor(f)
-    msg = 'Do you want to restart the main interface to see the changes? Otherwise the changes will take effect on the next restart.';
-    response = wwu_msgdlg(msg, 'Restart request', {'Yes','No'});
-    if strcmp('Yes', response)
-        esma;
-    end
+options = eeg_ReadConfig('themeFile');
+%load the  editor
+f = wwu_ThemeEditor('SchemeFile', options.themeFile);
+waitfor(f)
+msg = 'Do you want to restart the main interface to see the changes? Otherwise the changes will take effect on the next restart.';
+response = wwu_msgdlg(msg, 'Restart request', {'Yes','No'});
+if strcmp('Yes', response)
+esma;
+end
 %**************************************************************************
 function callback_editdatapath(~,~)   
-    study_ChangeEEGPath;
-    esma;
+study_ChangeEEGPath;
+esma;

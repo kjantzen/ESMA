@@ -186,10 +186,8 @@ for ii = 1:length(chans_used)
     uitreenode('Parent', n, 'Text', chans_used{ii});
 end
 
-if r.hasBetween
-    h.check_CIbars.Enable = false;
-    h.check_CIbars.Value = false;
-    h.check_errorbars.Value = true;
+if r.hasWithin
+    h.check_CIbars.E
 end
 %display means and standard deviations
 d = r.within;

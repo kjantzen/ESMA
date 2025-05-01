@@ -23,100 +23,100 @@
 function [status, exclude_decision] = study_ExtractEpochs(selfiles, varargin)
 
 p = wwu_finputcheck(varargin, {...
-    'Outfile', 'string', [], 'epoch_files';...
-    'Events',       'cell', [], [];...
-    'EpochStart',        'real', [], -.1;...
-    'EpochEnd',        'real', [], .5;...
-    'ExcludeBad', 'integer', [0,1], [];...
-    'Overwrite',       'integer', [0:2], 0;...
-    'FileExt',      'string', [], '.epc';...
-    'FigHandle',   'handle',  [], [];...
-    'BinFile',      'string', [], []...
-    }, [], 'ignore');
+'Outfile', 'string', [], 'epoch_files';...
+'Events',       'cell', [], [];...
+'EpochStart',        'real', [], -.1;...
+'EpochEnd',        'real', [], .5;...
+'ExcludeBad', 'integer', [0,1], [];...
+'Overwrite',       'integer', [0:2], 0;...
+'FileExt',      'string', [], '.epc';...
+'FigHandle',   'handle',  [], [];...
+'BinFile',      'string', [], []...
+}, [], 'ignore');
 
 status = 0;  %assume things went wrong
 if isempty(selfiles)
-    return
+return
 end
 
 OWrite = p.Overwrite;
 p.Events = split(p.Events);
 
 if isempty(p.ExcludeBad)
-    %get an idea of what kind of data this is
-    [fpath, fname, fext] = fileparts(selfiles{1});
-    EEGHead = eeg_LoadEEGFile(selfiles{1});
+%get an idea of what kind of data this is
+[fpath, fname, fext] = fileparts(selfiles{1});
+EEGHead = eeg_LoadEEGFile(selfiles{1});
 
-    %EEGHead = pop_loadset('filename', [fname, fext], 'filepath', fpath, 'loadmode', 'info');
-    if EEGHead.trials>1  && isempty(p.ExcludeBad)
-        response = uiconfirm(p.FigHandle, 'It looks like you are epoching already epoched data.  Do you want to exclude bad trials from your new epochs?', 'Extract Epochs', 'Options', {'Cancel','No', 'Yes'},...
-            'DefaultOption', 3, 'CancelOption', 1);
-        switch response
-            case 'Yes'
-                p.ExcludeBad = true;
-            case 'No'
-                p.ExcludeBad = false;
-            case 'Cancel'
-                return;
-        end
-    end
+%EEGHead = pop_loadset('filename', [fname, fext], 'filepath', fpath, 'loadmode', 'info');
+if EEGHead.trials>1  && isempty(p.ExcludeBad)
+response = uiconfirm(p.FigHandle, 'It looks like you are epoching already epoched data.  Do you want to exclude bad trials from your new epochs?', 'Extract Epochs', 'Options', {'Cancel','No', 'Yes'},...
+'DefaultOption', 3, 'CancelOption', 1);
+switch response
+case 'Yes'
+p.ExcludeBad = true;
+case 'No'
+p.ExcludeBad = false;
+case 'Cancel'
+return;
+end
+end
 end
 
 exclude_decision = p.ExcludeBad;
 for kk = 1:length(selfiles)
-    [fpath, fname, fext] = fileparts(selfiles{kk});
-    outfilename =  fullfile(fpath, [p.Outfile, p.FileExt]);
-    
-    if exist(outfilename, 'file')
-        if OWrite == 0 %skip when output file exists 
-            fprintf('File %s already exists\nAborting file creation ...\n', outfilename);
-            continue
-        elseif OWrite==2
-            response = questdlg(sprintf('At least one output file already exists!\nWould you like to overwrite?'),...
-                'Extract Eopochs', 'Overwrite All', 'Overwrite Current', 'Ignore Existing', 'Ignore Existing');
-            switch response
-                case 'Overwrite All'
-                    OWrite = 1;
-                case 'Ignore Existing'
-                    OWrite = 0;
-                    continue
-            end 
-        end
-    end
-    
-    EEGraw = eeg_LoadEEGFile(selfiles{kk});
-    badtrial_list = study_GetBadTrials(EEGraw);
-    bad_comps = EEGraw.reject.gcompreject;  %store the bad component list so it can be restored to the new epochs
-    if(check_for_events(EEGraw, p.Events))
-        if p.ExcludeBad
-            EEGraw = pop_rejepoch(EEGraw, badtrial_list, 0);
-        end
-        %convert all event markers to strings
-        for ii = 1:length(EEGraw.event)
-            EEGraw.event(ii).type = num2str(EEGraw.event(ii).type);
-        end
-        
-        EEG = pop_epoch(EEGraw, p.Events, [p.EpochStart, p.EpochEnd]);
-        if EEG.xmin < 0
-            baseWin = [EEG.xmin, 0];
-        else
-            baseWin = [EEG.xmin, EEG.xmax];
-        end
-        EEG = pop_rmbase(EEG, baseWin); %remove the offset
-        EEG.reject = [];
-        EEG = eeg_checkset(EEG);
-        EEG.reject.gcompreject = bad_comps;
-        %use the mass univariate toolbox tools for creating a bin file
-        %compatible with the statistical tools
-        if ~isempty(p.BinFile)
-            if isfield(EEG, 'bindesc')
-                EEG = remove_bins(EEG);
-            end
-            EEG = bin_info2EEG(EEG, p.BinFile);
-        end
-        wwu_SaveEEGFile(EEG, fullfile(fpath, [p.Outfile, p.FileExt]));
-     end
-    
+[fpath, fname, fext] = fileparts(selfiles{kk});
+outfilename =  fullfile(fpath, [p.Outfile, p.FileExt]);
+
+if exist(outfilename, 'file')
+if OWrite == 0 %skip when output file exists 
+fprintf('File %s already exists\nAborting file creation ...\n', outfilename);
+continue
+elseif OWrite==2
+response = questdlg(sprintf('At least one output file already exists!\nWould you like to overwrite?'),...
+'Extract Eopochs', 'Overwrite All', 'Overwrite Current', 'Ignore Existing', 'Ignore Existing');
+switch response
+case 'Overwrite All'
+OWrite = 1;
+case 'Ignore Existing'
+OWrite = 0;
+continue
+end 
+end
+end
+
+EEGraw = eeg_LoadEEGFile(selfiles{kk});
+badtrial_list = study_GetBadTrials(EEGraw);
+bad_comps = EEGraw.reject.gcompreject;  %store the bad component list so it can be restored to the new epochs
+if(check_for_events(EEGraw, p.Events))
+if p.ExcludeBad
+EEGraw = pop_rejepoch(EEGraw, badtrial_list, 0);
+end
+%convert all event markers to strings
+for ii = 1:length(EEGraw.event)
+EEGraw.event(ii).type = num2str(EEGraw.event(ii).type);
+end
+
+EEG = pop_epoch(EEGraw, p.Events, [p.EpochStart, p.EpochEnd]);
+if EEG.xmin < 0
+baseWin = [EEG.xmin, 0];
+else
+baseWin = [EEG.xmin, EEG.xmax];
+end
+EEG = pop_rmbase(EEG, baseWin); %remove the offset
+EEG.reject = [];
+EEG = eeg_checkset(EEG);
+EEG.reject.gcompreject = bad_comps;
+%use the mass univariate toolbox tools for creating a bin file
+%compatible with the statistical tools
+if ~isempty(p.BinFile)
+if isfield(EEG, 'bindesc')
+EEG = remove_bins(EEG);
+end
+EEG = bin_info2EEG(EEG, p.BinFile);
+end
+wwu_SaveEEGFile(EEG, fullfile(fpath, [p.Outfile, p.FileExt]));
+end
+
 end
 status = 1; %must be OK if we got this far
 
@@ -130,18 +130,18 @@ bin_names = split(strtrim(sprintf('bin%i ', 1:length(EEG.bindesc))))';
 
 %first remove the information from each epoch
 for ii = 1:length(EEG.epoch)
-    bin_evs = find(contains(EEG.epoch(ii).eventtype, bin_names));
-    EEG.epoch(ii).eventtype(bin_evs) = [];
-    EEG.epoch(ii).event(bin_evs) = [];
-    EEG.epoch(ii).eventlatency(bin_evs) = [];
-    EEG.epoch(ii).eventurevent(bin_evs) = [];
+bin_evs = find(contains(EEG.epoch(ii).eventtype, bin_names));
+EEG.epoch(ii).eventtype(bin_evs) = [];
+EEG.epoch(ii).event(bin_evs) = [];
+EEG.epoch(ii).eventlatency(bin_evs) = [];
+EEG.epoch(ii).eventurevent(bin_evs) = [];
 end
 
 %now get rid of the events in teh event structure
 for ii = length(EEG.event):-1:1
-    if sum(strcmp(bin_names, EEG.event(ii).type)) > 0
-        EEG.event(ii) = [];
-    end
+if sum(strcmp(bin_names, EEG.event(ii).type)) > 0
+EEG.event(ii) = [];
+end
 end
 
 %finally get rid of the bid description field
@@ -154,8 +154,8 @@ status = 1;
 evnt_str = {EEG.event.type};
 
 for ii = 1:length(events)
-    ncnt = strmatch(events{ii},evnt_str);
-    if ~isempty(ncnt) return; end
+ncnt = strmatch(events{ii},evnt_str);
+if ~isempty(ncnt) return; end
 end
 status = 0;
 
