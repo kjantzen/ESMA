@@ -298,7 +298,7 @@ if RejType(4)==1; EEG = pop_jointprob(EEG, rej_type, chanlist, trend_winsize, jp
 
 pb.Message = 'saving results...';
 %  save(fnames{jj}, 'EEG', '-mat', '-v6');
-wwu_SaveEEGFile(EEG, fnames{jj})
+eeg_SaveEEGFile(EEG, fnames{jj})
 
 pb.Value = jj/length(fnames);
 end

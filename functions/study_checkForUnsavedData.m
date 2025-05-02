@@ -17,19 +17,19 @@ updateNeeded = false;
 
 %only execute if the current figure and the calling figure are different
 if ~isequal(hfig, CURRENTFIGURE)
-    %signal the need for an update just in case something from the other
-    %figure was saved before it was deleted
-    updateNeeded = true;
-    %make sure the figure still exists
-    if ishandle(CURRENTFIGURE)
-        p = CURRENTFIGURE.UserData;
-        if isfield(p, 'EEG')
-            if contains(p.EEG.saved, 'no')
-                pb = uiprogressdlg(CURRENTFIGURE, "Indeterminate","on","Message",'Saving unsaved data...');
-                wwu_SaveEEGFile(p.EEG);
-                close(pb);
-            end
-        end
-    end    
+%signal the need for an update just in case something from the other
+%figure was saved before it was deleted
+updateNeeded = true;
+%make sure the figure still exists
+if ishandle(CURRENTFIGURE)
+p = CURRENTFIGURE.UserData;
+if isfield(p, 'EEG')
+if contains(p.EEG.saved, 'no')
+pb = uiprogressdlg(CURRENTFIGURE, "Indeterminate","on","Message",'Saving unsaved data...');
+eeg_SaveEEGFile(p.EEG);
+close(pb);
+end
+end
+end    
 end
 CURRENTFIGURE = hfig;

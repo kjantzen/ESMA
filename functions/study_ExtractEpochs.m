@@ -114,7 +114,7 @@ EEG = remove_bins(EEG);
 end
 EEG = bin_info2EEG(EEG, p.BinFile);
 end
-wwu_SaveEEGFile(EEG, fullfile(fpath, [p.Outfile, p.FileExt]));
+eeg_SaveEEGFile(EEG, fullfile(fpath, [p.Outfile, p.FileExt]));
 end
 
 end

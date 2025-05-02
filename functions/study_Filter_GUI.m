@@ -184,7 +184,7 @@ for jj = 1:nfile
 if owrite
 outfilename = file;
 else
-[file_id, option,writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
+[file_id, option,writeflag] = eeg_verifySaveFile(path, file, file_id, ext, option);
 if option == 3 && ~writeflag
 fprintf('skipping existing file...\n')
 reportValues{jj} = 'not saved';
@@ -201,7 +201,7 @@ fprintf('Filtering the data\n');
 fprintf('lowcutoff %f, highcutoff %f, revfilt %f\n', ledge, hedge, revfilt)
 EEGIn = pop_eegfiltnew( EEGIn, 'locutoff', ledge, 'hicutoff', hedge, 'revfilt', revfilt);
 newfile = fullfile(path, [outfilename, ext]);
-wwu_SaveEEGFile(EEGIn, newfile);
+eeg_SaveEEGFile(EEGIn, newfile);
 
 pbar.Value  = jj/nfile;
 
@@ -209,7 +209,7 @@ end
 clear EEGIn
 close(pbar)   
 Parameters.elapsedtime = {'Elapsed Time (s)', toc}; 
-wwu_UpdateProcessLog(study, 'RowNames', filenames, 'ColumnNames', {'Output file'}, 'Values',reportValues', 'SheetName','filter', 'Parameters', Parameters);
+eeg_UpdateProcessLog(study, 'RowNames', filenames, 'ColumnNames', {'Output file'}, 'Values',reportValues', 'SheetName','filter', 'Parameters', Parameters);
 params = filenames;
 params(end+1) = {'locutoff'};
 params(end+1) = {ledge};

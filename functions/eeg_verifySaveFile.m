@@ -1,4 +1,4 @@
-function [file_id, option, writeflag] = wwu_verifySaveFile(path, outfile, file_id, ext, option)
+function [file_id, option, writeflag] = eeg_verifySaveFile(path, outfile, file_id, ext, option)
 
     narginchk(5,6);
     

@@ -600,7 +600,7 @@ snum = h.dropdown_subjselect.Value;
 fnames = h.dropdown_subjselect.UserData;
 filename = fnames{snum};
 
-p.EEG = wwu_SaveEEGFile(p.EEG, filename);
+p.EEG = eeg_SaveEEGFile(p.EEG, filename);
 h.figure.UserData = p;
 close(pb);
 
@@ -661,7 +661,7 @@ if ~isempty(eventdata)
 old_snum = eventdata.PreviousValue;
 pb.Message = 'Saving current subject file.';
 oldfilename = fnames{old_snum};
-plot.EEG = wwu_SaveEEGFile(plot.EEG, oldfilename);
+plot.EEG = eeg_SaveEEGFile(plot.EEG, oldfilename);
 else
 fprintf('whoops - cannot determine which file to save')
 end

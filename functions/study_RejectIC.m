@@ -93,7 +93,7 @@ end
 end
 
 fprintf('%i components marked as bad.  Saving file...\n', sum(EEG.reject.gcompreject));
-wwu_SaveEEGFile(EEG, files{ii});
+eeg_SaveEEGFile(EEG, files{ii});
 %save(files{ii}, '-v6', '-mat', 'EEG');
 
 

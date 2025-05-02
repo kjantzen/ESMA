@@ -123,7 +123,7 @@ for jj = 1:nfile
 if owrite
 outfilename = file;
 else
-[file_id, option,writeflag] = wwu_verifySaveFile(path, file, file_id, ext, option);
+[file_id, option,writeflag] = eeg_verifySaveFile(path, file, file_id, ext, option);
 if option == 3 && ~writeflag
 fprintf('skipping existing file...\n')
 continue;
@@ -141,7 +141,7 @@ reportValues{jj,2} = newFs;
 
 EEGIn = pop_resample( EEGIn, newFs);
 newfile = fullfile(path, [outfilename, ext]);
-wwu_SaveEEGFile(EEGIn, newfile);
+eeg_SaveEEGFile(EEGIn, newfile);
 pbar.Value  = jj/nfile;
 end
 
@@ -149,7 +149,7 @@ clear EEGIn
 close(pbar)
 
 parameters.duration = {'Duration', toc}; 
-wwu_UpdateProcessLog(study,"ColumnNames",reportColumnsNames,...
+eeg_UpdateProcessLog(study,"ColumnNames",reportColumnsNames,...
 "Parameters",parameters,"RowNames",filenames,...
 "SheetName",'resample','Values',reportValues)
 params = filenames;

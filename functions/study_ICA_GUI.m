@@ -220,13 +220,13 @@ EEG.etc.ic_classification = [];
 end
 
 
-wwu_SaveEEGFile(EEG, fnames{jj});
+eeg_SaveEEGFile(EEG, fnames{jj});
 clear EEGIn EEGOut EEGProcessed
 pb.Value = jj/length(fnames);
 
 end
 parameters.duration = {'Duration', toc};
-wwu_UpdateProcessLog(study,"RowNames",fnames, "ColumnNames",reportColumnNames, ...
+eeg_UpdateProcessLog(study,"RowNames",fnames, "ColumnNames",reportColumnNames, ...
 "Parameters",parameters,"SheetName","ICA", "Values",reportValues);
 close(pb);
 close(h.figure);

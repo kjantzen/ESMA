@@ -347,7 +347,7 @@ EEG.pnts = maxIndx - minIndx + 1;
 EEG.times = EEG.times(minIndx:maxIndx);
 end
 
-wwu_SaveEEGFile(EEG, subjOutFile);
+eeg_SaveEEGFile(EEG, subjOutFile);
 end
 
 pb.Message = 'creating average';
@@ -368,7 +368,7 @@ GND.indiv_conditions = conditions;
 save(GNDFile, 'GND', '-mat')
 end
 parameters.duration = {'Duration (seconds)', toc};
-wwu_UpdateProcessLog(study, 'SheetName','average', ...
+eeg_UpdateProcessLog(study, 'SheetName','average', ...
 'ColumnNames',reportColumnNames, 'RowNames', reportRows,...
 'Values',reportData, 'Parameters',parameters);
 

@@ -85,11 +85,11 @@ end
 curpbVal = curpbVal + 1;
 pb.Message = 'saving data...';
 pb.Value = curpbVal/maxpbVal;
-wwu_SaveEEGFile(EEG, outfilename);
+eeg_SaveEEGFile(EEG, outfilename);
 end
 parameters.duration = {'Duration (seconds)', datetime-stime};
 
-wwu_UpdateProcessLog(study,'SheetName', 'auto bad chans', ...
+eeg_UpdateProcessLog(study,'SheetName', 'auto bad chans', ...
 'ColumnNames',{'# marked', 'Channels marked', 'Ouput File'},...
 'RowNames',dirtyfiles, 'Values', reportData, 'Parameters',parameters)
 %study_AddHistory(study, 'start', stime, 'finish', datetime, 'event', 'Auto Removed bad channels', 'paramstring', dirtyfiles);

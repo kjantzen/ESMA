@@ -62,7 +62,7 @@ pb.Message = 'marking by joint probablity...';
 if RejType(4)==1; EEG = pop_jointprob(EEG, rej_type, chanlist, trend_winsize, jp_limit,jp_limit,0,0,0); end
 
 pb.Message = 'saving results...';
-wwu_SaveEEGFile(EEG, fnames{jj});    
+eeg_SaveEEGFile(EEG, fnames{jj});    
 pb.Value = jj/length(fnames);
 end
 callback_exit(hObject, eventdata, h);

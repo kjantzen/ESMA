@@ -1,5 +1,5 @@
-%   wwu_Biosemi2EEGLab
-%   wwu_Biosemi2EEGLab(filelist) - converts the files listed in the cell
+%   eeg_Biosemi2EEGLab
+%   eeg_Biosemi2EEGLab(filelist) - converts the files listed in the cell
 %   array FILELIST from BIOSEMI BDF format to the EEGLAB set format.
 %   This function accounts for the specific trigger inputs used in the
 %   HCND lab.
@@ -24,7 +24,7 @@
 %   Hpass           The cut off for a high pass filter to apply
 %
 %   OWrite          An integer  indicating whether to overwrite [1] an
-%   existing output file. The default [0] is to skip conversion when the 
+%   existing output file. The default [0] is to skip conversion when the
 %   output file already exists.  If OWrtite = 2, the user will be promopted
 %   for how to handle existing files.
 %
@@ -37,10 +37,10 @@
 %   still be added at the end
 %
 %   SaveAsStruct  A boolean indicating whether to save the EEG file in
-%   struct formatusing the wwu_SaveEEGFile function will be used.  This may
+%   struct formatusing the eeg_SaveEEGFile function will be used.  This may
 %   make the file format incompatible with EEGlab. Default true
 %
-function results = wwu_Biosemi2EEGLab(filelist, varargin)
+function results = eeg_Biosemi2EEGLab(filelist, varargin)
 
 warning off;
 
@@ -84,7 +84,7 @@ for ii = 1:nfiles
 
     [path, name, ~] = fileparts(filelist{ii});
     outname = [name, '.cnt'];
-    
+
     %if the output file already exists
     if isfile(fullfile(path, outname))
         fprintf('Existing file %s found...', outname);
@@ -94,27 +94,27 @@ for ii = 1:nfiles
         elseif p.OWrite == 2    %ask what to do
             msg = sprintf('The file %s already exists.', outname);
             response = uiconfirm(p.FigHandle, msg, 'File Exists', ...
-                    'Options',{'Overwrite','Save as new','Skip Existing'}, ...
-           'DefaultOption',2,'CancelOption',3);
-             switch response
-                 case 'Overwrite'
+                'Options',{'Overwrite','Save as new','Skip Existing'}, ...
+                'DefaultOption',2,'CancelOption',3);
+            switch response
+                case 'Overwrite'
                     p.OWrite = 1;
-                 case 'Save as new'
-                     p.OWrite = 3;
-                     outname = ['name', '_1.cnt']; 
-                 case 'Skip Existing'
-                     p.OWrite = 0;
-             end
-             
+                case 'Save as new'
+                    p.OWrite = 3;
+                    outname = ['name', '_1.cnt'];
+                case 'Skip Existing'
+                    p.OWrite = 0;
+            end
+
         elseif p.OWrite == 3 %assign a new name to the file
-            outname = ['name', '_1.cnt']; 
+            outname = ['name', '_1.cnt'];
         else
             p.Owrite = 0;
             fprintf('Skipping file\n\n');
             results{ii,1} = false;
             continue
         end
-     
+
     end
     results{ii, 1} = true;
     results{ii, 2} = outname;
@@ -122,35 +122,35 @@ for ii = 1:nfiles
     EEGraw = pop_biosig(filelist{ii},  'rmeventchan', 'on', 'importannot', 'off');
     EEGraw.setname=name;
     EEGraw = eeg_checkset( EEGraw );
-    
+
     %lets assume for now that we want to get rid of all channels greater than
     %64 for the moment.
     EEG = pop_select( EEGraw, 'rmchannel',65:EEGraw.nbchan);
     EEG = eeg_checkset( EEG );
-    
+
     if ~isempty(p.ChanstoStrip)
         EEGAI = pop_select( EEGraw, 'rmchannel', p.ChanstoStrip(ii,:));
         EEGAI = eeg_checkset(EEGAI);
         outname_ai = [name, '_ai.set'];
     end
-               
-%if not speficied then do not assign channels
+
+    %if not speficied then do not assign channels
     if ~isempty(p.Chanlocs)
         EEG.chanlocs = p.Chanlocs;
         EEG = eeg_checkset(EEG);
-    end    
+    end
     if ~isempty(p.ChanFile)
-            EEG.chanlocs = readlocs(p.ChanFile);
+        EEG.chanlocs = readlocs(p.ChanFile);
         EEG = eeg_checkset(EEG);
     end
-       
+
     %convert data to the average reference
-    if (p.AvgRef==1)        
+    if (p.AvgRef==1)
         EEG = pop_reref(EEG, []);
         EEG = eeg_checkset( EEG );
     end
-    
-    %filter the data   
+
+    %filter the data
     if p.ApplyFilt
         if ~isempty(p.Hpass)
             EEG = pop_eegfilt(EEG, p.Hpass,0);
@@ -163,17 +163,17 @@ for ii = 1:nfiles
     end
     EEG = eeg_checkset( EEG );
     if p.SaveAsStruct
-        wwu_SaveEEGFile(EEG, fullfile(path, outname));
+        eeg_SaveEEGFile(EEG, fullfile(path, outname));
     else
         save(fullfile(path, outname), 'EEG', '-mat');
-    end    
-    
+    end
+
     if ~isempty(p.ChanstoStrip)
         EEGAI.event = EEG.event;
         EEGAI.urevent = EEG.urevent;
         EEGAI = pop_saveset(EEGAI, 'filename', outname_ai);
-    end       
+    end
     warning on;
-    fprintf('....DONE.....');    
+    fprintf('....DONE.....');
 end
 close(wb);

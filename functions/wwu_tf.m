@@ -170,7 +170,8 @@ for ii = 1:length(EEG.epoch)
     indx = find(contains(EEG.epoch(ii).eventtype, 'bin'));
     indx = indx(1);  %take only the first one if there are more
     bin = EEG.epoch(ii).eventtype{indx};
-    ncond = str2double(bin(end));
+    dPos = regexp(bin, '\d+$');
+    ncond = str2double(bin(dPos:end));
     if ~isempty(binlist(ncond).epoch)
         binlist(ncond).epoch(end + 1) = ii;
     else

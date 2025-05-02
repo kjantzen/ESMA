@@ -329,7 +329,7 @@ response = uiconfirm(h.figure, sprintf('Are you sure you want to delete %s?', GN
 'Options', ["Yes", "No"]);
 if contains(response, "Yes")
 GND = rm_bins(GND, c_bin);
-GND = wwu_SaveEEGFile(GND);
+GND = eeg_SaveEEGFile(GND);
 callback_relfreshDisplay([],[],h, true, false);
 end     
 case 'MU'        
@@ -343,7 +343,7 @@ GND.F_tests(c_stat) = [];
 if isfield(GND, "F_test_names")
 GND.F_test_name(c_stat) = [];
 end
-GND = wwu_SaveEEGFile(GND);
+GND = eeg_SaveEEGFile(GND);
 callback_relfreshDisplay([],[],h, true, false);
 
 if ~isempty(GND.F_tests) %if we did not delete them all
@@ -362,7 +362,7 @@ end
 response = uiconfirm(h.figure, sprintf('Are you sure you want to delete %s?', h.dropdown_ANOVAtest.Items{c_stat}), 'Confirm Delete');
 if contains(response, 'OK')
 GND.ANOVA(c_stat) = [];
-GND = wwu_SaveEEGFile(GND);
+GND = eeg_SaveEEGFile(GND);
 p.GND = GND;
 h.figure.UserData = p;
 

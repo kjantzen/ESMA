@@ -1,9 +1,9 @@
 % WWU_UPDATEPROCESSLOG
-% wwu_UpdateProcessLog(study, infoStruct) write information about a processing
+% eeg_UpdateProcessLog(study, infoStruct) write information about a processing
 % stage to a study specific excel file called PreProcessing.xlsx located in
 % the study folder.  If the file is not found it is created automatically.
-% This funciton is called automatically during specific processing stages 
-% to support detailed analysis and reporting of particiapnt sepcific 
+% This funciton is called automatically during specific processing stages
+% to support detailed analysis and reporting of particiapnt sepcific
 % processing outcomes including
 %   -number of channels removed
 %   -number of bad trials
@@ -14,19 +14,19 @@
 %   study - an hcnd_eeg study structure
 %   inStruct - an as yet to be determined data structure
 %
-function wwu_UpdateProcessLog(study, d)
+function eeg_UpdateProcessLog(study, d)
 
 %do some better checking here later when I know what I need in the
 %structure
 arguments
-    study 
+    study
     d.SheetName {mustBeText}
     d.ColumnNames (1,:) {mustBeUnderlyingType(d.ColumnNames, 'cell')}
     d.RowNames (:,1) {mustBeUnderlyingType(d.RowNames, 'cell')}
-    d.Values 
+    d.Values
     d.Parameters
 end
-    
+
 outputFile = 'ProcessingLog.xlsx';
 eegPath = study_GetEEGPath;
 processFile = fullfile(eegPath, study.path, outputFile);
@@ -36,7 +36,7 @@ if isfile(processFile)
     allSheets = sheetnames(processFile);
     sheetNum = length(allSheets) + 1;
     d.SheetName = sprintf('(%i) %s', sheetNum, d.SheetName);
-else 
+else
     d.SheetName = sprintf('(%i) %s', 1, d.SheetName);
 end
 

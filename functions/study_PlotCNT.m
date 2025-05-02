@@ -76,7 +76,7 @@ p.EEG.chaninfo.badchans = p.selchans;
 end
 end
 pb = uiprogressdlg(h.figure,'Indeterminate','on', 'Message','Saving channel status');
-p.EEG = wwu_SaveEEGFile(p.EEG,[],{'chaninfo'});
+p.EEG = eeg_SaveEEGFile(p.EEG,[],{'chaninfo'});
 close(pb);
 
 h.figure.UserData = p;
@@ -128,7 +128,7 @@ function check_for_unsaved_changes(fh, EEG)
 if strcmp(EEG.saved, 'no')
 msg = sprintf('Saving changes to %s', EEG.filename);
 pb = uiprogressdlg(fh,'Indeterminate','on', 'Message',msg);
-p.EEG = wwu_SaveEEGFile(EEG);
+p.EEG = eeg_SaveEEGFile(EEG);
 close(pb);
 end
 

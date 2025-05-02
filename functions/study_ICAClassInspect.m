@@ -152,7 +152,7 @@ if saveflag
 pb.Message = 'Saving current subject file.';
 oldfilename = fnames{old_snum};
 EEG = p.EEG;
-wwu_SaveEEGFile(EEG,oldfilename)
+eeg_SaveEEGFile(EEG,oldfilename)
 end
 
 pb.Message = 'Loading new subject file';
@@ -497,7 +497,7 @@ snum = h.dropdown_selsubject.Value;
 fnames = h.dropdown_selsubject.UserData;
 filename = fnames{snum};
 fprintf('saving changes...');
-wwu_SaveEEGFile(EEG, filename);
+eeg_SaveEEGFile(EEG, filename);
 fprintf('done\n');
 close(pb);
 end

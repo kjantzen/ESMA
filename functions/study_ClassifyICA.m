@@ -76,7 +76,7 @@ Outfile = f{:};
 else
 Outfile = fullfile(fpath, [p.Outfile, fext]);
 end
-wwu_SaveEEGFile(EEG, Outfile);
+eeg_SaveEEGFile(EEG, Outfile);
 if isobject(pb); pb.Value = cnt/fnum; end
 
 end
