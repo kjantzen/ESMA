@@ -240,9 +240,6 @@ set(handles.menu_convert, 'Callback', {@callback_convert,handles});
 msg.Message = 'Loading studies';
 fprintf('...reading STUDY information');
 
-%placeholder for the number of studies
-n = 0;
-
 %keep asking for a path untill studies are found
 n = populate_studylist(handles);
 fprintf("...found %i Studies...\n", n)
