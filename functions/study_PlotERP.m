@@ -251,7 +251,6 @@ writecell(v, excelFilename,'Range', 'A1', 'Sheet', 'Data');
 
 writecell({'Channels'}, excelFilename, 'Range', 'A4', 'Sheet', 'Data');
 
-
 %make the row number variable here because the size of variables is not
 %static
 rowNum = 5;
@@ -269,7 +268,7 @@ colNum = 66;
 %not all stats results will have this depending on version
 if isfield(r, 'subj_used')
 range = sprintf('%s%i', char(colNum), rowNum);
-writecell('Subject Folders', excelFilename, 'Range', range, 'Sheet', 'Data');
+writematrix('Subject Folders', excelFilename, 'Range', range, 'Sheet', 'Data');
 colNum = colNum + 1;
 end
 
@@ -290,8 +289,8 @@ range = sprintf('%s%i',char(colNum), rowNum+nFacs);
 writecell(r.conditions, excelFilename,'Range',range, 'Sheet', 'Data')
 
 %write the raw data
-range = sprintf('B%i',rowNum+nFacs+Offset);
-dwritetable(r.data, excelFilename, 'Range', range,'WriteMode','inplace','WriteVariableNames', false, 'WriteRowNames', false, 'Sheet', 'Data');
+range = sprintf('C%i',rowNum+nFacs+1);
+writetable(r.data, excelFilename, 'Range', range,'WriteMode','inplace','WriteVariableNames', false, 'WriteRowNames', false, 'Sheet', 'Data');
 
 %write the source table
 writetable(r.source_table, excelFilename, 'Sheet', 'ANOVA','Range', 'A1', 'WriteRowNames', true);

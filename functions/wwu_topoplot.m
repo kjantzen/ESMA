@@ -18,7 +18,7 @@
 %   chan_locs         - name of an EEG electrode position file (>> topoplot example).
 %                       Else, an EEG.chanlocs structure (>> help readlocs or >> topoplot example)
 % Optional inputs:
-%   'axishandle'      - the handle of the axis for plotting the topo
+%   'axishandle'      - the handle of the . for plotting the topo
 %   'maplimits'       - 'absmax'   -> scale map colors to +/- the absolute-max (makes green 0); 
 %                       'maxmin'   -> scale colors to the data range (makes green mid-range); 
 %                       [lo.hi]    -> use user-definined lo/hi limits

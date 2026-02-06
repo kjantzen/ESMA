@@ -24,8 +24,7 @@ function esma()
 %major revision indicates the addition of a new major function or a change
 %that may impact people using previous version.
 %Minor revisions indicate a bug fix or addition/expansion of a minor feature.
-VersionNumber = eeg_GetESMAVersion();
-fprintf('Starting EEG Study Management and Analysis V%s....\n', VersionNumber);
+
 
 try
     addSubFolderPaths
@@ -33,6 +32,9 @@ catch me
     wwu_msgdlg(me.message, 'Fatal Error!', {"OK"}, 'isError', true);
     return
 end
+
+VersionNumber = eeg_GetESMAVersion();
+fprintf('Starting EEG Study Management and Analysis V%s....\n', VersionNumber);
 
 EEGPath = study_GetEEGPath;
 if isempty(EEGPath)
